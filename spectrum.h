@@ -3,9 +3,11 @@
 
 struct spectrum_sweep_config;
 
+/* Return 0 to continue sweep, E_SPECTRUM_STOP_SWEEP to stop sweep and return from
+ * spectrum_run or any other value on error. */
 typedef int (*spectrum_cb_t)(
 		/* Pointer to the sweep_config struct passed to spectrum_run */
-		struct spectrum_sweep_config* sweep_config,
+		const struct spectrum_sweep_config* sweep_config,
 
 		/* Timestamp of the measurement in ms since spectrum_run call */
 		int timestamp,
@@ -18,11 +20,11 @@ typedef int (*spectrum_cb_t)(
 		 *
 		 * n = 0 .. channel_num - 1
 		 */
-		int data_list[]);
+		const int data_list[]);
 
 struct spectrum_sweep_config {
 	/* Device configuration Pre-set to use */
-	struct spectrum_dev_config *dev_config;
+	const struct spectrum_dev_config *dev_config;
 
 	/* Channel of the first measurement */
 	int channel_start;
@@ -70,26 +72,26 @@ struct spectrum_dev_config {
 	/* Number of channels */
 	int channel_num;
 
-	/* Time required for detection per channel in seconds 
+	/* Time required for detection per channel in miliseconds 
 	 *
 	 * Approximate number - accurate timestamps are returned with
 	 * measurement results. */
-	int channel_time_s;
+	int channel_time_ms;
 
 	/* Opaque pointer to a device-specific data structure */
-	void* private;
+	void* priv;
 };
 
-typedef int (*spectrum_dev_reset_t)(void *private);
-typedef int (*spectrum_dev_setup_t)(void *private, struct spectrum_sweep_config* sweep_config);
-typedef int (*spectrum_dev_run_t)(void *private, struct spectrum_sweep_config* sweep_config);
+typedef int (*spectrum_dev_reset_t)(void* priv);
+typedef int (*spectrum_dev_setup_t)(void* priv, struct spectrum_sweep_config* sweep_config);
+typedef int (*spectrum_dev_run_t)(void* priv, struct spectrum_sweep_config* sweep_config);
 
 struct spectrum_dev {
 	/* Name of the device */
 	const char* name;
 
 	/* List of configuration pre-sets supported by this device */
-	struct spectrum_dev_config* dev_config_list;
+	const struct spectrum_dev_config* const * dev_config_list;
 	int dev_config_num;
 
 	/* Reset the device */
@@ -102,16 +104,21 @@ struct spectrum_dev {
 	spectrum_dev_run_t dev_run;
 
 	/* Opaque pointer to a device-specific data structure */
-	void *private;
+	void* priv;
 };
 
+#define E_SPECTRUM_STOP_SWEEP 1
+#define E_SPECTRUM_OK 0
 #define E_SPECTRUM_INVALID -1
 #define E_SPECTRUM_TOOMANY -2
 
 #define SPECTRUM_MAX_DEV 10
 
-int spectrum_add_dev(struct spectrum_dev* dev);
+extern int spectrum_dev_num;
+extern const struct spectrum_dev* spectrum_dev_list[];
+
+int spectrum_add_dev(const struct spectrum_dev* dev);
 int spectrum_reset(void);
-int spectrum_sweep_channel_num(struct spectrum_sweep_config* sweep_config);
-int spectrum_run(struct spectrum_dev* dev, struct spectrum_sweep_config* sweep_config);
+int spectrum_sweep_channel_num(const struct spectrum_sweep_config* sweep_config);
+int spectrum_run(const struct spectrum_dev* dev, struct spectrum_sweep_config* sweep_config);
 #endif
