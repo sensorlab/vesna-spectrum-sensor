@@ -72,6 +72,6 @@ const struct spectrum_dev dev_null = {
 	.priv 			= NULL
 };
 
-int dev_null_register() {
+int dev_null_register(void) {
 	return spectrum_add_dev(&dev_null);
 }
