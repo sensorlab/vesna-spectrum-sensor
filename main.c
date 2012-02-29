@@ -27,7 +27,7 @@ void setup(void)
 			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
 
 	/* Setup USART parameters. */
-	usart_set_baudrate(USART1, 19200);
+	usart_set_baudrate(USART1, 115200);
 	usart_set_databits(USART1, 8);
 	usart_set_stopbits(USART1, USART_STOPBITS_1);
 	usart_set_parity(USART1, USART_PARITY_NONE);
