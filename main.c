@@ -3,9 +3,16 @@
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/nvic.h>
 
 #include "spectrum.h"
 #include "dev-null.h"
+
+#define USART_BUFFER_SIZE		128
+
+char usart_buffer[USART_BUFFER_SIZE];
+int usart_buffer_len = 0;
+volatile int usart_buffer_attn = 0;
 
 /* Set up all the peripherals */
 void setup(void)
@@ -18,6 +25,8 @@ void setup(void)
 			RCC_APB2ENR_AFIOEN |
 			RCC_APB2ENR_USART1EN);
 
+	nvic_enable_irq(NVIC_USART1_IRQ);
+
 	/* GPIO pin for the LED */
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
@@ -26,16 +35,44 @@ void setup(void)
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
 
+	/* GPIO pin for USART RX */
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+		      GPIO_CNF_INPUT_FLOAT, GPIO10);
+
 	/* Setup USART parameters. */
 	usart_set_baudrate(USART1, 115200);
 	usart_set_databits(USART1, 8);
 	usart_set_stopbits(USART1, USART_STOPBITS_1);
 	usart_set_parity(USART1, USART_PARITY_NONE);
 	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
-	usart_set_mode(USART1, USART_MODE_TX);
+	usart_set_mode(USART1, USART_MODE_TX_RX);
+
+	/* Enable USART1 Receive interrupt. */
+	USART_CR1(USART1) |= USART_CR1_RXNEIE;
 
 	/* Finally enable the USART. */
 	usart_enable(USART1);
+}
+
+void usart1_isr(void)
+{
+	/* Check if we were called because of RXNE. */
+	if (((USART_CR1(USART1) & USART_CR1_RXNEIE) != 0) &&
+	    ((USART_SR(USART1) & USART_SR_RXNE) != 0)) {
+
+		/* If we haven't yet processed previous command ignore input */
+		if (!usart_buffer_attn) {
+			char c = usart_recv(USART1);
+			if (c == '\n') {
+				usart_buffer[usart_buffer_len] = 0;
+				usart_buffer_len = 0;
+				usart_buffer_attn = 1;
+			} else {
+				usart_buffer[usart_buffer_len] = c;
+				usart_buffer_len++;
+			}
+		}
+	}
 }
 
 /* Provide _write syscall used by libc */
@@ -93,6 +130,10 @@ int main(void)
 
 	printf("\n\n");
 	while (1) {
+		if (usart_buffer_attn) {
+			printf("CMD %s\n", usart_buffer);
+			usart_buffer_attn = 0;
+		}
 	}
 
 	return 0;
