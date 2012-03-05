@@ -60,7 +60,7 @@ struct spectrum_dev_config {
 	const char* name;
 
 	/* Center frequency of the first channel in Hz */
-	int channel_base_hz;
+	long long int channel_base_hz;
 
 	/* Difference between center frequencies of two adjacent 
 	 * channels in Hz */
