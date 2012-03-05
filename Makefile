@@ -43,6 +43,6 @@ clean:
 		shutdown \
 	"
 
-.PHONY: images clean
+.PHONY: clean
 
 -include $(OBJS:.o=.d)
