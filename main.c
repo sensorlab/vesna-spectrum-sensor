@@ -64,26 +64,35 @@ void delay(void)
 	}
 }
 
+void dump_configs(void)
+{
+	int n, m;
+	for(n = 0; n < spectrum_dev_num; n++) {
+		const struct spectrum_dev* dev = spectrum_dev_list[n];
+
+		printf("DEVICE %d: %s\n", n, dev->name);
+
+		for(m = 0; m < dev->dev_config_num; m++) {
+			const struct spectrum_dev_config* dev_config = dev->dev_config_list[m];
+			printf("  CHANNEL CONFIG %d,%d: %s\n", n, m, dev_config->name);
+			printf("    BASE: %lld Hz\n", dev_config->channel_base_hz);
+			printf("    SPACING: %d Hz\n", dev_config->channel_spacing_hz);
+			printf("    BW: %d Hz\n", dev_config->channel_bw_hz);
+			printf("    NUM: %d\n", dev_config->channel_num);
+			printf("    TIME: %d ms\n", dev_config->channel_time_ms);
+		}
+	}
+}
+
 int main(void)
 {
 	setup();
 	dev_null_register();
 
+	dump_configs();
+
+	printf("\n\n");
 	while (1) {
-
-		int n, m;
-		for(n = 0; n < spectrum_dev_num; n++) {
-			const struct spectrum_dev* dev = spectrum_dev_list[n];
-
-			printf("DEVICE %d: %s\n", n, dev->name);
-
-			for(m = 0; m < dev->dev_config_num; m++) {
-				const struct spectrum_dev_config* dev_config = dev->dev_config_list[m];
-				printf("  CONFIG %d,%d: %s\n", n, m, dev_config->name);
-			}
-		}
-
-		delay();
 	}
 
 	return 0;
