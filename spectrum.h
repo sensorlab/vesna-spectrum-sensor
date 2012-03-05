@@ -12,15 +12,18 @@ typedef int (*spectrum_cb_t)(
 		/* Timestamp of the measurement in ms since spectrum_run call */
 		int timestamp,
 
-		/* Array of measurements 
+		/* Array of measurements
 		 *
 		 * data[n] = measurement for channel m, where
 		 *
 		 * m = channel_start + channel_step * n
 		 *
 		 * n = 0 .. channel_num - 1
+		 *
+		 * Values are input power in 0.01 dBm (e.g. to calculate power in
+		 * dBm, divide data[n] by 100)
 		 */
-		const int data_list[]);
+		const short int data_list[]);
 
 struct spectrum_sweep_config {
 	/* Device configuration Pre-set to use */
@@ -34,15 +37,6 @@ struct spectrum_sweep_config {
 
 	/* Channel of the one after the last measurement */
 	int channel_stop;
-
-	/* Constants required to calculate the measured power from the raw
-	 * measurement values using the following equation:
-	 *
-	 * P_dbm = (X + offset) / quotient 
-	 *
-	 * Filled in by the device driver */
-	int dbm_quotient;
-	int dbm_offset;
 
 	/* Callback function. Return -1 to stop the scan. */
 	spectrum_cb_t cb;

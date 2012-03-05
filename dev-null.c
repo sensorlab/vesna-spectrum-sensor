@@ -9,8 +9,6 @@ int dev_null_reset(void* priv)
 
 int dev_null_setup(void* priv, struct spectrum_sweep_config* sweep_config) 
 {
-	sweep_config->dbm_offset = 0;
-	sweep_config->dbm_quotient = 1;
 	return E_SPECTRUM_OK;
 }
 
@@ -18,9 +16,9 @@ int dev_null_run(void* priv, struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	int n = 0;
-	int data[10];
+	short int data[10];
 	do {
-		r = sweep_config->cb(sweep_config, 0, data);
+		r = sweep_config->cb(sweep_config, n, data);
 		n++;
 	} while(!r);
 
