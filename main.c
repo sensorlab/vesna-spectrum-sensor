@@ -105,16 +105,6 @@ int _write(int file, char *ptr, int len)
 	}
 }
 
-/* Delay execution for some arbitrary amount of time */
-void delay(void)
-{
-	int i;
-
-	for (i = 0; i < 8000000; i++) {
-		__asm__("nop");
-	}
-}
-
 int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
 {
 	int channel_num = spectrum_sweep_channel_num(sweep_config);
