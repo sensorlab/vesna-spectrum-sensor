@@ -9,7 +9,10 @@ typedef int (*spectrum_cb_t)(
 		/* Pointer to the sweep_config struct passed to spectrum_run */
 		const struct spectrum_sweep_config* sweep_config,
 
-		/* Timestamp of the measurement in ms since spectrum_run call */
+		/* Timestamp of the measurement in ms since spectrum_run call
+		 *
+		 * Note that on a 32-bit architecture this counter allows for
+		 * maximum of approx. 25 days of continous measurements. */
 		int timestamp,
 
 		/* Array of measurements
