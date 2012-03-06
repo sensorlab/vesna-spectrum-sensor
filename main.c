@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/usart.h>
@@ -10,9 +11,13 @@
 
 #define USART_BUFFER_SIZE		128
 
-char usart_buffer[USART_BUFFER_SIZE];
-int usart_buffer_len = 0;
-volatile int usart_buffer_attn = 0;
+static char usart_buffer[USART_BUFFER_SIZE];
+static int usart_buffer_len = 0;
+static volatile int usart_buffer_attn = 0;
+static int report = 0;
+
+static struct spectrum_sweep_config sweep_config;
+static const struct spectrum_dev* dev = NULL;
 
 /* Set up all the peripherals */
 void setup(void)
@@ -101,23 +106,116 @@ void delay(void)
 	}
 }
 
-void dump_configs(void)
+int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
 {
-	int n, m;
-	for(n = 0; n < spectrum_dev_num; n++) {
-		const struct spectrum_dev* dev = spectrum_dev_list[n];
+	int channel_num = spectrum_sweep_channel_num(sweep_config);
+	int n;
+	printf("TS %d.%03d DS", timestamp/1000, timestamp%1000);
+	for(n = 0; n < channel_num; n++) {
+		printf(" %d.%02d", data_list[n]/100, data_list[n]%100);
+	}
+	printf(" DE\n");
 
-		printf("DEVICE %d: %s\n", n, dev->name);
+	if(usart_buffer_attn) {
+		return E_SPECTRUM_STOP_SWEEP;
+	} else {
+		return E_SPECTRUM_OK;
+	}
+}
 
-		for(m = 0; m < dev->dev_config_num; m++) {
-			const struct spectrum_dev_config* dev_config = dev->dev_config_list[m];
-			printf("  CHANNEL CONFIG %d,%d: %s\n", n, m, dev_config->name);
-			printf("    BASE: %lld Hz\n", dev_config->channel_base_hz);
-			printf("    SPACING: %d Hz\n", dev_config->channel_spacing_hz);
-			printf("    BW: %d Hz\n", dev_config->channel_bw_hz);
-			printf("    NUM: %d\n", dev_config->channel_num);
-			printf("    TIME: %d ms\n", dev_config->channel_time_ms);
+void command_help(void)
+{
+	printf( "VESNA spectrum sensing application\n\n"
+
+		"help         print this help message\n"
+		"list         list available devices and pre-set configuations\n"
+		"report-on    start spectrum sweep\n"
+		"report-off   stop spectrum sweep\n"
+		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
+		"             sweep channels from START to STOP stepping STEP\n"
+		"             channels at a time using DEVICE and CONFIG pre-set\n\n"
+
+		"sweep data has the following format:\n"
+		"             TS timestamp DS power ... DE\n"
+		"where timestamp is time in seconds since sweep start and power is\n"
+		"received signal power for corresponding channel in dBm\n");
+}
+
+void command_list(void)
+{
+	int dev_id, config_id;
+	for(dev_id = 0; dev_id < spectrum_dev_num; dev_id++) {
+		const struct spectrum_dev* dev = spectrum_dev_list[dev_id];
+
+		printf("device %d: %s\n", dev_id, dev->name);
+
+		for(config_id = 0; config_id < dev->dev_config_num; config_id++) {
+			const struct spectrum_dev_config* dev_config = dev->dev_config_list[config_id];
+			printf("  channel config %d,%d: %s\n", dev_id, config_id, dev_config->name);
+			printf("    base: %lld Hz\n", dev_config->channel_base_hz);
+			printf("    spacing: %d Hz\n", dev_config->channel_spacing_hz);
+			printf("    bw: %d Hz\n", dev_config->channel_bw_hz);
+			printf("    num: %d\n", dev_config->channel_num);
+			printf("    time: %d ms\n", dev_config->channel_time_ms);
 		}
+	}
+}
+
+void command_report_on(void)
+{
+	if (dev == NULL) {
+		printf("error: set channel config first\n");
+	} else {
+		report = 1;
+	}
+}
+
+void command_report_off(void)
+{
+	report = 0;
+}
+
+void command_select(int start, int step, int stop, int dev_id, int config_id) 
+{
+	if (dev_id < 0 || dev_id >= spectrum_dev_num) {
+		printf("error: unknown device %d\n", dev_id);
+		return;
+	}
+
+	dev = spectrum_dev_list[dev_id];
+
+	if (config_id < 0 || config_id >= dev->dev_config_num) {
+		printf("error: unknown config %d\n", config_id);
+	}
+
+	const struct spectrum_dev_config* dev_config = dev->dev_config_list[config_id];
+
+	sweep_config.dev_config = dev_config;
+	sweep_config.channel_start = start;
+	sweep_config.channel_step = step;
+	sweep_config.channel_stop = stop;
+
+	sweep_config.cb = report_cb;
+}
+
+void dispatch(const char* cmd)
+{
+	int start, stop, step, dev_id, config_id;
+
+	if (!strcmp(cmd, "help")) {
+		command_help();
+	} else if (!strcmp(cmd, "list")) {
+		command_list();
+	} else if (!strcmp(cmd, "report-on")) {
+		command_report_on();
+	} else if (!strcmp(cmd, "report-off")) {
+		command_report_off();
+	} else if (sscanf(cmd, "select channel %d:%d:%d config %d,%d", 
+				&start, &step, &stop,
+				&dev_id, &config_id) == 5) {
+		command_select(start, step, stop, dev_id, config_id);
+	} else {
+		printf("error: unknown command\n");
 	}
 }
 
@@ -125,14 +223,23 @@ int main(void)
 {
 	setup();
 	dev_null_register();
+	int r;
+	
+	r = spectrum_reset();
+	if (r) {
+		printf("spectrum_reset(): error %d\n", r);
+	}
 
-	dump_configs();
-
-	printf("\n\n");
 	while (1) {
 		if (usart_buffer_attn) {
-			printf("CMD %s\n", usart_buffer);
+			dispatch(usart_buffer);
 			usart_buffer_attn = 0;
+		}
+		if (report) {
+			r = spectrum_run(dev, &sweep_config);
+			if (r) {
+				printf("error: spectrum_run(): %d\n", r);
+			}
 		}
 	}
 
