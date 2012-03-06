@@ -22,27 +22,14 @@ static const struct spectrum_dev* dev = NULL;
 
 /* Set up all the peripherals */
 
-void setup_rtc(void) {
+static void setup_rtc(void) 
+{
 	rtc_awake_from_off(LSE);
 	rtc_set_prescale_val(15);
 }
 
-void setup(void)
+static void setup_usart(void) 
 {
-	rcc_clock_setup_in_hsi_out_48mhz();
-
-	rcc_peripheral_enable_clock(&RCC_APB2ENR,
-			RCC_APB2ENR_IOPAEN |
-			RCC_APB2ENR_IOPBEN |
-			RCC_APB2ENR_AFIOEN |
-			RCC_APB2ENR_USART1EN);
-
-	nvic_enable_irq(NVIC_USART1_IRQ);
-
-	/* GPIO pin for the LED */
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
-
 	/* GPIO pin for USART TX */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
@@ -64,7 +51,25 @@ void setup(void)
 
 	/* Finally enable the USART. */
 	usart_enable(USART1);
+}
 
+static void setup(void)
+{
+	rcc_clock_setup_in_hsi_out_48mhz();
+
+	rcc_peripheral_enable_clock(&RCC_APB2ENR,
+			RCC_APB2ENR_IOPAEN |
+			RCC_APB2ENR_IOPBEN |
+			RCC_APB2ENR_AFIOEN |
+			RCC_APB2ENR_USART1EN);
+
+	nvic_enable_irq(NVIC_USART1_IRQ);
+
+	/* GPIO pin for the LED */
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
+
+	setup_usart();
 	setup_rtc();
 }
 
@@ -105,7 +110,7 @@ int _write(int file, char *ptr, int len)
 	}
 }
 
-int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
+static int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
 {
 	int channel_num = spectrum_sweep_channel_num(sweep_config);
 	int n;
@@ -122,7 +127,7 @@ int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, c
 	}
 }
 
-void command_help(void)
+static void command_help(void)
 {
 	printf( "VESNA spectrum sensing application\n\n"
 
@@ -140,7 +145,7 @@ void command_help(void)
 		"received signal power for corresponding channel in dBm\n");
 }
 
-void command_list(void)
+static void command_list(void)
 {
 	int dev_id, config_id;
 	for(dev_id = 0; dev_id < spectrum_dev_num; dev_id++) {
@@ -160,7 +165,7 @@ void command_list(void)
 	}
 }
 
-void command_report_on(void)
+static void command_report_on(void)
 {
 	if (dev == NULL) {
 		printf("error: set channel config first\n");
@@ -169,12 +174,12 @@ void command_report_on(void)
 	}
 }
 
-void command_report_off(void)
+static void command_report_off(void)
 {
 	report = 0;
 }
 
-void command_select(int start, int step, int stop, int dev_id, int config_id) 
+static void command_select(int start, int step, int stop, int dev_id, int config_id) 
 {
 	if (dev_id < 0 || dev_id >= spectrum_dev_num) {
 		printf("error: unknown device %d\n", dev_id);
@@ -197,7 +202,7 @@ void command_select(int start, int step, int stop, int dev_id, int config_id)
 	sweep_config.cb = report_cb;
 }
 
-void dispatch(const char* cmd)
+static void dispatch(const char* cmd)
 {
 	int start, stop, step, dev_id, config_id;
 
