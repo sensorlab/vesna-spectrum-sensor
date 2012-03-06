@@ -7,12 +7,12 @@ int dev_null_reset(void* priv)
 	return E_SPECTRUM_OK;
 }
 
-int dev_null_setup(void* priv, struct spectrum_sweep_config* sweep_config) 
+int dev_null_setup(void* priv, const struct spectrum_sweep_config* sweep_config) 
 {
 	return E_SPECTRUM_OK;
 }
 
-int dev_null_run(void* priv, struct spectrum_sweep_config* sweep_config)
+int dev_null_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	int n = 0;

@@ -77,8 +77,8 @@ struct spectrum_dev_config {
 };
 
 typedef int (*spectrum_dev_reset_t)(void* priv);
-typedef int (*spectrum_dev_setup_t)(void* priv, struct spectrum_sweep_config* sweep_config);
-typedef int (*spectrum_dev_run_t)(void* priv, struct spectrum_sweep_config* sweep_config);
+typedef int (*spectrum_dev_setup_t)(void* priv, const struct spectrum_sweep_config* sweep_config);
+typedef int (*spectrum_dev_run_t)(void* priv, const struct spectrum_sweep_config* sweep_config);
 
 struct spectrum_dev {
 	/* Name of the device */
@@ -114,5 +114,5 @@ extern const struct spectrum_dev* spectrum_dev_list[];
 int spectrum_add_dev(const struct spectrum_dev* dev);
 int spectrum_reset(void);
 int spectrum_sweep_channel_num(const struct spectrum_sweep_config* sweep_config);
-int spectrum_run(const struct spectrum_dev* dev, struct spectrum_sweep_config* sweep_config);
+int spectrum_run(const struct spectrum_dev* dev, const struct spectrum_sweep_config* sweep_config);
 #endif

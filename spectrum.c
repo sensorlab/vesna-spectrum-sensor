@@ -41,7 +41,7 @@ int spectrum_sweep_channel_num(const struct spectrum_sweep_config* sweep_config)
 /* Start a spectrum sensing on a device 
  *
  * Return 0 on success, or error code otherwise. */
-int spectrum_run(const struct spectrum_dev* dev, struct spectrum_sweep_config* sweep_config)
+int spectrum_run(const struct spectrum_dev* dev, const struct spectrum_sweep_config* sweep_config)
 {
 	/* some sanity checks */
 	if (sweep_config->channel_start >= sweep_config->channel_stop) {
