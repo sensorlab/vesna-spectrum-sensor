@@ -79,10 +79,11 @@ void usart1_isr(void)
 	if (((USART_CR1(USART1) & USART_CR1_RXNEIE) != 0) &&
 	    ((USART_SR(USART1) & USART_SR_RXNE) != 0)) {
 
+		char c = usart_recv(USART1);
+
 		/* If we haven't yet processed previous command ignore input */
 		if (!usart_buffer_attn) {
-			char c = usart_recv(USART1);
-			if (c == '\n') {
+			if (c == '\n' || usart_buffer_len >= (USART_BUFFER_SIZE-1)) {
 				usart_buffer[usart_buffer_len] = 0;
 				usart_buffer_len = 0;
 				usart_buffer_attn = 1;
