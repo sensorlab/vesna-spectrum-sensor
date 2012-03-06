@@ -3,6 +3,7 @@
 #include <string.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/stm32/f1/rtc.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/nvic.h>
 
@@ -20,6 +21,12 @@ static struct spectrum_sweep_config sweep_config;
 static const struct spectrum_dev* dev = NULL;
 
 /* Set up all the peripherals */
+
+void setup_rtc(void) {
+	rtc_awake_from_off(LSE);
+	rtc_set_prescale_val(15);
+}
+
 void setup(void)
 {
 	rcc_clock_setup_in_hsi_out_48mhz();
@@ -57,6 +64,8 @@ void setup(void)
 
 	/* Finally enable the USART. */
 	usart_enable(USART1);
+
+	setup_rtc();
 }
 
 void usart1_isr(void)
