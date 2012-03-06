@@ -16,11 +16,19 @@ int dev_null_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	int n = 0;
-	short int data[10];
+	short int *data;
+
+	data = calloc(spectrum_sweep_channel_num(sweep_config), sizeof(*data));
+	if (data == NULL) {
+		return E_SPECTRUM_TOOMANY;
+	}
+
 	do {
 		r = sweep_config->cb(sweep_config, n, data);
 		n++;
 	} while(!r);
+
+	free(data);
 
 	if (r == E_SPECTRUM_STOP_SWEEP) {
 		return E_SPECTRUM_OK;
