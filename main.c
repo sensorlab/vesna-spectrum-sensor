@@ -117,7 +117,7 @@ static int report_cb(const struct spectrum_sweep_config* sweep_config, int times
 	int n;
 	printf("TS %d.%03d DS", timestamp/1000, timestamp%1000);
 	for(n = 0; n < channel_num; n++) {
-		printf(" %d.%02d", data_list[n]/100, data_list[n]%100);
+		printf(" %d.%02d", data_list[n]/100, abs(data_list[n]%100));
 	}
 	printf(" DE\n");
 
