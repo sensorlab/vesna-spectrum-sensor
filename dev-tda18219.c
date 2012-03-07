@@ -207,7 +207,7 @@ const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 	.channel_bw_hz		= 1700000,
 	.channel_num		= 392000,
 
-	.channel_time_ms	= 100,
+	.channel_time_ms	= 50,
 
 	.priv			= &tda18219_standard_dvbt_1700khz
 };
