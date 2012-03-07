@@ -11,10 +11,20 @@ LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-OBJS		+= main.o spectrum.o dev-null.o
+OBJS		+= main.o spectrum.o
+LIBS		+= -lopencm3_stm32f1
 
 OPENOCD		?= openocd
 OPENOCD_PARAMS  ?= -f interface/olimex-arm-usb-ocd.cfg -f target/stm32f1x.cfg
+
+ifeq ($(MODEL),sne-crew)
+	LIBS += -ltda18219
+	OBJS += dev-tda18219.o
+	CFLAGS += -DMODEL_TDA18219
+else
+	OBJS += dev-null.o
+	CFLAGS += -DMODEL_NULL
+endif
 
 all: $(BINARY).bin
 
@@ -22,10 +32,10 @@ all: $(BINARY).bin
 	$(OBJCOPY) -Obinary $(*).elf $(*).bin
 
 %.elf: $(OBJS) $(LDSCRIPT)
-	$(LD) -o $(*).elf $(OBJS) -lopencm3_stm32f1 $(LDFLAGS)
+	$(LD) -o $(*).elf $(OBJS) $(LIBS) $(LDFLAGS)
 
 %.o: %.c Makefile
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) -DMODEL=$(MODEL) -o $@ -c $<
 
 clean:
 	rm -f *.o

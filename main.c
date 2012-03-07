@@ -227,7 +227,15 @@ static void dispatch(const char* cmd)
 int main(void)
 {
 	setup();
+
+#ifdef MODEL_TDA18219
+	dev_tda18219_register();
+#endif
+
+#ifdef MODEL_NULL
 	dev_null_register();
+#endif
+
 	int r;
 	
 	r = spectrum_reset();
