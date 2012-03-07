@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <libopencm3/stm32/f1/rcc.h>
@@ -9,6 +10,7 @@
 
 #include "spectrum.h"
 #include "dev-null.h"
+#include "dev-tda18219.h"
 
 #define USART_BUFFER_SIZE		128
 
