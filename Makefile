@@ -22,7 +22,7 @@ ifeq ($(MODEL),sne-crew)
 	OBJS += dev-tda18219.o
 	CFLAGS += -DMODEL_TDA18219
 else
-	OBJS += dev-null.o
+	OBJS += dev-dummy.o
 	CFLAGS += -DMODEL_NULL
 endif
 

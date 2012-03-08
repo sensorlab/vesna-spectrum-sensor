@@ -9,7 +9,7 @@
 #include <libopencm3/stm32/nvic.h>
 
 #include "spectrum.h"
-#include "dev-null.h"
+#include "dev-dummy.h"
 #include "dev-tda18219.h"
 
 #define USART_BUFFER_SIZE		128
@@ -235,7 +235,7 @@ int main(void)
 #endif
 
 #ifdef MODEL_NULL
-	dev_null_register();
+	dev_dummy_register();
 #endif
 
 	int r;

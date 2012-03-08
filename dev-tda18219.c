@@ -214,7 +214,7 @@ const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 
 const struct spectrum_dev_config* dev_tda18219_config_list[] = { &dev_tda18219_dvbt_1700khz };
 
-const struct spectrum_dev dev_null = {
+const struct spectrum_dev dev_tda18219 = {
 	.name = "tda18219hn",
 
 	.dev_config_list	= dev_tda18219_config_list,
@@ -228,5 +228,5 @@ const struct spectrum_dev dev_null = {
 };
 
 int dev_tda18219_register(void) {
-	return spectrum_add_dev(&dev_null);
+	return spectrum_add_dev(&dev_tda18219);
 }
