@@ -222,7 +222,7 @@ static void dispatch(const char* cmd)
 				&dev_id, &config_id) == 5) {
 		command_select(start, step, stop, dev_id, config_id);
 	} else {
-		printf("error: unknown command\n");
+		printf("error: unknown command: %s\n", cmd);
 	}
 }
 
