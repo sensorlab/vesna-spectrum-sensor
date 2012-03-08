@@ -1,4 +1,4 @@
-BINARY = spectrum-sense
+BINARY = spectrum-sensor
 
 PREFIX		?= arm-none-eabi
 CC		= $(PREFIX)-gcc
