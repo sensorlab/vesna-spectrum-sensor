@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
@@ -198,6 +199,28 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 	}
 }
 
+void dev_tda18219_print_status(void)
+{
+	struct tda18219_status status;
+	tda18219_get_status(&status);
+
+	printf("IC          : TDA18219HN\n\n");
+	printf("Ident       : %04x\n", status.ident);
+	printf("Major rev   : %d\n", status.major_rev);
+	printf("Minor rev   : %d\n\n", status.minor_rev);
+	printf("Temperature : %d C\n", status.temperature);
+	printf("Power-on    : %s\n", status.por_flag ? "true" : "false");
+	printf("LO lock     : %s\n", status.lo_lock  ? "true" : "false");
+	printf("Sleep mode  : %s\n", status.sm ? "true" : "false");
+	printf("Sleep LNA   : %s\n\n", status.sm_lna ? "true" : "false");
+
+	int n;
+	for(n = 0; n < 12; n++) {
+		printf("RF cal %02d   : %d%s\n", n, status.calibration_ncaps[n], 
+				status.calibration_error[n] ? " (error)" : "");
+	}
+}
+
 const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 	.name			= "DVB-T 1.7 MHz",
 
@@ -227,6 +250,7 @@ const struct spectrum_dev dev_tda18219 = {
 	.priv 			= NULL
 };
 
-int dev_tda18219_register(void) {
+int dev_tda18219_register(void)
+{
 	return spectrum_add_dev(&dev_tda18219);
 }

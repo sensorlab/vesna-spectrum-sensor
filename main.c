@@ -140,7 +140,8 @@ static void command_help(void)
 		"report-off   stop spectrum sweep\n"
 		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
 		"             sweep channels from START to STOP stepping STEP\n"
-		"             channels at a time using DEVICE and CONFIG pre-set\n\n"
+		"             channels at a time using DEVICE and CONFIG pre-set\n"
+		"status       print out hardware status\n\n"
 
 		"sweep data has the following format:\n"
 		"             TS timestamp DS power ... DE\n"
@@ -205,6 +206,13 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	sweep_config.cb = report_cb;
 }
 
+static void command_status(void)
+{
+#ifdef MODEL_TDA18219
+	dev_tda18219_print_status();
+#endif
+}
+
 static void dispatch(const char* cmd)
 {
 	int start, stop, step, dev_id, config_id;
@@ -217,6 +225,8 @@ static void dispatch(const char* cmd)
 		command_report_on();
 	} else if (!strcmp(cmd, "report-off")) {
 		command_report_off();
+	} else if (!strcmp(cmd, "status")) {
+		command_status();
 	} else if (sscanf(cmd, "select channel %d:%d:%d config %d,%d", 
 				&start, &step, &stop,
 				&dev_id, &config_id) == 5) {
