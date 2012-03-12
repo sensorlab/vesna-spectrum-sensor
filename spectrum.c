@@ -48,7 +48,7 @@ int spectrum_run(const struct spectrum_dev* dev, const struct spectrum_sweep_con
 		return E_SPECTRUM_INVALID;
 	}
 
-	if (sweep_config->channel_stop >= sweep_config->dev_config->channel_num) {
+	if (sweep_config->channel_stop > sweep_config->dev_config->channel_num) {
 		return E_SPECTRUM_INVALID;
 	}
 
