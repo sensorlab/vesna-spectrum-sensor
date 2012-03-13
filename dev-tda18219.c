@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <libopencm3/stm32/f1/adc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/rtc.h>
@@ -13,6 +14,9 @@ static void setup_stm32f1_peripherals(void)
 {
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, 
 			RCC_APB1ENR_I2C1EN);
+
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, 
+			RCC_APB2ENR_ADC1EN);
 
 
 	/* GPIO pin for I2C1 SCL, SDA */
@@ -31,6 +35,11 @@ static void setup_stm32f1_peripherals(void)
 	/* Set to lowest gain for now */
 	gpio_clear(GPIOA, GPIO4);
 
+	/* GPIO pin for AD8307 ENB */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO6);
+	gpio_set(GPIOA, GPIO6);
+
 
 	/* Setup I2C */
 	i2c_peripheral_disable(I2C1);
@@ -44,6 +53,33 @@ static void setup_stm32f1_peripherals(void)
 	i2c_set_trise(I2C1, 0x08);
 
 	i2c_peripheral_enable(I2C1);
+
+
+	/* Make sure the ADC doesn't run during config. */
+	adc_off(ADC1);
+
+	/* We configure everything for one single conversion. */
+	adc_disable_scan_mode(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_enable_discontinous_mode_regular(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+
+	adc_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	int i;
+	for (i = 0; i < 800000; i++)    /* Wait a bit. */
+		__asm__("nop");
+
+	adc_reset_calibration(ADC1);
+	adc_calibration(ADC1);
+
+	uint8_t channel_array[16];
+	/* Select the channel we want to convert. */
+	channel_array[0] = 0;
+	adc_set_regular_sequence(ADC1, 1, channel_array);
 }
 
 
@@ -178,9 +214,23 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 			tda18219_set_frequency((struct tda18219_standard*) sweep_config->dev_config->priv,
 					freq);
 
-			int rssi_dbuv = tda18219_get_input_power();
+			uint8_t rf_agc_gain_1 = tda18219_read_reg(TDA18219_RF_AGC_GAIN_1);
+			uint8_t if_agc_gain = tda18219_read_reg(TDA18219_IF_AGC_GAIN);
+
+			int agc1 = ((int) (rf_agc_gain_1 & TDA18219_RF_AGC_GAIN_1_LNA_GAIN_MASK)) * 3 - 12;
+			int agc2 = ((int) ((rf_agc_gain_1 & TDA18219_RF_AGC_GAIN_1_RF_FILTER_GAIN_MASK) >> 4)) * 3 - 11;
+			int agc4 = ((int) (if_agc_gain & TDA18219_IF_AGC_GAIN_IR_MIXER_MASK)) * 3 + 2;
+			int agc5 = ((int) ((if_agc_gain & TDA18219_IF_AGC_GAIN_LPF_GAIN_MASK) >> 3)) * 3;
+
+			adc_on(ADC1);
+			while (!(ADC_SR(ADC1) & ADC_SR_EOC));
+			int rssi_n = ADC_DR(ADC1);
+
+			int rssi_dbm_100 = rssi_n * 3300 / 1024 - 8400 - (agc1 + agc2 + agc4 + agc5) * 100;
+
+			//int rssi_dbuv = tda18219_get_input_power();
 			// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
-			int rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
+			//int rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
 
 			//uint8_t rssi_u = tda18219_read_reg(TDA18219_POWER_1);
 			//int rssi_dbm_100 = rssi_u * 25 + 3600 - 9000 - 1875;
