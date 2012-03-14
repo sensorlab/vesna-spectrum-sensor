@@ -182,6 +182,52 @@ int dev_tda18219_setup(void* priv, const struct spectrum_sweep_config* sweep_con
 	return E_SPECTRUM_OK;
 }
 
+static int dev_tda18219_get_ad8307_input_power(void)
+{
+	const int nsamples = 100;
+
+	int acc = 0;
+	int n;
+	for(n = 0; n < nsamples; n++) {
+		adc_on(ADC1);
+		while (!(ADC_SR(ADC1) & ADC_SR_EOC));
+		acc += ADC_DR(ADC1);
+	}
+	acc /= nsamples;
+
+	/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
+	 *
+	 *              3.3 V
+	 *     Kad = ----------
+	 *           (2^12 - 1)
+	 *
+	 * AD8307
+	 *
+	 *     Kdet = 25 mV/dB  (slope)
+	 *     Adet = -84 dBm   (intercept)
+	 *
+	 * Since we are using this detector for low power signals only, TDA18219 is
+	 * at maximum gain.
+	 *
+	 *     AGC1 = 15 dB
+	 *     AGC2 = -2 dB
+	 *     AGC3 = 30 dB (guess based on measurement)
+	 *     AGC4 = 14 dB
+	 *     AGC5 = 9 dB
+	 *     --------------
+	 *     Atuner = 66 dB
+	 *
+	 * Pinput [dBm] = N * Kad / Kdet - Adet - Atuner
+	 *
+	 *                  3.3 V * 1000
+	 *              = N ------------ - 84 - 66
+	 *                  4095 * 25 V
+	 *
+	 * Note we are returning [dBm * 100]
+	 */
+	return acc * 3300 / 1024 - 15000;
+}
+
 int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
@@ -214,26 +260,16 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 			tda18219_set_frequency((struct tda18219_standard*) sweep_config->dev_config->priv,
 					freq);
 
-			uint8_t rf_agc_gain_1 = tda18219_read_reg(TDA18219_RF_AGC_GAIN_1);
-			uint8_t if_agc_gain = tda18219_read_reg(TDA18219_IF_AGC_GAIN);
+			int rssi_dbuv = tda18219_get_input_power();
 
-			int agc1 = ((int) (rf_agc_gain_1 & TDA18219_RF_AGC_GAIN_1_LNA_GAIN_MASK)) * 3 - 12;
-			int agc2 = ((int) ((rf_agc_gain_1 & TDA18219_RF_AGC_GAIN_1_RF_FILTER_GAIN_MASK) >> 4)) * 3 - 11;
-			int agc4 = ((int) (if_agc_gain & TDA18219_IF_AGC_GAIN_IR_MIXER_MASK)) * 3 + 2;
-			int agc5 = ((int) ((if_agc_gain & TDA18219_IF_AGC_GAIN_LPF_GAIN_MASK) >> 3)) * 3;
-
-			adc_on(ADC1);
-			while (!(ADC_SR(ADC1) & ADC_SR_EOC));
-			int rssi_n = ADC_DR(ADC1);
-
-			int rssi_dbm_100 = rssi_n * 3300 / 1024 - 8400 - (agc1 + agc2 + agc4 + agc5) * 100;
-
-			//int rssi_dbuv = tda18219_get_input_power();
-			// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
-			//int rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
-
-			//uint8_t rssi_u = tda18219_read_reg(TDA18219_POWER_1);
-			//int rssi_dbm_100 = rssi_u * 25 + 3600 - 9000 - 1875;
+			int rssi_dbm_100;
+			if(rssi_dbuv < 40) {
+				// internal power detector in TDA18219 doesn't go below 40 dBuV
+				rssi_dbm_100 = dev_tda18219_get_ad8307_input_power();
+			} else {
+				// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
+				rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
+			}
 
 			data[n] = rssi_dbm_100;
 		}
