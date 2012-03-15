@@ -38,8 +38,6 @@ static void setup_stm32f1_peripherals(void)
 	/* GPIO pin for AD8307 ENB */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO6);
-	gpio_set(GPIOA, GPIO6);
-
 
 	/* Setup I2C */
 	i2c_peripheral_disable(I2C1);
@@ -172,13 +170,17 @@ void tda18219_wait_irq(void)
 int dev_tda18219_reset(void* priv) 
 {
 	setup_stm32f1_peripherals();
+	tda18219_power_on();
 	tda18219_init();
+	tda18219_power_standby();
 	return E_SPECTRUM_OK;
 }
 
 int dev_tda18219_setup(void* priv, const struct spectrum_sweep_config* sweep_config) 
 {
+	tda18219_power_on();
 	tda18219_set_standard((struct tda18219_standard*) sweep_config->dev_config->priv);
+	tda18219_power_standby();
 	return E_SPECTRUM_OK;
 }
 
@@ -241,6 +243,9 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 		return E_SPECTRUM_TOOMANY;
 	}
 
+	tda18219_power_on();
+	gpio_set(GPIOA, GPIO6);
+
 	do {
 		uint32_t rtc_counter = rtc_get_counter_val();
 		/* LSE clock is 32768 Hz. Prescaler is set to 16.
@@ -275,6 +280,9 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 		}
 		r = sweep_config->cb(sweep_config, timestamp, data);
 	} while(!r);
+
+	gpio_clear(GPIOA, GPIO6);
+	tda18219_power_standby();
 
 	free(data);
 
