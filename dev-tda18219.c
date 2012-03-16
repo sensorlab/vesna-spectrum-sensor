@@ -276,6 +276,9 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 				rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
 			}
 
+			// extra offset determined by measurement
+			rssi_dbm_100 -= 750;
+
 			data[n] = rssi_dbm_100;
 		}
 		r = sweep_config->cb(sweep_config, timestamp, data);
