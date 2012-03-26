@@ -17,7 +17,7 @@ LIBS		+= -lopencm3_stm32f1
 OPENOCD		?= openocd
 OPENOCD_PARAMS  ?= -f interface/olimex-arm-usb-ocd.cfg -f target/stm32f1x.cfg
 
-ifeq ($(MODEL),sne-crew)
+ifeq ($(MODEL),sne-crewtv)
 	LIBS += -ltda18219
 	OBJS += dev-tda18219.o
 	CFLAGS += -DMODEL_TDA18219
