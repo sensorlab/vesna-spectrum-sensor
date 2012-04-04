@@ -1,0 +1,89 @@
+Introduction
+============
+
+This is a spectrum sensing application for the VESNA platform. It presents
+a unified interface to different radiofrequency energy detection modules
+through a serial terminal. It also serves as an example use of hardware
+drivers using the low-level spectrum sensing API.
+
+All spectrum sensing devices supported by this application work by tuning
+to a radiofrequency channel and estimating the power level at the antenna
+interface. The range of frequencies that can be sensed is determined by a
+hardware configuration. Each device may support one or more configurations.
+A configuration is characterized by the frequency of the bottom-most
+channel, channel spacing, channel bandwidth, number of channels and the
+time it takes the device to perform a measurement for a single channel.
+
+Currently two hardware models are supported:
+
+- MODEL_TDA18219
+
+  VESNA SNC + SNE-CREWTV hardware configuration
+
+  wide-band energy detection in the UHF band using NXP TDA18219HN tuner
+  (also requires proprietary libtda18219 VESNA library)
+
+- MODEL_NULL
+
+  VESNA SNC hardware configuration
+
+  dummy software-only device, returning noise and zero measurements
+
+For more info on VESNA, see http://sensorlab.ijs.si/hardware.html
+
+
+Compilation
+===========
+
+To compile and upload firmware to a VESNA using OpenOCD and Olimex
+ARM-USB-OCD:
+
+$ make MODEL=sne-crewtv spectrum-sensor.u
+
+Set the MODEL variable to the name of the hardware model you are
+using.
+
+
+Usage
+=====
+
+Connect VESNA to a serial terminal using 115200 baud, 8 data bits, 1 stop
+bit, no parity. 
+
+You can then use the terminal to interact with the application in a
+command-line fashion (conclude each command with a new line)
+
+Type "help" to print a list of available commands with brief descriptions.
+
+A typical session consists of:
+
+1. "list" command to get the list of hardware configurations available
+
+2. "select" command to select a configuration and setup the spectrum sweep
+   parameters.
+
+3. "report-on" command to start the sweep.
+
+4. "report-off" command to stop the sweep.
+
+
+License
+=======
+
+Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+http://sensorlab.ijs.si
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Author: Tomaz Solc, <tomaz.solc@ijs.si>
