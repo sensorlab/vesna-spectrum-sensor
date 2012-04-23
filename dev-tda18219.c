@@ -56,6 +56,10 @@ static void setup_stm32f1_peripherals(void)
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO6);
 
+	/* ADC pin for AD8307 output */
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_ANALOG, GPIO0);
+
 	/* Setup I2C */
 	i2c_peripheral_disable(I2C1);
 
