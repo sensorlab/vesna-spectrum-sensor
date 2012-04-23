@@ -35,12 +35,21 @@ static void setup_stm32f1_peripherals(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, 
 			RCC_APB2ENR_ADC1EN);
 
-
 	/* GPIO pin for I2C1 SCL, SDA */
+
+	/* VESNA v1.0
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO6);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO7);
+	*/
+
+	/* VESNA v1.1 */
+	AFIO_MAPR |= AFIO_MAPR_I2C1_REMAP;
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO8);
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO9);
 
 	/* GPIO pin for TDA18219 IRQ */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
