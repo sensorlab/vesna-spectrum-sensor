@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libopencm3/stm32/f1/adc.h>
+#include <libopencm3/stm32/f1/dma.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/rtc.h>
@@ -27,6 +28,8 @@
 
 #include "dev-tda18219.h"
 #include "spectrum.h"
+
+uint16_t buff[5000];
 
 static void setup_stm32f1_peripherals(void)
 {
@@ -84,16 +87,29 @@ static void setup_stm32f1_peripherals(void)
 	i2c_peripheral_enable(I2C1);
 
 
+	/* setup DMA */
+	rcc_peripheral_enable_clock(&RCC_AHBENR,
+			RCC_AHBENR_DMA1EN);
+
 	/* Make sure the ADC doesn't run during config. */
 	adc_off(ADC1);
 
+	dma_channel_reset(DMA1, DMA_CHANNEL1);
+	dma_set_peripheral_address(DMA1, DMA_CHANNEL1, (u32) &ADC1_DR);
+	dma_set_memory_address(DMA1, DMA_CHANNEL1, (u32) &buff);
+	dma_set_priority(DMA1, DMA_CHANNEL1, DMA_CCR_PL_VERY_HIGH);
+	dma_set_peripheral_size(DMA1, DMA_CHANNEL1, DMA_CCR_PSIZE_16BIT);
+	dma_set_memory_size(DMA1, DMA_CHANNEL1, DMA_CCR_MSIZE_16BIT);
+	dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL1);
+	dma_set_read_from_peripheral(DMA1, DMA_CHANNEL1);
+
 	/* We configure everything for one single conversion. */
-	adc_disable_scan_mode(ADC1);
-	adc_set_single_conversion_mode(ADC1);
-	adc_enable_discontinous_mode_regular(ADC1);
+	adc_enable_scan_mode(ADC1);
+	adc_set_continous_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
-	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_1DOT5CYC);
+	adc_enable_dma(ADC1);
 
 	adc_on(ADC1);
 
@@ -221,16 +237,23 @@ int dev_tda18219_setup(void* priv __attribute__((unused)), const struct spectrum
 
 static void dev_tda18219_get_ad8307_input_power(void)
 {
-	const int nsamples = 1000;
+	const int nsamples = sizeof(buff)/sizeof(*buff);
+
+	dma_set_number_of_data(DMA1, DMA_CHANNEL1, sizeof(buff)/sizeof(*buff));
+	dma_enable_channel(DMA1, DMA_CHANNEL1);
+
+	adc_on(ADC1);
+	while(!(DMA_ISR(DMA1) & DMA_ISR_TCIF(DMA_CHANNEL1))) {}
+	DMA_IFCR(DMA1) = DMA_IFCR_CTCIF(DMA_CHANNEL1);
+
+	dma_disable_channel(DMA1, DMA_CHANNEL1);
 
 	int n;
+	printf("TS 0.0 DS");
 	for(n = 0; n < nsamples; n++) {
-		adc_on(ADC1);
-		while (!(ADC_SR(ADC1) & ADC_SR_EOC));
-		int acc = ADC_DR(ADC1);
-
-		printf("%d\n", acc);
+		printf(" %d", buff[n]);
 	}
+	printf(" DE\n");
 }
 
 int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config)
