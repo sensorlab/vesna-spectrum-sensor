@@ -219,50 +219,18 @@ int dev_tda18219_setup(void* priv __attribute__((unused)), const struct spectrum
 	return E_SPECTRUM_OK;
 }
 
-static int dev_tda18219_get_ad8307_input_power(void)
+static void dev_tda18219_get_ad8307_input_power(void)
 {
-	const int nsamples = 100;
+	const int nsamples = 1000;
 
-	int acc = 0;
 	int n;
 	for(n = 0; n < nsamples; n++) {
 		adc_on(ADC1);
 		while (!(ADC_SR(ADC1) & ADC_SR_EOC));
-		acc += ADC_DR(ADC1);
-	}
-	acc /= nsamples;
+		int acc = ADC_DR(ADC1);
 
-	/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
-	 *
-	 *              3.3 V
-	 *     Kad = ----------
-	 *           (2^12 - 1)
-	 *
-	 * AD8307
-	 *
-	 *     Kdet = 25 mV/dB  (slope)
-	 *     Adet = -84 dBm   (intercept)
-	 *
-	 * Since we are using this detector for low power signals only, TDA18219 is
-	 * at maximum gain.
-	 *
-	 *     AGC1 = 15 dB
-	 *     AGC2 = -2 dB
-	 *     AGC3 = 30 dB (guess based on measurement)
-	 *     AGC4 = 14 dB
-	 *     AGC5 = 9 dB
-	 *     --------------
-	 *     Atuner = 66 dB
-	 *
-	 * Pinput [dBm] = N * Kad / Kdet - Adet - Atuner
-	 *
-	 *                  3.3 V * 1000
-	 *              = N ------------ - 84 - 66
-	 *                  4095 * 25 V
-	 *
-	 * Note we are returning [dBm * 100]
-	 */
-	return acc * 3300 / 1024 - 15000;
+		printf("%d\n", acc);
+	}
 }
 
 int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config)
@@ -291,31 +259,16 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 		 */
 		int timestamp = ((long long) rtc_counter) * 1000 / 2048;
 
-		int n, ch;
-		for(		ch = sweep_config->channel_start, n = 0; 
-				ch < sweep_config->channel_stop && n < channel_num; 
-				ch += sweep_config->channel_step, n++) {
-			int freq = sweep_config->dev_config->channel_base_hz + \
-				   	sweep_config->dev_config->channel_spacing_hz * ch;
-			tda18219_set_frequency((struct tda18219_standard*) sweep_config->dev_config->priv,
-					freq);
+		int ch = sweep_config->channel_start;
 
-			int rssi_dbuv = tda18219_get_input_power();
+		int freq = sweep_config->dev_config->channel_base_hz + \
+				sweep_config->dev_config->channel_spacing_hz * ch;
 
-			int rssi_dbm_100;
-			if(rssi_dbuv < 40) {
-				// internal power detector in TDA18219 doesn't go below 40 dBuV
-				rssi_dbm_100 = dev_tda18219_get_ad8307_input_power();
-			} else {
-				// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
-				rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
-			}
+		tda18219_set_frequency((struct tda18219_standard*) sweep_config->dev_config->priv,
+				freq);
 
-			// extra offset determined by measurement
-			rssi_dbm_100 -= 750;
+		dev_tda18219_get_ad8307_input_power();
 
-			data[n] = rssi_dbm_100;
-		}
 		r = sweep_config->cb(sweep_config, timestamp, data);
 	} while(!r);
 

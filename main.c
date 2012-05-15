@@ -133,14 +133,6 @@ int _write(int file, char *ptr, int len)
 
 static int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
 {
-	int channel_num = spectrum_sweep_channel_num(sweep_config);
-	int n;
-	printf("TS %d.%03d DS", timestamp/1000, timestamp%1000);
-	for(n = 0; n < channel_num; n++) {
-		printf(" %d.%02d", data_list[n]/100, abs(data_list[n]%100));
-	}
-	printf(" DE\n");
-
 	if(usart_buffer_attn) {
 		return E_SPECTRUM_STOP_SWEEP;
 	} else {
