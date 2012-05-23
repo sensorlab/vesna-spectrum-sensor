@@ -21,9 +21,19 @@ ifeq ($(MODEL),sne-crewtv)
 	LIBS += -ltda18219
 	OBJS += dev-tda18219.o
 	CFLAGS += -DMODEL_TDA18219
-else
+	MODEL_OK = ok
+endif
+
+ifeq ($(MODEL),snr-trx868)
+	OBJS += dev-cc.o
+	CFLAGS += -DMODEL_CC
+	MODEL_OK = ok
+endif
+
+ifeq ($(MODEL),null)
 	OBJS += dev-dummy.o
 	CFLAGS += -DMODEL_NULL
+	MODEL_OK = ok
 endif
 
 all: $(BINARY).bin

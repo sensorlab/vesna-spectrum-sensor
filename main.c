@@ -28,6 +28,7 @@
 #include "spectrum.h"
 #include "dev-dummy.h"
 #include "dev-tda18219.h"
+#include "dev-cc.h"
 
 #define USART_BUFFER_SIZE		128
 
@@ -228,6 +229,10 @@ static void command_status(void)
 #ifdef MODEL_TDA18219
 	dev_tda18219_print_status();
 #endif
+
+#ifdef MODEL_CC
+	dev_cc1101_print_status();
+#endif
 }
 
 static void dispatch(const char* cmd)
@@ -259,6 +264,10 @@ int main(void)
 
 #ifdef MODEL_TDA18219
 	dev_tda18219_register();
+#endif
+
+#ifdef MODEL_CC
+	dev_cc_register();
 #endif
 
 #ifdef MODEL_NULL
