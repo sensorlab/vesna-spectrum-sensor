@@ -25,6 +25,7 @@
 #include <tda18219/tda18219.h>
 #include <tda18219/tda18219regs.h>
 
+#include "dev-tda18219.h"
 #include "spectrum.h"
 
 static void setup_stm32f1_peripherals(void)
