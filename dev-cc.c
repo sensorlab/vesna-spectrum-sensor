@@ -193,6 +193,8 @@ int dev_cc_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 			cc_strobe(CC_STROBE_SRX);
 			cc_wait_state(CC_MARCSTATE_RX);
 
+			systick_udelay(5000);
+
 			int8_t reg = cc_read_reg(CC_REG_RSSI);
 
 			int rssi_dbm_100 = -5920 + ((int) reg) * 50;
@@ -222,7 +224,7 @@ void dev_cc1101_print_status(void)
 	dev_cc_print_status();
 }
 
-uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
+uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	CC_REG_IOCFG2,             0x2E,
 	CC_REG_IOCFG1,             0x2E,
 	CC_REG_IOCFG0,             0x2E,
@@ -236,13 +238,16 @@ uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	CC_REG_CHANNR,             0x00,
 	CC_REG_FSCTRL1,            0x06,
 	CC_REG_FSCTRL0,            0x00,
-	CC_REG_FREQ2,              0x21,
-	CC_REG_FREQ1,              0x65,
-	CC_REG_FREQ0,              0x6A,
-	CC_REG_MDMCFG4,            0x49,
+	/* fc = 835.919678 MHz */
+	CC_REG_FREQ2,              0x20,
+	CC_REG_FREQ1,              0x26,
+	CC_REG_FREQ0,              0x98,
+	/* bw = 101.563 kHz */
+	CC_REG_MDMCFG4,            0xC9,
 	CC_REG_MDMCFG3,            0x93,
 	CC_REG_MDMCFG2,            0x70,
-	CC_REG_MDMCFG1,            0x22,
+	/* dfch = 49.987 kHz */
+	CC_REG_MDMCFG1,            0x20,
 	CC_REG_MDMCFG0,            0xF8,
 	CC_REG_DEVIATN,            0x34,
 	CC_REG_MCSM2,              0x07,
@@ -287,106 +292,191 @@ uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_800khz_init_seq[] = {
-	CC_REG_IOCFG2,         0x2E,
-	CC_REG_IOCFG1,         0x2E,
-	CC_REG_IOCFG0,         0x2E,
-	CC_REG_FIFOTHR,        0x07,
-	CC_REG_SYNC1,          0xD3,
-	CC_REG_SYNC0,          0x91,
-	CC_REG_PKTLEN,         0xFF,
-	CC_REG_PKTCTRL1,       0x04,
-	CC_REG_PKTCTRL0,       0x12,
-	CC_REG_ADDR,           0x00,
-	CC_REG_CHANNR,         0x00,
-	CC_REG_FSCTRL1,        0x06,
-	CC_REG_FSCTRL0,        0x00,
-	CC_REG_FREQ2,          0x20,
-	CC_REG_FREQ1,          0x26,
-	CC_REG_FREQ0,          0x98,
-	CC_REG_MDMCFG4,        0x09,
-	CC_REG_MDMCFG3,        0x84,
-	CC_REG_MDMCFG2,        0x70,
-	CC_REG_MDMCFG1,        0x22,
-	CC_REG_MDMCFG0,        0xE5,
-	CC_REG_DEVIATN,        0x67,
-	CC_REG_MCSM2,          0x07,
-	CC_REG_MCSM1,          0x30,
-	CC_REG_MCSM0,          0x18,
-	CC_REG_FOCCFG,         0x16,
-	CC_REG_BSCFG,          0x6C,
-	CC_REG_AGCCTRL2,       0x43,
-	CC_REG_AGCCTRL1,       0x40,
-	CC_REG_AGCCTRL0,       0x91,
-	CC_REG_WOREVT1,        0x87,
-	CC_REG_WOREVT0,        0x6B,
-	CC_REG_WORCTRL,        0xFB,
-	CC_REG_FREND1,         0x56,
-	CC_REG_FREND0,         0x10,
-	CC_REG_FSCAL3,         0xE9,
-	CC_REG_FSCAL2,         0x2A,
-	CC_REG_FSCAL1,         0x00,
-	CC_REG_FSCAL0,         0x1F,
-	CC_REG_RCCTRL1,        0x41,
-	CC_REG_RCCTRL0,        0x00,
-	CC_REG_FSTEST,         0x59,
-	CC_REG_PTEST,          0x7F,
-	CC_REG_AGCTEST,        0x3F,
-	CC_REG_TEST2,          0x88,
-	CC_REG_TEST1,          0x31,
-	CC_REG_TEST0,          0x09,
-	CC_REG_PARTNUM,        0x00,
-	CC_REG_VERSION,        0x04,
-	CC_REG_FREQEST,        0x00,
-	CC_REG_LQI,            0x00,
-	CC_REG_RSSI,           0x00,
-	CC_REG_MARCSTATE,      0x00,
-	CC_REG_WORTIME1,       0x00,
-	CC_REG_WORTIME0,       0x00,
-	CC_REG_PKTSTATUS,      0x00,
-	CC_REG_VCO_VC_DAC,     0x00,
-	CC_REG_TXBYTES,        0x00,
-	CC_REG_RXBYTES,        0x00,
-	CC_REG_RCCTRL1_STATUS, 0x00,
-	CC_REG_RCCTRL0_STATUS, 0x00,
-	0xFF,		       0xFF
+uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
+	CC_REG_IOCFG2,             0x2E,
+	CC_REG_IOCFG1,             0x2E,
+	CC_REG_IOCFG0,             0x2E,
+	CC_REG_FIFOTHR,            0x07,
+	CC_REG_SYNC1,              0xD3,
+	CC_REG_SYNC0,              0x91,
+	CC_REG_PKTLEN,             0xFF,
+	CC_REG_PKTCTRL1,           0x04,
+	CC_REG_PKTCTRL0,           0x12,
+	CC_REG_ADDR,               0x00,
+	CC_REG_CHANNR,             0x00,
+	CC_REG_FSCTRL1,            0x06,
+	CC_REG_FSCTRL0,            0x00,
+	/* fc = 835.919678 MHz */
+	CC_REG_FREQ2,              0x20,
+	CC_REG_FREQ1,              0x26,
+	CC_REG_FREQ0,              0x98,
+	/* bw = 203.125 kHz */
+	CC_REG_MDMCFG4,            0x89,
+	CC_REG_MDMCFG3,            0x93,
+	CC_REG_MDMCFG2,            0x70,
+	/* dfch = 49.987 kHz */
+	CC_REG_MDMCFG1,            0x20,
+	CC_REG_MDMCFG0,            0xF8,
+	CC_REG_DEVIATN,            0x34,
+	CC_REG_MCSM2,              0x07,
+	CC_REG_MCSM1,              0x30,
+	CC_REG_MCSM0,              0x18,
+	CC_REG_FOCCFG,             0x16,
+	CC_REG_BSCFG,              0x6C,
+	CC_REG_AGCCTRL2,           0x43,
+	CC_REG_AGCCTRL1,           0x40,
+	CC_REG_AGCCTRL0,           0x91,
+	CC_REG_WOREVT1,            0x87,
+	CC_REG_WOREVT0,            0x6B,
+	CC_REG_WORCTRL,            0xFB,
+	CC_REG_FREND1,             0x56,
+	CC_REG_FREND0,             0x10,
+	CC_REG_FSCAL3,             0xE9,
+	CC_REG_FSCAL2,             0x2A,
+	CC_REG_FSCAL1,             0x00,
+	CC_REG_FSCAL0,             0x1F,
+	CC_REG_RCCTRL1,            0x41,
+	CC_REG_RCCTRL0,            0x00,
+	CC_REG_FSTEST,             0x59,
+	CC_REG_PTEST,              0x7F,
+	CC_REG_AGCTEST,            0x3F,
+	CC_REG_TEST2,              0x81,
+	CC_REG_TEST1,              0x35,
+	CC_REG_TEST0,              0x09,
+	CC_REG_PARTNUM,            0x00,
+	CC_REG_VERSION,            0x04,
+	CC_REG_FREQEST,            0x00,
+	CC_REG_LQI,                0x00,
+	CC_REG_RSSI,               0x00,
+	CC_REG_MARCSTATE,          0x00,
+	CC_REG_WORTIME1,           0x00,
+	CC_REG_WORTIME0,           0x00,
+	CC_REG_PKTSTATUS,          0x00,
+	CC_REG_VCO_VC_DAC,         0x00,
+	CC_REG_TXBYTES,            0x00,
+	CC_REG_RXBYTES,            0x00,
+	CC_REG_RCCTRL1_STATUS,     0x00,
+	CC_REG_RCCTRL0_STATUS,     0x00,
+	0xFF,			   0xFF
+};
+
+uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
+	CC_REG_IOCFG2,             0x2E,
+	CC_REG_IOCFG1,             0x2E,
+	CC_REG_IOCFG0,             0x2E,
+	CC_REG_FIFOTHR,            0x07,
+	CC_REG_SYNC1,              0xD3,
+	CC_REG_SYNC0,              0x91,
+	CC_REG_PKTLEN,             0xFF,
+	CC_REG_PKTCTRL1,           0x04,
+	CC_REG_PKTCTRL0,           0x12,
+	CC_REG_ADDR,               0x00,
+	CC_REG_CHANNR,             0x00,
+	CC_REG_FSCTRL1,            0x06,
+	CC_REG_FSCTRL0,            0x00,
+	/* fc = 835.919678 MHz */
+	CC_REG_FREQ2,              0x20,
+	CC_REG_FREQ1,              0x26,
+	CC_REG_FREQ0,              0x98,
+	/* bw = 406.250 kHz */
+	CC_REG_MDMCFG4,            0x49,
+	CC_REG_MDMCFG3,            0x93,
+	CC_REG_MDMCFG2,            0x70,
+	/* dfch = 49.987 kHz */
+	CC_REG_MDMCFG1,            0x20,
+	CC_REG_MDMCFG0,            0xF8,
+	CC_REG_DEVIATN,            0x34,
+	CC_REG_MCSM2,              0x07,
+	CC_REG_MCSM1,              0x30,
+	CC_REG_MCSM0,              0x18,
+	CC_REG_FOCCFG,             0x16,
+	CC_REG_BSCFG,              0x6C,
+	CC_REG_AGCCTRL2,           0x43,
+	CC_REG_AGCCTRL1,           0x40,
+	CC_REG_AGCCTRL0,           0x91,
+	CC_REG_WOREVT1,            0x87,
+	CC_REG_WOREVT0,            0x6B,
+	CC_REG_WORCTRL,            0xFB,
+	CC_REG_FREND1,             0x56,
+	CC_REG_FREND0,             0x10,
+	CC_REG_FSCAL3,             0xE9,
+	CC_REG_FSCAL2,             0x2A,
+	CC_REG_FSCAL1,             0x00,
+	CC_REG_FSCAL0,             0x1F,
+	CC_REG_RCCTRL1,            0x41,
+	CC_REG_RCCTRL0,            0x00,
+	CC_REG_FSTEST,             0x59,
+	CC_REG_PTEST,              0x7F,
+	CC_REG_AGCTEST,            0x3F,
+	CC_REG_TEST2,              0x81,
+	CC_REG_TEST1,              0x35,
+	CC_REG_TEST0,              0x09,
+	CC_REG_PARTNUM,            0x00,
+	CC_REG_VERSION,            0x04,
+	CC_REG_FREQEST,            0x00,
+	CC_REG_LQI,                0x00,
+	CC_REG_RSSI,               0x00,
+	CC_REG_MARCSTATE,          0x00,
+	CC_REG_WORTIME1,           0x00,
+	CC_REG_WORTIME0,           0x00,
+	CC_REG_PKTSTATUS,          0x00,
+	CC_REG_VCO_VC_DAC,         0x00,
+	CC_REG_TXBYTES,            0x00,
+	CC_REG_RXBYTES,            0x00,
+	CC_REG_RCCTRL1_STATUS,     0x00,
+	CC_REG_RCCTRL0_STATUS,     0x00,
+	0xFF,			   0xFF
+};
+
+const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
+	.name			= "868 MHz ISM, 100 kHz bandwidth",
+
+	.channel_base_hz 	= 867999729,
+	.channel_spacing_hz	= 49987,
+	.channel_bw_hz		= 101563,
+	.channel_num		= 40,
+
+	.channel_time_ms	= 5,
+
+	.priv			= dev_cc1101_868mhz_400khz_init_seq
+};
+
+const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
+	.name			= "868 MHz ISM, 200 kHz bandwidth",
+
+	.channel_base_hz 	= 867999729,
+	.channel_spacing_hz	= 49987,
+	.channel_bw_hz		= 203125,
+	.channel_num		= 40,
+
+	.channel_time_ms	= 5,
+
+	.priv			= dev_cc1101_868mhz_400khz_init_seq
 };
 
 const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth",
 
-	.channel_base_hz 	= 868299866,
-	.channel_spacing_hz	= 199951,
-	.channel_bw_hz		= 400000,
-	.channel_num		= 5,
+	.channel_base_hz 	= 867999729,
+	.channel_spacing_hz	= 49987,
+	.channel_bw_hz		= 406250,
+	.channel_num		= 40,
 
-	.channel_time_ms	= 0,
+	.channel_time_ms	= 5,
 
 	.priv			= dev_cc1101_868mhz_400khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_800khz = {
-	.name			= "868 MHz ISM, 800 kHz bandwidth",
-
-	.channel_base_hz 	= 867999729,
-	.channel_spacing_hz	= 199797,
-	.channel_bw_hz		= 800000,
-	.channel_num		= 3,
-
-	.channel_time_ms	= 0,
-
-	.priv			= dev_cc1101_868mhz_800khz_init_seq
-};
-
 const struct spectrum_dev_config* dev_cc1101_config_list[] = {
-	&dev_cc1101_868mhz_400khz, 
-	&dev_cc1101_868mhz_800khz };
+	&dev_cc1101_868mhz_100khz,
+	&dev_cc1101_868mhz_200khz,
+	&dev_cc1101_868mhz_400khz };
 
 const struct spectrum_dev dev_cc1101 = {
 	.name = "cc1101",
 
 	.dev_config_list	= dev_cc1101_config_list,
-	.dev_config_num		= 2,
+	.dev_config_num		= 3,
 
 	.dev_reset		= dev_cc_reset,
 	.dev_setup		= dev_cc_setup,
