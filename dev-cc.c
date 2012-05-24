@@ -144,6 +144,8 @@ int dev_cc_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	short int *data;
+	/* FIXME: calculate value according to the formula in the datasheet */
+	const uint32_t rssi_delay_us = 5000;
 
 	rtc_set_counter_val(0);
 
@@ -176,7 +178,7 @@ int dev_cc_run(void* priv, const struct spectrum_sweep_config* sweep_config)
 			cc_strobe(CC_STROBE_SRX);
 			cc_wait_state(CC_MARCSTATE_RX);
 
-			systick_udelay(5000);
+			systick_udelay(rssi_delay_us);
 
 			int8_t reg = cc_read_reg(CC_REG_RSSI);
 
