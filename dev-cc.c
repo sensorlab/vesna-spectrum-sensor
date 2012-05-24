@@ -60,27 +60,10 @@ static void systick_udelay(uint32_t usecs)
 static void cc_reset() 
 {
 	gpio_clear(CC_GPIO, CC_PIN_NSS);
-
-	gpio_set(CC_GPIO, CC_PIN_SCK);
-	gpio_clear(CC_GPIO, CC_PIN_MOSI);
-
-	gpio_set(CC_GPIO, CC_PIN_NSS);
-	systick_udelay(10);
-	gpio_clear(CC_GPIO, CC_PIN_NSS);
-	systick_udelay(10);
-	gpio_set(CC_GPIO, CC_PIN_NSS);
-	systick_udelay(200);
-	gpio_clear(CC_GPIO, CC_PIN_NSS);
-
 	cc_wait_while_miso_high();
-
-	systick_udelay(300);
 
 	spi_send(SPI2, CC_STROBE_SRES);
-
 	cc_wait_while_miso_high();
-
-	systick_udelay(300);
 
 	gpio_set(CC_GPIO, CC_PIN_NSS);
 }
