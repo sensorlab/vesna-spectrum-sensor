@@ -231,7 +231,13 @@ static void command_status(void)
 #endif
 
 #ifdef TUNER_CC
+#if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNE_ISMTV_868)
 	dev_cc1101_print_status();
+#endif
+
+#if defined(MODEL_SNR_TRX_2400) || defined(MODEL_SNE_ISMTV_2400)
+	dev_cc2500_print_status();
+#endif
 #endif
 }
 

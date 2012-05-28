@@ -30,6 +30,12 @@ ifeq ($(MODEL),sne-ismtv-868)
 	MODEL_OK = ok
 endif
 
+ifeq ($(MODEL),sne-ismtv-2400)
+	OBJS += dev-cc.o
+	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_2400
+	MODEL_OK = ok
+endif
+
 ifeq ($(MODEL),snr-trx-868)
 	OBJS += dev-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_868

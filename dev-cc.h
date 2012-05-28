@@ -18,7 +18,7 @@
 
 #endif
 
-#ifdef MODEL_SNE_ISMTV_868
+#if defined(MODEL_SNE_ISMTV_868) || defined(MODEL_SNE_ISMTV_2400)
 
 #	define CC_GPIO_NSS	GPIOB
 #	define CC_PIN_NSS	GPIO9
@@ -185,4 +185,5 @@
 
 int dev_cc_register(void);
 void dev_cc1101_print_status(void);
+void dev_cc2500_print_status(void);
 #endif
