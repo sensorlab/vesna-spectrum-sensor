@@ -24,15 +24,21 @@ ifeq ($(MODEL),sne-crewtv)
 	MODEL_OK = ok
 endif
 
-ifeq ($(MODEL),snr-trx868)
+ifeq ($(MODEL),sne-ismtv-868)
 	OBJS += dev-cc.o
-	CFLAGS += -DMODEL_CC
+	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_868
+	MODEL_OK = ok
+endif
+
+ifeq ($(MODEL),snr-trx-868)
+	OBJS += dev-cc.o
+	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_868
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),null)
 	OBJS += dev-dummy.o
-	CFLAGS += -DMODEL_NULL
+	CFLAGS += -DTUNER_NULL
 	MODEL_OK = ok
 endif
 
@@ -44,8 +50,8 @@ all: $(BINARY).bin
 %.elf: $(OBJS) $(LDSCRIPT)
 	$(LD) -o $(*).elf $(OBJS) $(LIBS) $(LDFLAGS)
 
-%.o: %.c Makefile
-	$(CC) $(CFLAGS) -DMODEL=$(MODEL) -o $@ -c $<
+%.o: %.c check-model
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
 	rm -f *.o
@@ -64,6 +70,11 @@ clean:
 		shutdown \
 	"
 
-.PHONY: clean
+check-model:
+ifndef MODEL_OK
+	$(error Please select hardware model with MODEL environment)
+endif
+
+.PHONY: clean check-model
 
 -include $(OBJS:.o=.d)

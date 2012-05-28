@@ -266,7 +266,7 @@ int main(void)
 	dev_tda18219_register();
 #endif
 
-#ifdef MODEL_CC
+#ifdef TUNER_CC
 	dev_cc_register();
 #endif
 

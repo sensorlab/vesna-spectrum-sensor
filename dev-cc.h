@@ -1,12 +1,16 @@
 #ifndef HAVE_DEV_CC_H
 #define HAVE_DEV_CC_H
 
-#define CC_GPIO		GPIOB
+#ifdef MODEL_SNR_TRX_868
 
-#define CC_PIN_NSS	GPIO12
-#define CC_PIN_SCK	GPIO13
-#define CC_PIN_MISO	GPIO14
-#define CC_PIN_MOSI	GPIO15
+#	define CC_GPIO		GPIOB
+
+#	define CC_PIN_NSS	GPIO12
+#	define CC_PIN_SCK	GPIO13
+#	define CC_PIN_MISO	GPIO14
+#	define CC_PIN_MOSI	GPIO15
+
+#endif
 
 // Configuration Registers
 #define CC_REG_IOCFG2           0x00        // GDO2 output pin configuration
