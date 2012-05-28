@@ -11,31 +11,40 @@
 
 static void setup_stm32f1_peripherals(void)
 {
-	rcc_peripheral_enable_clock(&RCC_APB1ENR,
-			RCC_APB1ENR_SPI2EN);
+	u32 br;
+	if(CC_SPI == SPI1) {
+		rcc_peripheral_enable_clock(&RCC_APB2ENR,
+				RCC_APB2ENR_SPI1EN);
+		br = SPI_CR1_BAUDRATE_FPCLK_DIV_4;
+	} else if(CC_SPI == SPI2) {
+		rcc_peripheral_enable_clock(&RCC_APB1ENR,
+				RCC_APB1ENR_SPI2EN);
+		br = SPI_CR1_BAUDRATE_FPCLK_DIV_2;
+	}
 
-	gpio_set_mode(CC_GPIO, GPIO_MODE_OUTPUT_10_MHZ, 
+	gpio_set_mode(CC_GPIO_NSS, GPIO_MODE_OUTPUT_10_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, CC_PIN_NSS);
-	gpio_set_mode(CC_GPIO, GPIO_MODE_OUTPUT_10_MHZ, 
+
+	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_OUTPUT_10_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, CC_PIN_SCK);
-	gpio_set_mode(CC_GPIO, GPIO_MODE_OUTPUT_10_MHZ, 
-			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, CC_PIN_MISO);
-	gpio_set_mode(CC_GPIO, GPIO_MODE_OUTPUT_10_MHZ, 
+	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_FLOAT, CC_PIN_MISO);
+	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_OUTPUT_10_MHZ,
 			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, CC_PIN_MOSI);
 
 
-	spi_init_master(SPI2,
-			SPI_CR1_BAUDRATE_FPCLK_DIV_4, 
+	spi_init_master(CC_SPI,
+			br,
 			SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE, 
 			SPI_CR1_CPHA_CLK_TRANSITION_1,
 			SPI_CR1_DFF_8BIT,
 			SPI_CR1_MSBFIRST);
-	spi_set_unidirectional_mode(SPI2);
-	spi_set_full_duplex_mode(SPI2);
-	spi_enable_software_slave_management(SPI2);
-	spi_set_nss_high(SPI2);
+	spi_set_unidirectional_mode(CC_SPI);
+	spi_set_full_duplex_mode(CC_SPI);
+	spi_enable_software_slave_management(CC_SPI);
+	spi_set_nss_high(CC_SPI);
 
-	spi_enable(SPI2);
+	spi_enable(CC_SPI);
 
 
 	systick_set_reload(0x00ffffff);
@@ -45,7 +54,7 @@ static void setup_stm32f1_peripherals(void)
 
 static void cc_wait_while_miso_high(void)
 {
-	while(gpio_get(CC_GPIO, CC_PIN_MISO));
+	while(gpio_get(CC_GPIO_SPI, CC_PIN_MISO));
 }
 
 static const uint32_t systick_udelay_calibration = 6;
@@ -59,54 +68,54 @@ static void systick_udelay(uint32_t usecs)
 
 static void cc_reset() 
 {
-	gpio_clear(CC_GPIO, CC_PIN_NSS);
+	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
 	cc_wait_while_miso_high();
 
-	spi_send(SPI2, CC_STROBE_SRES);
+	spi_send(CC_SPI, CC_STROBE_SRES);
 	cc_wait_while_miso_high();
 
-	gpio_set(CC_GPIO, CC_PIN_NSS);
+	gpio_set(CC_GPIO_NSS, CC_PIN_NSS);
 }
 
 uint16_t cc_read_reg(uint8_t reg)
 {
-	gpio_clear(CC_GPIO, CC_PIN_NSS);
+	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
 	cc_wait_while_miso_high();
 
-	spi_send(SPI2, reg|0x80);
-	spi_read(SPI2);
+	spi_send(CC_SPI, reg|0x80);
+	spi_read(CC_SPI);
 
-	spi_send(SPI2, 0);
-	uint16_t value = spi_read(SPI2);
+	spi_send(CC_SPI, 0);
+	uint16_t value = spi_read(CC_SPI);
 
-	gpio_set(CC_GPIO,CC_PIN_NSS);
+	gpio_set(CC_GPIO_NSS,CC_PIN_NSS);
 
 	return value;
 }
 
 void cc_write_reg(uint8_t reg, uint8_t value) 
 {
-	gpio_clear(CC_GPIO,CC_PIN_NSS);
+	gpio_clear(CC_GPIO_NSS,CC_PIN_NSS);
 	cc_wait_while_miso_high();
 
-	spi_send(SPI2, reg);
-	spi_read(SPI2);
+	spi_send(CC_SPI, reg);
+	spi_read(CC_SPI);
 
-	spi_send(SPI2, value);
-	spi_read(SPI2);
+	spi_send(CC_SPI, value);
+	spi_read(CC_SPI);
 
-	gpio_set(CC_GPIO,CC_PIN_NSS);
+	gpio_set(CC_GPIO_NSS,CC_PIN_NSS);
 }
 
 uint16_t cc_strobe(uint8_t strobe) 
 {
-	gpio_clear(CC_GPIO, CC_PIN_NSS);
+	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
 	cc_wait_while_miso_high();
 
-	spi_send(SPI2, strobe);
-	uint16_t value = spi_read(SPI2);
+	spi_send(CC_SPI, strobe);
+	uint16_t value = spi_read(CC_SPI);
 
-	gpio_set(CC_GPIO, CC_PIN_NSS);
+	gpio_set(CC_GPIO_NSS, CC_PIN_NSS);
 
 	return value;
 }

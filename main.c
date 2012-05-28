@@ -230,7 +230,7 @@ static void command_status(void)
 	dev_tda18219_print_status();
 #endif
 
-#ifdef MODEL_CC
+#ifdef TUNER_CC
 	dev_cc1101_print_status();
 #endif
 }

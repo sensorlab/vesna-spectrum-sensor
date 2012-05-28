@@ -1,14 +1,34 @@
 #ifndef HAVE_DEV_CC_H
 #define HAVE_DEV_CC_H
 
+#include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/spi.h>
+
 #ifdef MODEL_SNR_TRX_868
 
-#	define CC_GPIO		GPIOB
-
+#	define CC_GPIO_NSS	GPIOB
 #	define CC_PIN_NSS	GPIO12
+
+#	define CC_GPIO_SPI	GPIOB
 #	define CC_PIN_SCK	GPIO13
 #	define CC_PIN_MISO	GPIO14
 #	define CC_PIN_MOSI	GPIO15
+
+#	define CC_SPI		SPI2
+
+#endif
+
+#ifdef MODEL_SNE_ISMTV_868
+
+#	define CC_GPIO_NSS	GPIOB
+#	define CC_PIN_NSS	GPIO9
+
+#	define CC_GPIO_SPI	GPIOA
+#	define CC_PIN_SCK	GPIO5
+#	define CC_PIN_MISO	GPIO6
+#	define CC_PIN_MOSI	GPIO7
+
+#	define CC_SPI		SPI1
 
 #endif
 
