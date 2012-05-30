@@ -226,7 +226,7 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 
 static void command_status(void)
 {
-#ifdef MODEL_TDA18219
+#ifdef TUNER_TDA18219
 	dev_tda18219_print_status();
 #endif
 
@@ -268,7 +268,7 @@ int main(void)
 {
 	setup();
 
-#ifdef MODEL_TDA18219
+#ifdef TUNER_TDA18219
 	dev_tda18219_register();
 #endif
 
@@ -276,7 +276,7 @@ int main(void)
 	dev_cc_register();
 #endif
 
-#ifdef MODEL_NULL
+#ifdef TUNER_NULL
 	dev_dummy_register();
 #endif
 

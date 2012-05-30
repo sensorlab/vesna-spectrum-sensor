@@ -48,27 +48,27 @@ static void setup_stm32f1_peripherals(void)
 	/* VESNA v1.1 */
 	AFIO_MAPR |= AFIO_MAPR_I2C1_REMAP;
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO8);
+			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, TDA_PIN_SCL);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO9);
+			GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, TDA_PIN_SDA);
 
 	/* GPIO pin for TDA18219 IRQ */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, GPIO7);
+			GPIO_CNF_INPUT_FLOAT, TDA_PIN_IRQ);
 
 	/* GPIO pin for TDA18219 IF AGC */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO4);
+			GPIO_CNF_OUTPUT_PUSHPULL, TDA_PIN_IF_AGC);
 	/* Set to lowest gain for now */
-	gpio_clear(GPIOA, GPIO4);
+	gpio_clear(GPIOA, TDA_PIN_IF_AGC);
 
 	/* GPIO pin for AD8307 ENB */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO6);
+			GPIO_CNF_OUTPUT_PUSHPULL, TDA_PIN_ENB);
 
 	/* ADC pin for AD8307 output */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_ANALOG, GPIO0);
+			GPIO_CNF_INPUT_ANALOG, TDA_PIN_OUT);
 
 	/* Setup I2C */
 	i2c_peripheral_disable(I2C1);
@@ -107,7 +107,11 @@ static void setup_stm32f1_peripherals(void)
 
 	uint8_t channel_array[16];
 	/* Select the channel we want to convert. */
-	channel_array[0] = 0;
+	if(TDA_PIN_OUT == GPIO0) {
+		channel_array[0] = 0;
+	} else if(TDA_PIN_OUT == GPIO2) {
+		channel_array[0] = 2;
+	}
 	adc_set_regular_sequence(ADC1, 1, channel_array);
 }
 
@@ -194,7 +198,7 @@ void tda18219_write_reg(uint8_t reg, uint8_t value)
 
 void tda18219_wait_irq(void)
 {
-	while(!gpio_get(GPIOA, GPIO7));
+	while(!gpio_get(GPIOA, TDA_PIN_IRQ));
 }
 
 
@@ -275,7 +279,7 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 	}
 
 	tda18219_power_on();
-	gpio_set(GPIOA, GPIO6);
+	gpio_set(GPIOA, TDA_PIN_ENB);
 
 	do {
 		uint32_t rtc_counter = rtc_get_counter_val();
@@ -315,7 +319,7 @@ int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_confi
 		r = sweep_config->cb(sweep_config, timestamp, data);
 	} while(!r);
 
-	gpio_clear(GPIOA, GPIO6);
+	gpio_clear(GPIOA, TDA_PIN_ENB);
 	tda18219_power_standby();
 
 	free(data);

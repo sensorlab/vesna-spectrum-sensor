@@ -20,7 +20,14 @@ OPENOCD_PARAMS  ?= -f interface/olimex-arm-usb-ocd.cfg -f target/stm32f1x.cfg
 ifeq ($(MODEL),sne-crewtv)
 	LIBS += -ltda18219
 	OBJS += dev-tda18219.o
-	CFLAGS += -DMODEL_TDA18219
+	CFLAGS += -DTUNER_TDA18219 -DMODEL_SNE_CREWTV
+	MODEL_OK = ok
+endif
+
+ifeq ($(MODEL),sne-ismtv-uhf)
+	LIBS += -ltda18219
+	OBJS += dev-tda18219.o
+	CFLAGS += -DTUNER_TDA18219 -DMODEL_SNE_ISMTV_UHF
 	MODEL_OK = ok
 endif
 
