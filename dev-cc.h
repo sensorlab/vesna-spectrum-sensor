@@ -1,3 +1,22 @@
+/* Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+ * http://sensorlab.ijs.si
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+
+/* Authors:	Ales Verbic
+ * 		Zoltan Padrah
+ * 		Tomaz Solc, <tomaz.solc@ijs.si> */
 #ifndef HAVE_DEV_CC_H
 #define HAVE_DEV_CC_H
 
@@ -32,7 +51,7 @@
 
 #endif
 
-// Configuration Registers
+/* Configuration Registers */
 #define CC_REG_IOCFG2           0x00        // GDO2 output pin configuration
 #define CC_REG_IOCFG1           0x01        // GDO1 output pin configuration
 #define CC_REG_IOCFG0           0x02        // GDO0 output pin configuration
@@ -82,7 +101,8 @@
 #define CC_REG_TEST0            0x2E        // Various test settings
 #define CC_REG_RCCTRL1_STATUS   (0x3C | 0xc0)
 #define CC_REG_RCCTRL0_STATUS   (0x3D | 0xc0)
-// Status registers
+
+/* Status registers */
 #define CC_REG_PARTNUM          (0x30 | 0xc0)        // Part number
 #define CC_REG_VERSION          (0x31 | 0xc0)        // Current version number
 #define CC_REG_FREQEST          (0x32 | 0xc0)       // Frequency offset estimate
@@ -95,17 +115,18 @@
 #define CC_REG_VCO_VC_DAC       (0x39 | 0xc0)        // Current setting from PLL cal module
 #define CC_REG_TXBYTES          (0x3A | 0xc0)        // Underflow and # of bytes in TXFIFO
 #define CC_REG_RXBYTES          (0x3B | 0xc0)        // Overflow and # of bytes in RXFIFO
-// Multi byte memory locations
+
+/* Multi byte memory locations */
 #define CC_REG_PATABLE          0x3E
 #define CC_REG_TXFIFO           0x3F
 #define CC_REG_RXFIFO           0x3F
 
-// Definitions for burst/single access to registers
+/* Definitions for burst/single access to registers */
 #define CC_REG_WRITE_BURST      0x40
 #define CC_REG_READ_SINGLE      0x80
 #define CC_REG_READ_BURST       0xC0
 
-// Strobe commands
+/* Strobe commands */
 #define CC_STROBE_SRES             0x30        // Reset chip.
 #define CC_STROBE_SFSTXON          0x31        // Enable and calibrate frequency synthesizer (if MCSM0.FS_AUTOCAL=1).
 // If in RX/TX: Go to a wait state where only the synthesizer is
@@ -130,16 +151,14 @@
 // bytes for simpler software.
 
 
-//----------------------------------------------------------------------------------
-// Chip Status Byte
-//----------------------------------------------------------------------------------
+/* Chip status byte */
 
-// Bit fields in the chip status byte
+/* Bit fields in the chip status byte */
 #define CC_STATUS_CHIP_RDYn_BM             0x80
 #define CC_STATUS_STATE_BM                 0x70
 #define CC_STATUS_FIFO_BYTES_AVAILABLE_BM  0x0F
 
-// Chip states
+/* Chip states */
 #define CC_STATE_IDLE                      0x00
 #define CC_STATE_RX                        0x10
 #define CC_STATE_TX                        0x20
@@ -149,8 +168,7 @@
 #define CC_STATE_RX_OVERFLOW               0x60
 #define CC_STATE_TX_UNDERFLOW              0x70
 
-
-// possible values of MACRSTATE register
+/* possible values of MACRSTATE register */
 #define CC_MARCSTATE_SLEEP                   0x00
 #define CC_MARCSTATE_IDLE                    0x01
 #define CC_MARCSTATE_XOFF                    0x02
@@ -175,13 +193,10 @@
 #define CC_MARCSTATE_RXTX_SWITCH             0x15
 #define CC_MARCSTATE_TXFIFO_UNDERFLOW        0x16
 
-
-//----------------------------------------------------------------------------------
-// Other register bit fields
-//----------------------------------------------------------------------------------
+/* Other register bit fields */
 #define CC_REG_LQI_CRC_OK_BM                   0x80
 #define CC_REG_LQI_EST_BM                      0x7F
-#define CC_REG_PKTSTATUS_SFD				   0x08
+#define CC_REG_PKTSTATUS_SFD		       0x08
 
 int dev_cc_register(void);
 void dev_cc1101_print_status(void);
