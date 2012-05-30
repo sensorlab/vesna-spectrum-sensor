@@ -14,16 +14,45 @@ A configuration is characterized by the frequency of the bottom-most
 channel, channel spacing, channel bandwidth, number of channels and the
 time it takes the device to perform a measurement for a single channel.
 
-Currently two hardware models are supported:
+Currently the following hardware models are supported (selectable via the
+MODEL environment variable when invoking make):
 
-- MODEL_TDA18219
+- sne-crewtv
 
   VESNA SNC + SNE-CREWTV hardware configuration
 
   wide-band energy detection in the UHF band using NXP TDA18219HN tuner
   (also requires proprietary libtda18219 VESNA library)
 
-- MODEL_NULL
+- sne-ismtv-uhf
+
+  VESNA SNC + SNE-ISMTV-UHF hardware configuration
+
+  wide-band energy detection in the UHF band using NXP TDA18219HN tuner
+  (also requires proprietary libtda18219 VESNA library)
+
+- sne-ismtv-868
+
+  VESNA SNC + SNE-ISMTV-868 hardware configuration
+
+  energy detection in the 868 MHz ISM band using Texas Instruments
+  CC1101.
+
+- snr-trx-868
+
+  VESNA SNC + SNR-TRX-868 hardware configuration
+
+  energy detection in the 868 MHz ISM band using Texas Instruments
+  CC1101.
+
+- sne-ismtv-2400
+
+  VESNA SNC + SNE-ISMTV-2400 hardware configuration
+
+  energy detection in the 2.4 GHz ISM band using Texas Instruments
+  CC2500.
+
+- null
 
   VESNA SNC hardware configuration
 
