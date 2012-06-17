@@ -74,6 +74,7 @@ clean:
 
 %.u: %.bin
 	$(OPENOCD) $(OPENOCD_PARAMS) -c "\
+		reset_config trst_and_srst; \
 		init; \
 		reset halt; \
 		poll; \
