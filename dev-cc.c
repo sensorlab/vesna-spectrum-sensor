@@ -144,14 +144,15 @@ void cc_wait_state(uint8_t state)
 	while(cc_read_reg(CC_REG_MARCSTATE) != state);
 }
 
-int dev_cc_reset(void* priv) 
+int dev_cc_reset(void* priv __attribute__((unused))) 
 {
 	setup_stm32f1_peripherals();
 	cc_reset();
 	return E_SPECTRUM_OK;
 }
 
-int dev_cc_setup(void* priv, const struct spectrum_sweep_config* sweep_config) 
+int dev_cc_setup(void* priv __attribute__((unused)), 
+		const struct spectrum_sweep_config* sweep_config) 
 {
 	uint8_t *init_seq = (uint8_t*) sweep_config->dev_config->priv;
 
@@ -168,7 +169,8 @@ int dev_cc_setup(void* priv, const struct spectrum_sweep_config* sweep_config)
 	return E_SPECTRUM_OK;
 }
 
-int dev_cc_run(void* priv, const struct spectrum_sweep_config* sweep_config)
+int dev_cc_run(void* priv __attribute__((unused)),
+		const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	short int *data;

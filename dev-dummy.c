@@ -20,12 +20,14 @@
 
 #include "spectrum.h"
 
-int dev_dummy_reset(void* priv)
+int dev_dummy_reset(void* priv __attribute__((unused)))
 {
 	return E_SPECTRUM_OK;
 }
 
-int dev_dummy_setup(void* priv, const struct spectrum_sweep_config* sweep_config) 
+int dev_dummy_setup(void* priv __attribute__((unused)),
+		const struct spectrum_sweep_config* sweep_config 
+		__attribute__((unused))) 
 {
 	return E_SPECTRUM_OK;
 }
@@ -42,7 +44,8 @@ static short int get_random(void)
 	return -(rand() % 10000);
 }
 
-int dev_dummy_run(void* priv, const struct spectrum_sweep_config* sweep_config)
+int dev_dummy_run(void* priv __attribute__((unused)),
+		const struct spectrum_sweep_config* sweep_config)
 {
 	int r, channel_num, n;
 	short int *data;

@@ -202,7 +202,7 @@ void tda18219_wait_irq(void)
 }
 
 
-int dev_tda18219_reset(void* priv) 
+int dev_tda18219_reset(void* priv __attribute__((unused))) 
 {
 	setup_stm32f1_peripherals();
 	tda18219_power_on();
@@ -211,7 +211,7 @@ int dev_tda18219_reset(void* priv)
 	return E_SPECTRUM_OK;
 }
 
-int dev_tda18219_setup(void* priv, const struct spectrum_sweep_config* sweep_config) 
+int dev_tda18219_setup(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config) 
 {
 	tda18219_power_on();
 	tda18219_set_standard((struct tda18219_standard*) sweep_config->dev_config->priv);
@@ -265,7 +265,7 @@ static int dev_tda18219_get_ad8307_input_power(void)
 	return acc * 3300 / 1024 - 15000;
 }
 
-int dev_tda18219_run(void* priv, const struct spectrum_sweep_config* sweep_config)
+int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config)
 {
 	int r;
 	short int *data;
