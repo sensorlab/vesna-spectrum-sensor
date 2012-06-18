@@ -23,7 +23,7 @@
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/spi.h>
 
-#ifdef MODEL_SNR_TRX_868
+#if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNR_TRX_2400)
 
 #	define CC_GPIO_NSS	GPIOB
 #	define CC_PIN_NSS	GPIO12

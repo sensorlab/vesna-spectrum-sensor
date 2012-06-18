@@ -49,6 +49,12 @@ ifeq ($(MODEL),snr-trx-868)
 	MODEL_OK = ok
 endif
 
+ifeq ($(MODEL),snr-trx-2400)
+	OBJS += dev-cc.o
+	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_2400
+	MODEL_OK = ok
+endif
+
 ifeq ($(MODEL),null)
 	OBJS += dev-dummy.o
 	CFLAGS += -DTUNER_NULL

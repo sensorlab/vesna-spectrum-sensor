@@ -52,6 +52,13 @@ MODEL environment variable when invoking make):
   energy detection in the 2.4 GHz ISM band using Texas Instruments
   CC2500.
 
+- snr-trx-2400
+
+  VESNA SNC + SNR-TRX-2400 hardware configuration
+
+  energy detection in the 2.4 GHz ISM band using Texas Instruments
+  CC2500.
+
 - null
 
   VESNA SNC hardware configuration
