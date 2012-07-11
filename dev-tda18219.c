@@ -248,8 +248,11 @@ static void dev_tda18219_get_ad8307_input_power(void)
 
 	dma_disable_channel(DMA1, DMA_CHANNEL1);
 
+	struct tda18219_status status;
+	tda18219_get_status(&status);
+
 	int n;
-	printf("TS 0.0 DS");
+	printf("TS 0.0 TE %d DS", status.temperature);
 	for(n = 0; n < nsamples; n++) {
 		printf(" %d", buff[n]);
 	}
