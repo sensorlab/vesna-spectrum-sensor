@@ -367,13 +367,31 @@ const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 	.priv			= &tda18219_standard_dvbt_1700khz
 };
 
-const struct spectrum_dev_config* dev_tda18219_config_list[] = { &dev_tda18219_dvbt_1700khz };
+const struct spectrum_dev_config dev_tda18219_dvbt_8000khz = {
+	.name			= "DVB-T 8.0 MHz",
+
+	// UHF: 470 MHz to 862 MHz
+	.channel_base_hz 	= 470000000,
+	.channel_spacing_hz	= 1000,
+	.channel_bw_hz		= 8000000,
+	.channel_num		= 392000,
+
+	.channel_time_ms	= 50,
+
+	.priv			= &tda18219_standard_dvbt_8000khz
+};
+
+
+const struct spectrum_dev_config* dev_tda18219_config_list[] = {
+	&dev_tda18219_dvbt_1700khz,
+	&dev_tda18219_dvbt_8000khz
+};
 
 const struct spectrum_dev dev_tda18219 = {
 	.name = "tda18219hn",
 
 	.dev_config_list	= dev_tda18219_config_list,
-	.dev_config_num		= 1,
+	.dev_config_num		= sizeof(dev_tda18219_config_list)/sizeof(struct spectrum_dev_config*),
 
 	.dev_reset		= dev_tda18219_reset,
 	.dev_setup		= dev_tda18219_setup,
