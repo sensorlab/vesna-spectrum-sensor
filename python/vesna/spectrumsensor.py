@@ -13,11 +13,14 @@ class DeviceConfig:
 		self.name = name
 		self.device = device
 
+	def ch_to_hz(self, ch):
+		return self.base + self.spacing * ch
+
 	def get_start_hz(self):
-		return self.base
+		return self.ch_to_hz(0)
 
 	def get_stop_hz(self):
-		return self.base + self.spacing * (self.num - 1)
+		return self.ch_to_hz(self.num - 1)
 
 	def covers(self, start_hz, stop_hz):
 		"""Return true is this configuration can cover the given band
@@ -57,11 +60,11 @@ class SweepConfig:
 
 		# real frequency start, step, stop
 		# (stop_hz is the frequency of the last channel)
-		self.start_hz = config.base + config.spacing * self.start_ch
-		self.step_hz = config.spacing * self.step_ch
-		self.stop_hz = config.base + config.spacing * (self.stop_ch - 1)
+		self.start_hz = config.ch_to_hz(start_ch)
+		self.stop_hz = config.ch_to_hz(stop_ch - 1)
+		self.step_hz = config.spacing * step_ch
 
-		self.num_channels = len(range(self.start_ch, self.stop_ch, self.step_ch))
+		self.num_channels = len(range(start_ch, stop_ch, step_ch))
 
 class Sweep: pass
 
