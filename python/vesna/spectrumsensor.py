@@ -143,6 +143,20 @@ class SpectrumSensor:
 
 		return config_list
 
+	def get_status(self):
+		self.comm.write("status\n")
+
+		resp = []
+
+		while True:
+			line = self.comm.readline()
+			if line:
+				resp.append(line)
+			else:
+				break
+
+		return resp
+
 	def run(self, sweep_config, cb):
 		self.comm.write("select channel %d:%d:%d config %d,%d\n" % (
 				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
