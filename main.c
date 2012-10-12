@@ -199,6 +199,7 @@ static void command_report_on(void)
 static void command_report_off(void)
 {
 	report = 0;
+	printf("ok\n");
 }
 
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
@@ -222,6 +223,8 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	sweep_config.channel_stop = stop;
 
 	sweep_config.cb = report_cb;
+
+	printf("ok\n");
 }
 
 static void command_status(void)
