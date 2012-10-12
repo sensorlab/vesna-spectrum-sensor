@@ -1,3 +1,4 @@
+import optparse
 import os
 import numpy
 import sys
@@ -335,8 +336,8 @@ def test_identification(dut, gen):
 
 def test_all():
 
-	dut = DeviceUnderTest("/dev/ttyUSB0", "sne_ismtv_uhf_sertest", replay=False)
-	gen = SignalGenerator("/dev/usbtmc3")
+	dut = DeviceUnderTest(options.vesna_device, options.name, replay=options.replay)
+	gen = SignalGenerator(options.usbtmc_device)
 
 	test_identification(dut, gen)
 	test_settle_time(dut, gen)
@@ -344,6 +345,24 @@ def test_all():
 	test_freq_sweep(dut, gen)
 
 def main():
-	test_all()
+	parser = optparse.OptionParser()
+	parser.add_option("-d", "--vesna-device", dest="vesna_device", metavar="DEVICE",
+			help="Use VESNA spectrum sensor attached to DEVICE.", default="/dev/ttyUSB0")
+	parser.add_option("-g", "--usbtmc-device", dest="usbtmc_device", metavar="DEVICE",
+			help="Use signal generator attached to DEVICE.", default="/dev/usbtmc3")
+	parser.add_option("-i", "--id", dest="name", metavar="ID",
+			help="Use ID as identification for device under test.")
+	parser.add_option("-o", "--output", dest="name", metavar="PATH",
+			help="Write log to PATH")
+	parser.add_option("-n", "--replay", dest="replay", action="store_true",
+			help="Replay measurement from logs.")
+
+	(options, args) = parser.parse_args()
+
+	if not options.name:
+		print "Please specify ID for device under test using the \"-i\" option"
+		return
+
+	test_all(options)
 
 main()
