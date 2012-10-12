@@ -5,58 +5,29 @@ import sys
 import time
 from vesna.spectrumsensor import SpectrumSensor, SweepConfig
 
-class PyUsbTmcError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
 class usbtmc:
-    """Simple implementation of a USBTMC device interface using the
-       linux kernel usbtmc character device driver"""
-    def __init__(self, device):
-        self.device = device
-        try:
-            # Get a handle to the IO device
-            self.FILE = os.open(device, os.O_RDWR)
-        except OSError as e:
-            raise PyUsbTmcError("Error opening device: " + str(e))
-            # print >> sys.stderr, "Error opening device: ", e
-            # raise e
-            # TODO: This should throw a more descriptive exception to caller
-    
-    def write(self, command):
-        """Write command directly to the device"""
-        try:
-            os.write(self.FILE, command);
-        except OSError as e:
-            print >> sys.stderr, "Write Error: ", e
+	def __init__(self, device):
+		self.device = device
+		self.f = os.open(device, os.O_RDWR)
+	
+	def write(self, command):
+		os.write(self.f, command);
 
-    def read(self, length=4000):
-        """Read an arbitrary amount of data directly from the device"""
-        try:
-            return os.read(self.FILE, length)
-        except OSError as e:
-            if e.args[0] == 110:
-                print >> sys.stderr, "Read Error: Read timeout"
-            else:
-                print >> sys.stderr, "Read Error: ", e
-            return ""
+	def read(self, length=4000):
+		return os.read(self.f, length)
 
-    def query(self, command, length=300):
-        """Write command then read the response and return"""
-        self.write(command)
-        return self.read(length)
+	def query(self, command, length=300):
+		self.write(command)
+		return self.read(length)
 
-    def getName(self):
-        return self.query("*IDN?")
+	def get_name(self):
+		return self.query("*IDN?")
 
-    def sendReset(self):
-        self.write("*RST")
+	def send_reset(self):
+		self.write("*RST")
 
-    def close(self):
-        """Close interface to instrument and release file descriptor"""
-        os.close(self.FILE)
+	def close(self):
+		os.close(self.f)
 
 class SignalGenerator(usbtmc):
 	def rf_on(self, freq_hz, power_dbm):
