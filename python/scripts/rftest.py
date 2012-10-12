@@ -5,6 +5,12 @@ import sys
 import time
 from vesna.spectrumsensor import SpectrumSensor, SweepConfig
 
+log_f = None
+
+def log(msg):
+	log_f.write(msg + "\n")
+	print msg
+
 class usbtmc:
 	def __init__(self, device):
 		self.device = device
@@ -42,9 +48,11 @@ class SignalGenerator(usbtmc):
 		self.write("outp off\n")
 
 class DeviceUnderTest:
-	def __init__(self, device, name, replay=False):
+	def __init__(self, device, name, replay=False, log_path=None):
 		self.name = name
 		self.replay = replay
+		self.log_path = log_path
+
 		self.extra = 150
 
 		self.spectrumsensor = SpectrumSensor(device)
@@ -84,14 +92,15 @@ class DeviceUnderTest:
 		return measurements
 
 	def _measure_ch_save(self, name, measurements):
-		path = ("log/%s_%s.log" % (self.name, name)).replace("-", "m")
-		f = open(path, "w")
-		f.write("# P [dBm]\n")
-		f.write("\n".join(map(str, measurements)))
-		f.close()
+		if self.log_path:
+			path = ("%s/%s_%s.log" % (self.log_path, self.name, name)).replace("-", "m")
+			f = open(path, "w")
+			f.write("# P [dBm]\n")
+			f.write("\n".join(map(str, measurements)))
+			f.close()
 
 	def _measure_ch_replay(self, name):
-		path = ("log/%s_%s.log" % (self.name, name)).replace("-", "m")
+		path = ("%s/%s_%s.log" % (self.log_path, self.name, name)).replace("-", "m")
 		f = open(path)
 
 		return map(float, filter(lambda x:not x.startswith("#"), f))
@@ -117,7 +126,7 @@ def max_error(reference, measured):
 
 def test_power_ramp(dut, gen):
 
-	print "Start power ramp test"
+	log("Start power ramp test")
 
 	N = 100
 
@@ -128,14 +137,14 @@ def test_power_ramp(dut, gen):
 	for ch in ch_list:
 		f_hz = dut.config.ch_to_hz(ch)
 
-		print "  f = %d Hz" % (f_hz)
+		log("  f = %d Hz" % (f_hz))
 		
 		gen.rf_off()
 
 		nf = dut.measure_ch(ch, N, "power_ramp_%dhz_off" % (f_hz,))
 		nf_mean = numpy.mean(nf)
 
-		print "    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf))
+		log("    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf)))
 
 		p_dbm_start = int(round(nf_mean/10)*10-30)
 		p_dbm_step = 5
@@ -143,11 +152,11 @@ def test_power_ramp(dut, gen):
 		p_dbm_list = range(p_dbm_start, p_dbm_step, p_dbm_step)
 		pout_dbm_list = []
 		for p_dbm in p_dbm_list:
-			print "    Pin = %d dBm" % (p_dbm)
+			log("    Pin = %d dBm" % (p_dbm))
 			gen.rf_on(f_hz, p_dbm)
 			s = dut.measure_ch(ch, N, "power_ramp_%dhz_%ddbm" % (f_hz, p_dbm))
 			s_mean = numpy.mean(s)
-			print "       Pout = %f dBm, u = %f" % (s_mean, numpy.std(s))
+			log("       Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
 			pout_dbm_list.append(s_mean)
 
 		gen.rf_off()
@@ -160,33 +169,33 @@ def test_power_ramp(dut, gen):
 		f.close()
 
 		r, m = chop(p_dbm_list, pout_dbm_list, nf_mean+20, 0)
-		print "    Range %.1f - %.1f dBm" % (r[0], r[-1])
-		print "      max absolute error %.1f dBm" % (max_error(r, m))
+		log("    Range %.1f - %.1f dBm" % (r[0], r[-1]))
+		log("      max absolute error %.1f dBm" % (max_error(r, m)))
 
 		r, m = chop(p_dbm_list, pout_dbm_list, nf_mean+20, -40)
-		print "    Range %.1f - %.1f dBm" % (r[0], r[-1])
-		print "      max absolute error %.1f dBm" % (max_error(r, m))
+		log("    Range %.1f - %.1f dBm" % (r[0], r[-1]))
+		log("      max absolute error %.1f dBm" % (max_error(r, m)))
 
 		A = numpy.array([numpy.ones(len(r))])
 		n = numpy.linalg.lstsq(A.T, numpy.array(m) - numpy.array(r))[0][0]
-		print "      offset = %f dBm" % (n,)
+		log("      offset = %f dBm" % (n,))
 
 		A = numpy.array([r, numpy.ones(len(r))])
 		k, n = numpy.linalg.lstsq(A.T, m)[0]
-		print "      linear regression: k = %f, n = %f dBm" % (k, n)
+		log("      linear regression: k = %f, n = %f dBm" % (k, n))
 
-	print "End power ramp test"
+	log("End power ramp test")
 
 def test_freq_sweep(dut, gen):
 
-	print "Start frequency sweep test"
+	log("Start frequency sweep test")
 
 	N = 100
 
 	p_dbm_list = [ -90, -75, -60, -45 ]
 	for p_dbm in p_dbm_list:
 
-		print "  Pin = %d dBm" % (p_dbm,)
+		log("  Pin = %d dBm" % (p_dbm,))
 
 		nruns = 50
 		ch_num = dut.config.num
@@ -198,11 +207,11 @@ def test_freq_sweep(dut, gen):
 			f_hz = dut.config.ch_to_hz(ch)
 			f_hz_list.append(f_hz)
 
-			print "    f = %d Hz" % (f_hz)
+			log("    f = %d Hz" % (f_hz))
 			gen.rf_on(f_hz, p_dbm)
 			s = dut.measure_ch(ch, N, "freq_sweep_%ddbm_%dhz" % (p_dbm, f_hz))
 			s_mean = numpy.mean(s)
-			print "       Pout = %f dBm, u = %f" % (s_mean, numpy.std(s))
+			log("       Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
 			pout_dbm_list.append(s_mean)
 
 		gen.rf_off()
@@ -213,10 +222,10 @@ def test_freq_sweep(dut, gen):
 			f.write("%f\t%f\n" % (f_hz, pout_dbm))
 		f.close()
 
-		print "    Range %.1f - %.1f Hz" % (f_hz_list[0], f_hz_list[-1])
-		print "      max absolute error %.1f dBm" % (max_error([p_dbm]*len(f_hz_list), pout_dbm_list))
+		log("    Range %.1f - %.1f Hz" % (f_hz_list[0], f_hz_list[-1]))
+		log("      max absolute error %.1f dBm" % (max_error([p_dbm]*len(f_hz_list), pout_dbm_list)))
 
-	print "End power ramp test"
+	log("End power ramp test")
 
 def get_settle_time(measurements, settled):
 	mmax = max(settled)
@@ -228,7 +237,7 @@ def get_settle_time(measurements, settled):
 
 def test_settle_time(dut, gen):
 	
-	print "Start settle time test"
+	log("Start settle time test")
 
 	N = 1000
 
@@ -239,12 +248,12 @@ def test_settle_time(dut, gen):
 	p_dbm_list = [ -90, -50, -10 ]
 
 	for p_dbm in p_dbm_list:
-		print "  Pin = %d dBm" % (p_dbm,)
+		log("  Pin = %d dBm" % (p_dbm,))
 
 		for ch in ch_list:
 			f_hz = dut.config.ch_to_hz(ch)
 
-			print "    f = %d Hz" % (f_hz,)
+			log("    f = %d Hz" % (f_hz,))
 
 			step = 200
 
@@ -279,35 +288,36 @@ def test_settle_time(dut, gen):
 			on_settled = measurements[2*step-step/4:2*step]
 			t = get_settle_time(measurements[1*step:], on_settled)
 
-			print "      settled up in %d samples" % (t,)
+			log("      settled up in %d samples" % (t,))
 			if t >= dut.extra:
-				print "        WARNING: settle time too long for other tests!"
+				log("        WARNING: settle time too long for other tests!")
 
 			off_settled = measurements[-step/4:]
 			t = get_settle_time(measurements[2*step:], off_settled)
 
-			print "      settled down in %d samples" % (t,)
+			log("      settled down in %d samples" % (t,))
 			if t >= dut.extra:
-				print "        WARNING: settle time too long for other tests!"
+				log("        WARNING: settle time too long for other tests!")
 
-	print "End settle time test"
+	log("End settle time test")
 
 def test_identification(dut, gen):
-	print "Start identification"
-	print "  Device under test: %s" % (dut.name,)
+	log("Start identification")
+	log("  Device under test: %s" % (dut.name,))
 	if dut.replay:
-		print "  *** REPLAY ***"
+		log("  *** REPLAY ***")
 
 	resp = dut.spectrumsensor.get_status()
 	for line in resp:
-		print "    %s" % (line.strip(),)
+		log("    %s" % (line.strip(),))
 
-	print "  Signal generator: %s" % (gen.getName(),)
-	print "End identification"
+	log("  Signal generator: %s" % (gen.get_name(),))
+	log("End identification")
 
-def test_all():
+def test_all(options):
 
-	dut = DeviceUnderTest(options.vesna_device, options.name, replay=options.replay)
+	dut = DeviceUnderTest(options.vesna_device, options.name,
+			replay=options.replay, log_path=options.log_path)
 	gen = SignalGenerator(options.usbtmc_device)
 
 	test_identification(dut, gen)
@@ -323,8 +333,8 @@ def main():
 			help="Use signal generator attached to DEVICE.", default="/dev/usbtmc3")
 	parser.add_option("-i", "--id", dest="name", metavar="ID",
 			help="Use ID as identification for device under test.")
-	parser.add_option("-o", "--output", dest="name", metavar="PATH",
-			help="Write log to PATH")
+	parser.add_option("-o", "--log", dest="log_path", metavar="PATH", default="log",
+			help="Write measurement logs under PATH.")
 	parser.add_option("-n", "--replay", dest="replay", action="store_true",
 			help="Replay measurement from logs.")
 
@@ -333,6 +343,14 @@ def main():
 	if not options.name:
 		print "Please specify ID for device under test using the \"-i\" option"
 		return
+
+	try:
+		os.mkdir(options.log_path)
+	except OSError:
+		pass
+
+	global log_f
+	log_f = open("log/%s.log" % (options.name,), "w")
 
 	test_all(options)
 
