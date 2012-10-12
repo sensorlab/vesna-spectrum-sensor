@@ -216,7 +216,8 @@ def test_freq_sweep(dut, gen):
 
 		gen.rf_off()
 
-		f = open("log/%s_freq_sweep_%ddbm.log" % (dut.name, p_dbm), "w")
+		path = ("log/%s_freq_sweep_%ddbm.log" % (dut.name, p_dbm)).replace("-", "m")
+		f = open(path, "w")
 		f.write("# f [Hz]\tPout [dBm]\n")
 		for f_hz, pout_dbm in zip(f_hz_list, pout_dbm_list):
 			f.write("%f\t%f\n" % (f_hz, pout_dbm))
