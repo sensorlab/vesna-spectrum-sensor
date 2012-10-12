@@ -50,7 +50,7 @@ class SweepConfig:
 		assert start_ch >= 0
 		assert start_ch < config.num
 		assert stop_ch >= 0
-		assert stop_ch < config.num
+		assert stop_ch <= config.num
 		assert step_ch > 0
 
 		self.config = config
