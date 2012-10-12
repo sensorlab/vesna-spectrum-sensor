@@ -218,7 +218,7 @@ def test_freq_sweep(dut, gen):
 
 		nruns = 50
 		ch_num = dut.config.num
-		ch_list = [ int(ch_num*i/(nruns-1)) for i in xrange(nruns) ]
+		ch_list = [ int((ch_num-1)*i/(nruns-1)) for i in xrange(nruns) ]
 
 		f_hz_list = []
 		pout_dbm_list = []
