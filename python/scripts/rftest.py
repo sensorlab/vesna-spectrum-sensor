@@ -115,14 +115,9 @@ def chop(p_dbm_list, pout_dbm_list, min_dbm, max_dbm):
 
 	return p_dbm_list2, pout_dbm_list2
 
-def max_error(reference, measured):
-	emax = -1
-	for vr, vm in zip(reference, measured):
-		#vm = numpy.mean(vm)
-
-		emax = max(emax, abs(vr - vm))
-
-	return emax
+def max_error(pin_dbm_list, pout_dbm_list):
+	return max(	abs(i - o)
+			for i, o in zip(pin_dbm_list, pout_dbm_list) )
 
 def get_linear_range(k, n, pin_dbm_list, pout_dbm_list):
 
