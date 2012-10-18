@@ -302,6 +302,84 @@ def test_settle_time(dut, gen):
 
 	log("End settle time test")
 
+def find_zero(i_start, i_step, x, y):
+	i = i_start
+	try:
+		while y[i] > 0:
+			i += i_step
+	except IndexError:
+		return None
+
+	return numpy.interp(0, y[i-1:i+1], x[i-1:i+1])
+
+def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list):
+
+	pout_dbm_max = max(pout_dbm_list)
+	i_max = pout_dbm_list.index(pout_dbm_max)
+
+	pout_diff_list = numpy.array(pout_dbm_list) - pout_dbm_max + 3.0
+
+	f_hz_start = find_zero(i_max, -1, f_hz_list, pout_diff_list)
+	f_hz_stop = find_zero(i_max, +1, f_hz_list, pout_diff_list)
+
+	if f_hz_start is None or f_hz_stop is None:
+		log("      Can't calculate channel filter pass band!")
+	else:
+		bw = f_hz_stop - f_hz_start
+		fc_hz_real = (f_hz_stop + f_hz_start) / 2.0
+
+		log("      Poutmax = %f dBm" % (pout_dbm_max,))
+		log("      fmin = %f Hz" % (f_hz_start,))
+		log("      fmax = %f Hz" % (f_hz_stop,))
+		log("      BW(-3 dB) = %f Hz" % (bw,))
+		log("      Efc = %f Hz" % (fc_hz - fc_hz_real,))
+
+def test_channel_filter(dut, gen):
+	log("Start channel filter test")
+
+	N = 100
+
+	nruns = 3
+	ch_num = dut.config.num
+	ch_list = [ int(ch_num*(i+0.5)/nruns) for i in xrange(nruns) ]
+
+	p_dbm = -30
+
+	log("  Pin = %d dBm" % (p_dbm,))
+
+	for ch in ch_list:
+		fc_hz = dut.config.ch_to_hz(ch)
+
+		log("    fc = %d Hz" % (fc_hz,))
+
+		npoints = 40
+
+		f_hz_list = [	(fc_hz - 1.5*dut.config.bw) + 3.0 * dut.config.bw / (npoints - 1) * n
+				for n in xrange(npoints) ]
+
+		pout_dbm_list = []
+
+		for f_hz in f_hz_list:
+			log("      f = %d Hz" % (f_hz))
+			gen.rf_on(f_hz, p_dbm)
+			s = dut.measure_ch(ch, N, "channel_filter_%dhz_%dhz" % (fc_hz, f_hz))
+			s_mean = numpy.mean(s)
+			log("        Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
+			pout_dbm_list.append(s_mean)
+
+		gen.rf_off()
+
+		path = ("log/%s_channel_filter_%dhz.log" % (dut.name, fc_hz))
+		f = open(path, "w")
+		f.write("# f [Hz]\tPout [dBm]\n")
+		for f_hz, pout_dbm in zip(f_hz_list, pout_dbm_list):
+			f.write("%f\t%f\n" % (f_hz, pout_dbm))
+		f.close()
+
+		get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list)
+
+	log("End channel filter test")
+
 def test_identification(dut, gen):
 	log("Start identification")
 	log("  Device under test: %s" % (dut.name,))
@@ -325,6 +403,7 @@ def test_all(options):
 	test_settle_time(dut, gen)
 	test_power_ramp(dut, gen)
 	test_freq_sweep(dut, gen)
+	test_channel_filter(dut, gen)
 
 def main():
 	parser = optparse.OptionParser()
