@@ -327,7 +327,7 @@ def find_zero(i_start, i_step, x, y):
 
 	return numpy.interp(0, y[i-1:i+1], x[i-1:i+1])
 
-def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list):
+def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, config):
 
 	pout_dbm_max = max(pout_dbm_list)
 	i_max = pout_dbm_list.index(pout_dbm_max)
@@ -346,8 +346,12 @@ def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list):
 		log("      Poutmax = %f dBm" % (pout_dbm_max,))
 		log("      fmin = %f Hz" % (f_hz_start,))
 		log("      fmax = %f Hz" % (f_hz_stop,))
-		log("      BW(-3 dB) = %f Hz" % (bw,))
-		log("      Efc = %f Hz" % (fc_hz - fc_hz_real,))
+		log("      BW(-3 dB) = %f Hz (should be %d Hz, %.1f %%)" % (
+				bw, config.bw, 100.0 * (config.bw - bw) / bw))
+
+		efc = fc_hz - fc_hz_real
+		log("      Efc = %f Hz (%.1f %% channel)" % (
+				efc, 100.0 * efc / config.bw))
 
 def test_channel_filter(dut, gen):
 	log("Start channel filter test")
@@ -391,7 +395,7 @@ def test_channel_filter(dut, gen):
 			f.write("%f\t%f\n" % (f_hz, pout_dbm))
 		f.close()
 
-		get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list)
+		get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, dut.config)
 
 	log("End channel filter test")
 
