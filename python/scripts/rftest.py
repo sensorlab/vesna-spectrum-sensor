@@ -124,6 +124,23 @@ def max_error(reference, measured):
 
 	return emax
 
+def get_linear_range(k, n, pin_dbm_list, pout_dbm_list):
+
+	emax = -1
+	for i, (pin_dbm, pout_dbm) in enumerate(zip(pin_dbm_list, pout_dbm_list)):
+
+		pout_dbm_lin = pin_dbm * k + n
+
+		e = abs(pout_dbm - pout_dbm_lin)
+
+		if pin_dbm < -40:
+			emax = max(emax, e)
+		else:
+			if e > emax * 1.5:
+				break
+
+	log("      saturation @ Pin = %.1f dBm" % (pin_dbm_list[i-1],))
+
 def test_power_ramp(dut, gen):
 
 	log("Start power ramp test")
@@ -183,6 +200,9 @@ def test_power_ramp(dut, gen):
 		A = numpy.array([r, numpy.ones(len(r))])
 		k, n = numpy.linalg.lstsq(A.T, m)[0]
 		log("      linear regression: k = %f, n = %f dBm" % (k, n))
+
+		r, m = chop(p_dbm_list, pout_dbm_list, nf_mean+20, 0)
+		get_linear_range(k, n, r, m)
 
 	log("End power ramp test")
 
