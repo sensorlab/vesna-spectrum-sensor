@@ -1,3 +1,4 @@
+import datetime
 import optparse
 import os
 import numpy
@@ -446,9 +447,13 @@ def run_tests(options):
 
 	run_all = not any(getattr(options, name) for name, testfunc in iter_tests())
 
+	log("Session started at %s" % (datetime.datetime.now()))
+
 	for name, testfunc in sorted(iter_tests(), key=lambda x:"ident" not in x[0]):
 		if run_all or getattr(options, name):
 			testfunc(dut, gen)
+
+	log("Session ended at %s" % (datetime.datetime.now()))
 
 def iter_tests():
 	for name, testfunc in globals().iteritems():
