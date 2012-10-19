@@ -137,6 +137,8 @@ def get_linear_range(k, n, pin_dbm_list, pout_dbm_list):
 	log("      saturation @ Pin = %.1f dBm" % (pin_dbm_list[i-1],))
 
 def test_power_ramp(dut, gen):
+	"""Check measurement errors versus input power
+	"""
 
 	log("Start power ramp test")
 
@@ -202,6 +204,8 @@ def test_power_ramp(dut, gen):
 	log("End power ramp test")
 
 def test_freq_sweep(dut, gen):
+	"""Check measurement errors versus tuned frequency
+	"""
 
 	log("Start frequency sweep test")
 
@@ -252,6 +256,7 @@ def get_settle_time(measurements, settled):
 			return n
 
 def test_settle_time(dut, gen):
+	"""Measure automatic gain control settling time"""
 	
 	log("Start settle time test")
 
@@ -353,7 +358,10 @@ def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, config):
 		log("      Efc = %f Hz (%.1f %% channel)" % (
 				efc, 100.0 * efc / config.bw))
 
-def test_channel_filter(dut, gen):
+def test_ch_filter(dut, gen):
+	"""Test channel filter and local oscillator accuracy
+	"""
+
 	log("Start channel filter test")
 
 	N = 100
@@ -399,7 +407,10 @@ def test_channel_filter(dut, gen):
 
 	log("End channel filter test")
 
-def test_identification(dut, gen):
+def test_ident(dut, gen):
+	"""Identify device under test and testing harness
+	"""
+
 	log("Start identification")
 	log("  Device under test: %s" % (dut.name,))
 	if dut.replay:
@@ -412,17 +423,22 @@ def test_identification(dut, gen):
 	log("  Signal generator: %s" % (gen.get_name(),))
 	log("End identification")
 
-def test_all(options):
+def run_tests(options):
 
 	dut = DeviceUnderTest(options.vesna_device, options.name,
 			replay=options.replay, log_path=options.log_path)
 	gen = SignalGenerator(options.usbtmc_device)
 
-	test_identification(dut, gen)
-	test_settle_time(dut, gen)
-	test_power_ramp(dut, gen)
-	test_freq_sweep(dut, gen)
-	test_channel_filter(dut, gen)
+	run_all = not any(getattr(options, name) for name, testfunc in iter_tests())
+
+	for name, testfunc in sorted(iter_tests(), key=lambda x:"ident" not in x[0]):
+		if run_all or getattr(options, name):
+			testfunc(dut, gen)
+
+def iter_tests():
+	for name, testfunc in globals().iteritems():
+		if name.startswith("test_") and callable(testfunc):
+			yield name, testfunc
 
 def main():
 	parser = optparse.OptionParser()
@@ -436,6 +452,15 @@ def main():
 			help="Write measurement logs under PATH.")
 	parser.add_option("-n", "--replay", dest="replay", action="store_true",
 			help="Replay measurement from logs.")
+
+	group = optparse.OptionGroup(parser, "Tests", description="Choose only specific tests to run "
+			"(default is to run all tests)")
+
+	for name, testfunc in iter_tests():
+		opt = "--" + name.replace("_", "-")
+		group.add_option(opt, dest=name, action="store_true", help=testfunc.__doc__)
+
+	parser.add_option_group(group)
 
 	(options, args) = parser.parse_args()
 
@@ -451,6 +476,6 @@ def main():
 	global log_f
 	log_f = open("log/%s.log" % (options.name,), "w")
 
-	test_all(options)
+	run_tests(options)
 
 main()
