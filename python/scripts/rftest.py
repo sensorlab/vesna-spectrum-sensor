@@ -1,6 +1,8 @@
 import optparse
 import os
 import numpy
+import math
+import scipy.integrate
 import sys
 import time
 from vesna.spectrumsensor import SpectrumSensor, SweepConfig
@@ -348,18 +350,23 @@ def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, config):
 		bw = f_hz_stop - f_hz_start
 		fc_hz_real = (f_hz_stop + f_hz_start) / 2.0
 
-		log("      Poutmax = %f dBm" % (pout_dbm_max,))
-		log("      fmin = %f Hz" % (f_hz_start,))
-		log("      fmax = %f Hz" % (f_hz_stop,))
-		log("      BW(-3 dB) = %f Hz (should be %d Hz, %.1f %%)" % (
+		log("    Poutmax = %f dBm" % (pout_dbm_max,))
+		log("    fmin = %f Hz" % (f_hz_start,))
+		log("    fmax = %f Hz" % (f_hz_stop,))
+		log("    BW(-3 dB) = %f Hz (should be %d Hz, %.1f %%)" % (
 				bw, config.bw, 100.0 * (config.bw - bw) / bw))
 
 		efc = fc_hz - fc_hz_real
-		log("      Efc = %f Hz (%.1f %% channel)" % (
+		log("    Efc = %f Hz (%.1f %% channel)" % (
 				efc, 100.0 * efc / config.bw))
 
+def get_noise_figure(f_hz_list, pout_dbm_list, p_dbm, nf_mean):
+	pout_list = (10 ** ((numpy.array(pout_dbm_list)-p_dbm) / 10)) * 1e-3
+	i = 10*math.log10(scipy.integrate.trapz(pout_list, f_hz_list)/1e-3)
+	log("    NF = %f" % ((nf_mean - i) + 174))
+
 def test_ch_filter(dut, gen):
-	"""Test channel filter and local oscillator accuracy
+	"""Test channel filter, local oscillator accuracy and noise figure
 	"""
 
 	log("Start channel filter test")
@@ -377,7 +384,14 @@ def test_ch_filter(dut, gen):
 	for ch in ch_list:
 		fc_hz = dut.config.ch_to_hz(ch)
 
-		log("    fc = %d Hz" % (fc_hz,))
+		log("  fc = %d Hz" % (fc_hz,))
+
+		gen.rf_off()
+
+		nf = dut.measure_ch(ch, N, "channel_filter_%dhz_off" % (fc_hz,))
+		nf_mean = numpy.mean(nf)
+
+		log("    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf)))
 
 		npoints = 40
 
@@ -387,11 +401,11 @@ def test_ch_filter(dut, gen):
 		pout_dbm_list = []
 
 		for f_hz in f_hz_list:
-			log("      f = %d Hz" % (f_hz))
+			log("    f = %d Hz" % (f_hz))
 			gen.rf_on(f_hz, p_dbm)
 			s = dut.measure_ch(ch, N, "channel_filter_%dhz_%dhz" % (fc_hz, f_hz))
 			s_mean = numpy.mean(s)
-			log("        Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
+			log("      Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
 			pout_dbm_list.append(s_mean)
 
 		gen.rf_off()
@@ -404,6 +418,7 @@ def test_ch_filter(dut, gen):
 		f.close()
 
 		get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, dut.config)
+		get_noise_figure(f_hz_list, pout_dbm_list, p_dbm, nf_mean)
 
 	log("End channel filter test")
 
