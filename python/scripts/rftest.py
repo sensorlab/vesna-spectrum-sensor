@@ -429,16 +429,31 @@ def test_ident(dut, gen):
 	if dut.replay:
 		log("  *** REPLAY ***")
 
+	log("    Device status:")
 	resp = dut.spectrumsensor.get_status()
 	for line in resp:
-		log("    %s" % (line.strip(),))
+		log("      %s" % (line.strip(),))
+
+	log("    Device configurations:")
+	for device in dut.config_list.devices:
+		log("      device %d: %s" % (device.id, device.name))
+		for config in dut.config_list.configs:
+			if config.device is device:
+				log("        channel config %d,%d: %s" % (device.id, config.id, config.name))
+				log("          base: %d Hz" % (config.base,))
+				log("          spacing: %d Hz" % (config.spacing,))
+				log("          bw: %d Hz" % (config.bw,))
+				log("          num: %d" % (config.num,))
+				log("          time: %d ms" % (config.time,))
+
+	log("    Using config %d,%d" % (dut.config.device.id, dut.config.id))
 
 	log("  Signal generator: %s" % (gen.get_name(),))
 	log("End identification")
 
 def run_tests(options):
 
-	device_id, config_id = map(int, option.vesna_config.split(","))
+	device_id, config_id = map(int, options.vesna_config.split(","))
 
 	dut = DeviceUnderTest(options.vesna_device, options.name,
 			replay=options.replay, log_path=options.log_path,
