@@ -1,6 +1,9 @@
+import datetime
 import optparse
 import os
 import numpy
+import math
+import scipy.integrate
 import sys
 import time
 from vesna.spectrumsensor import SpectrumSensor, SweepConfig
@@ -115,16 +118,30 @@ def chop(p_dbm_list, pout_dbm_list, min_dbm, max_dbm):
 
 	return p_dbm_list2, pout_dbm_list2
 
-def max_error(reference, measured):
+def max_error(pin_dbm_list, pout_dbm_list):
+	return max(	abs(i - o)
+			for i, o in zip(pin_dbm_list, pout_dbm_list) )
+
+def get_linear_range(k, n, pin_dbm_list, pout_dbm_list):
+
 	emax = -1
-	for vr, vm in zip(reference, measured):
-		#vm = numpy.mean(vm)
+	for i, (pin_dbm, pout_dbm) in enumerate(zip(pin_dbm_list, pout_dbm_list)):
 
-		emax = max(emax, abs(vr - vm))
+		pout_dbm_lin = pin_dbm * k + n
 
-	return emax
+		e = abs(pout_dbm - pout_dbm_lin)
+
+		if pin_dbm < -40:
+			emax = max(emax, e)
+		else:
+			if e > emax * 1.5:
+				break
+
+	log("      saturation @ Pin = %.1f dBm" % (pin_dbm_list[i-1],))
 
 def test_power_ramp(dut, gen):
+	"""Check measurement errors versus input power
+	"""
 
 	log("Start power ramp test")
 
@@ -184,9 +201,14 @@ def test_power_ramp(dut, gen):
 		k, n = numpy.linalg.lstsq(A.T, m)[0]
 		log("      linear regression: k = %f, n = %f dBm" % (k, n))
 
+		r, m = chop(p_dbm_list, pout_dbm_list, nf_mean+20, 0)
+		get_linear_range(k, n, r, m)
+
 	log("End power ramp test")
 
 def test_freq_sweep(dut, gen):
+	"""Check measurement errors versus tuned frequency
+	"""
 
 	log("Start frequency sweep test")
 
@@ -237,6 +259,7 @@ def get_settle_time(measurements, settled):
 			return n
 
 def test_settle_time(dut, gen):
+	"""Measure automatic gain control settling time"""
 	
 	log("Start settle time test")
 
@@ -302,7 +325,108 @@ def test_settle_time(dut, gen):
 
 	log("End settle time test")
 
-def test_identification(dut, gen):
+def find_zero(i_start, i_step, x, y):
+	i = i_start
+	try:
+		while y[i] > 0:
+			i += i_step
+	except IndexError:
+		return None
+
+	return numpy.interp(0, y[i-1:i+1], x[i-1:i+1])
+
+def get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, config):
+
+	pout_dbm_max = max(pout_dbm_list)
+	i_max = pout_dbm_list.index(pout_dbm_max)
+
+	pout_diff_list = numpy.array(pout_dbm_list) - pout_dbm_max + 3.0
+
+	f_hz_start = find_zero(i_max, -1, f_hz_list, pout_diff_list)
+	f_hz_stop = find_zero(i_max, +1, f_hz_list, pout_diff_list)
+
+	if f_hz_start is None or f_hz_stop is None:
+		log("      Can't calculate channel filter pass band!")
+	else:
+		bw = f_hz_stop - f_hz_start
+		fc_hz_real = (f_hz_stop + f_hz_start) / 2.0
+
+		log("    Poutmax = %f dBm" % (pout_dbm_max,))
+		log("    fmin = %f Hz" % (f_hz_start,))
+		log("    fmax = %f Hz" % (f_hz_stop,))
+		log("    BW(-3 dB) = %f Hz (should be %d Hz, %.1f %%)" % (
+				bw, config.bw, 100.0 * (config.bw - bw) / bw))
+
+		efc = fc_hz - fc_hz_real
+		log("    Efc = %f Hz (%.1f %% channel)" % (
+				efc, 100.0 * efc / config.bw))
+
+def get_noise_figure(f_hz_list, pout_dbm_list, p_dbm, nf_mean):
+	pout_list = (10 ** ((numpy.array(pout_dbm_list)-p_dbm) / 10)) * 1e-3
+	i = 10*math.log10(scipy.integrate.trapz(pout_list, f_hz_list)/1e-3)
+	log("    NF = %f" % ((nf_mean - i) + 174))
+
+def test_ch_filter(dut, gen):
+	"""Test channel filter, local oscillator accuracy and noise figure
+	"""
+
+	log("Start channel filter test")
+
+	N = 100
+
+	nruns = 3
+	ch_num = dut.config.num
+	ch_list = [ int(ch_num*(i+0.5)/nruns) for i in xrange(nruns) ]
+
+	p_dbm = -30
+
+	log("  Pin = %d dBm" % (p_dbm,))
+
+	for ch in ch_list:
+		fc_hz = dut.config.ch_to_hz(ch)
+
+		log("  fc = %d Hz" % (fc_hz,))
+
+		gen.rf_off()
+
+		nf = dut.measure_ch(ch, N, "channel_filter_%dhz_off" % (fc_hz,))
+		nf_mean = numpy.mean(nf)
+
+		log("    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf)))
+
+		npoints = 40
+
+		f_hz_list = [	(fc_hz - 1.5*dut.config.bw) + 3.0 * dut.config.bw / (npoints - 1) * n
+				for n in xrange(npoints) ]
+
+		pout_dbm_list = []
+
+		for f_hz in f_hz_list:
+			log("    f = %d Hz" % (f_hz))
+			gen.rf_on(f_hz, p_dbm)
+			s = dut.measure_ch(ch, N, "channel_filter_%dhz_%dhz" % (fc_hz, f_hz))
+			s_mean = numpy.mean(s)
+			log("      Pout = %f dBm, u = %f" % (s_mean, numpy.std(s)))
+			pout_dbm_list.append(s_mean)
+
+		gen.rf_off()
+
+		path = ("log/%s_channel_filter_%dhz.log" % (dut.name, fc_hz))
+		f = open(path, "w")
+		f.write("# f [Hz]\tPout [dBm]\n")
+		for f_hz, pout_dbm in zip(f_hz_list, pout_dbm_list):
+			f.write("%f\t%f\n" % (f_hz, pout_dbm))
+		f.close()
+
+		get_channel_start_stop(fc_hz, f_hz_list, pout_dbm_list, dut.config)
+		get_noise_figure(f_hz_list, pout_dbm_list, p_dbm, nf_mean)
+
+	log("End channel filter test")
+
+def test_ident(dut, gen):
+	"""Identify device under test and testing harness
+	"""
+
 	log("Start identification")
 	log("  Device under test: %s" % (dut.name,))
 	if dut.replay:
@@ -315,16 +439,26 @@ def test_identification(dut, gen):
 	log("  Signal generator: %s" % (gen.get_name(),))
 	log("End identification")
 
-def test_all(options):
+def run_tests(options):
 
 	dut = DeviceUnderTest(options.vesna_device, options.name,
 			replay=options.replay, log_path=options.log_path)
 	gen = SignalGenerator(options.usbtmc_device)
 
-	test_identification(dut, gen)
-	test_settle_time(dut, gen)
-	test_power_ramp(dut, gen)
-	test_freq_sweep(dut, gen)
+	run_all = not any(getattr(options, name) for name, testfunc in iter_tests())
+
+	log("Session started at %s" % (datetime.datetime.now()))
+
+	for name, testfunc in sorted(iter_tests(), key=lambda x:"ident" not in x[0]):
+		if run_all or getattr(options, name):
+			testfunc(dut, gen)
+
+	log("Session ended at %s" % (datetime.datetime.now()))
+
+def iter_tests():
+	for name, testfunc in globals().iteritems():
+		if name.startswith("test_") and callable(testfunc):
+			yield name, testfunc
 
 def main():
 	parser = optparse.OptionParser()
@@ -338,6 +472,15 @@ def main():
 			help="Write measurement logs under PATH.")
 	parser.add_option("-n", "--replay", dest="replay", action="store_true",
 			help="Replay measurement from logs.")
+
+	group = optparse.OptionGroup(parser, "Tests", description="Choose only specific tests to run "
+			"(default is to run all tests)")
+
+	for name, testfunc in iter_tests():
+		opt = "--" + name.replace("_", "-")
+		group.add_option(opt, dest=name, action="store_true", help=testfunc.__doc__)
+
+	parser.add_option_group(group)
 
 	(options, args) = parser.parse_args()
 
@@ -353,6 +496,6 @@ def main():
 	global log_f
 	log_f = open("log/%s.log" % (options.name,), "w")
 
-	test_all(options)
+	run_tests(options)
 
 main()
