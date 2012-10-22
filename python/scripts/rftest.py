@@ -51,7 +51,7 @@ class SignalGenerator(usbtmc):
 		self.write("outp off\n")
 
 class DeviceUnderTest:
-	def __init__(self, device, name, replay=False, log_path=None):
+	def __init__(self, device, name, device_id=0, config_id=0, replay=False, log_path=None):
 		self.name = name
 		self.replay = replay
 		self.log_path = log_path
@@ -64,9 +64,6 @@ class DeviceUnderTest:
 		if not self.config_list.configs:
 			raise Exception("Device returned no configurations. "
 					"It is still scanning or not responding.")
-
-		config_id = 0
-		device_id = 0
 
 		self.config = self.config_list.get_config(config_id, device_id)
 
@@ -432,17 +429,35 @@ def test_ident(dut, gen):
 	if dut.replay:
 		log("  *** REPLAY ***")
 
+	log("    Device status:")
 	resp = dut.spectrumsensor.get_status()
 	for line in resp:
-		log("    %s" % (line.strip(),))
+		log("      %s" % (line.strip(),))
+
+	log("    Device configurations:")
+	for device in dut.config_list.devices:
+		log("      device %d: %s" % (device.id, device.name))
+		for config in dut.config_list.configs:
+			if config.device is device:
+				log("        channel config %d,%d: %s" % (device.id, config.id, config.name))
+				log("          base: %d Hz" % (config.base,))
+				log("          spacing: %d Hz" % (config.spacing,))
+				log("          bw: %d Hz" % (config.bw,))
+				log("          num: %d" % (config.num,))
+				log("          time: %d ms" % (config.time,))
+
+	log("    Using config %d,%d" % (dut.config.device.id, dut.config.id))
 
 	log("  Signal generator: %s" % (gen.get_name(),))
 	log("End identification")
 
 def run_tests(options):
 
+	device_id, config_id = map(int, options.vesna_config.split(","))
+
 	dut = DeviceUnderTest(options.vesna_device, options.name,
-			replay=options.replay, log_path=options.log_path)
+			replay=options.replay, log_path=options.log_path,
+			device_id=device_id, config_id=config_id)
 	gen = SignalGenerator(options.usbtmc_device)
 
 	run_all = not any(getattr(options, name) for name, testfunc in iter_tests())
@@ -472,6 +487,8 @@ def main():
 			help="Write measurement logs under PATH.")
 	parser.add_option("-n", "--replay", dest="replay", action="store_true",
 			help="Replay measurement from logs.")
+	parser.add_option("--vesna-config", dest="vesna_config", metavar="CONFIG",
+			help="Manually choose a specific device configuration", default="0,0")
 
 	group = optparse.OptionGroup(parser, "Tests", description="Choose only specific tests to run "
 			"(default is to run all tests)")
