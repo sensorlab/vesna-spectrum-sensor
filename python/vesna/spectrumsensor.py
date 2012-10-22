@@ -130,7 +130,7 @@ class SpectrumSensor:
 
 			g = re.match("  channel config ([0-9]+),([0-9]+): (.*)", line)
 			if g:
-				config = DeviceConfig(int(g.group(1)), g.group(2), device)
+				config = DeviceConfig(int(g.group(2)), g.group(3), device)
 				config_list._add_config(config)
 				continue
 
