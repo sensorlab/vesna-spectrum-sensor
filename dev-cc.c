@@ -91,6 +91,8 @@ static void cc_reset()
 	cc_wait_while_miso_high();
 
 	spi_send(CC_SPI, CC_STROBE_SRES);
+	uint16_t value = spi_read(CC_SPI);
+
 	cc_wait_while_miso_high();
 
 	gpio_set(CC_GPIO_NSS, CC_PIN_NSS);
