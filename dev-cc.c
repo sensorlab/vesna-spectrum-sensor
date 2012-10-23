@@ -250,7 +250,8 @@ void dev_cc2500_print_status(void)
 uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 60.267857
-	 * Base frequency = 862.999695 */
+	 * Base frequency = 862.999695
+	 * Xtal frequency = 27.000000 */
 	CC_REG_IOCFG2,        0x29,
 	CC_REG_IOCFG1,        0x2E,
 	CC_REG_IOCFG0,        0x06,
@@ -316,10 +317,14 @@ uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 };
 
 uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
+	/* Channel spacing = 49.953461
+	 * RX filter BW = 105.468750
+	 * Base frequency = 867.999985
+	 * Xtal frequency = 27.000000 */
 	CC_REG_IOCFG2,             0x2E,
 	CC_REG_IOCFG1,             0x2E,
 	CC_REG_IOCFG0,             0x2E,
-	CC_REG_FIFOTHR,            0x07,
+	CC_REG_FIFOTHR,            0x47,
 	CC_REG_SYNC1,              0xD3,
 	CC_REG_SYNC0,              0x91,
 	CC_REG_PKTLEN,             0xFF,
@@ -329,17 +334,14 @@ uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	CC_REG_CHANNR,             0x00,
 	CC_REG_FSCTRL1,            0x06,
 	CC_REG_FSCTRL0,            0x00,
-	/* fc = 835.919678 MHz */
 	CC_REG_FREQ2,              0x20,
-	CC_REG_FREQ1,              0x26,
-	CC_REG_FREQ0,              0x98,
-	/* bw = 101.563 kHz */
+	CC_REG_FREQ1,              0x25,
+	CC_REG_FREQ0,              0xED,
 	CC_REG_MDMCFG4,            0xC9,
 	CC_REG_MDMCFG3,            0x93,
 	CC_REG_MDMCFG2,            0x70,
-	/* dfch = 49.987 kHz */
 	CC_REG_MDMCFG1,            0x20,
-	CC_REG_MDMCFG0,            0xF8,
+	CC_REG_MDMCFG0,            0xE5,
 	CC_REG_DEVIATN,            0x34,
 	CC_REG_MCSM2,              0x07,
 	CC_REG_MCSM1,              0x30,
@@ -384,10 +386,14 @@ uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 };
 
 uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
+	/* Channel spacing = 49.953461
+	 * RX filter BW = 210.937500
+	 * Base frequency = 867.999985
+	 * Xtal frequency = 27.000000 */
 	CC_REG_IOCFG2,             0x2E,
 	CC_REG_IOCFG1,             0x2E,
 	CC_REG_IOCFG0,             0x2E,
-	CC_REG_FIFOTHR,            0x07,
+	CC_REG_FIFOTHR,            0x47,
 	CC_REG_SYNC1,              0xD3,
 	CC_REG_SYNC0,              0x91,
 	CC_REG_PKTLEN,             0xFF,
@@ -397,17 +403,14 @@ uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 	CC_REG_CHANNR,             0x00,
 	CC_REG_FSCTRL1,            0x06,
 	CC_REG_FSCTRL0,            0x00,
-	/* fc = 835.919678 MHz */
 	CC_REG_FREQ2,              0x20,
-	CC_REG_FREQ1,              0x26,
-	CC_REG_FREQ0,              0x98,
-	/* bw = 203.125 kHz */
+	CC_REG_FREQ1,              0x25,
+	CC_REG_FREQ0,              0xED,
 	CC_REG_MDMCFG4,            0x89,
 	CC_REG_MDMCFG3,            0x93,
 	CC_REG_MDMCFG2,            0x70,
-	/* dfch = 49.987 kHz */
 	CC_REG_MDMCFG1,            0x20,
-	CC_REG_MDMCFG0,            0xF8,
+	CC_REG_MDMCFG0,            0xE5,
 	CC_REG_DEVIATN,            0x34,
 	CC_REG_MCSM2,              0x07,
 	CC_REG_MCSM1,              0x30,
@@ -452,6 +455,10 @@ uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 };
 
 uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
+	/* Channel spacing = 49.953461
+	 * RX filter BW = 421.875000
+	 * Base frequency = 867.999985
+	 * Xtal frequency = 27.000000 */
 	CC_REG_IOCFG2,             0x2E,
 	CC_REG_IOCFG1,             0x2E,
 	CC_REG_IOCFG0,             0x2E,
@@ -465,17 +472,14 @@ uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	CC_REG_CHANNR,             0x00,
 	CC_REG_FSCTRL1,            0x06,
 	CC_REG_FSCTRL0,            0x00,
-	/* fc = 835.919678 MHz */
 	CC_REG_FREQ2,              0x20,
-	CC_REG_FREQ1,              0x26,
-	CC_REG_FREQ0,              0x98,
-	/* bw = 406.250 kHz */
+	CC_REG_FREQ1,              0x25,
+	CC_REG_FREQ0,              0xED,
 	CC_REG_MDMCFG4,            0x49,
 	CC_REG_MDMCFG3,            0x93,
 	CC_REG_MDMCFG2,            0x70,
-	/* dfch = 49.987 kHz */
 	CC_REG_MDMCFG1,            0x20,
-	CC_REG_MDMCFG0,            0xF8,
+	CC_REG_MDMCFG0,            0xE5,
 	CC_REG_DEVIATN,            0x34,
 	CC_REG_MCSM2,              0x07,
 	CC_REG_MCSM1,              0x30,
@@ -535,9 +539,9 @@ const struct spectrum_dev_config dev_cc1101_868mhz_60khz = {
 const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
 	.name			= "868 MHz ISM, 100 kHz bandwidth",
 
-	.channel_base_hz 	= 867999729,
-	.channel_spacing_hz	= 49987,
-	.channel_bw_hz		= 101563,
+	.channel_base_hz 	= 867999985,
+	.channel_spacing_hz	= 49953,
+	.channel_bw_hz		= 105469,
 	.channel_num		= 40,
 
 	.channel_time_ms	= 5,
@@ -548,9 +552,9 @@ const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
 const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
 	.name			= "868 MHz ISM, 200 kHz bandwidth",
 
-	.channel_base_hz 	= 867999729,
-	.channel_spacing_hz	= 49987,
-	.channel_bw_hz		= 203125,
+	.channel_base_hz 	= 867999985,
+	.channel_spacing_hz	= 49953,
+	.channel_bw_hz		= 210938,
 	.channel_num		= 40,
 
 	.channel_time_ms	= 5,
@@ -561,9 +565,9 @@ const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
 const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth",
 
-	.channel_base_hz 	= 867999729,
-	.channel_spacing_hz	= 49987,
-	.channel_bw_hz		= 406250,
+	.channel_base_hz 	= 867999985,
+	.channel_spacing_hz	= 49953,
+	.channel_bw_hz		= 421875,
 	.channel_num		= 40,
 
 	.channel_time_ms	= 5,
