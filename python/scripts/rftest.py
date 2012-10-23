@@ -65,7 +65,7 @@ class DeviceUnderTest:
 			raise Exception("Device returned no configurations. "
 					"It is still scanning or not responding.")
 
-		self.config = self.config_list.get_config(config_id, device_id)
+		self.config = self.config_list.get_config(device_id, config_id)
 
 	def measure_ch(self, ch, n, name):
 		if self.replay:
