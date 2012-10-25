@@ -23,6 +23,7 @@
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/rtc.h>
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/iwdg.h>
 #include <tda18219/tda18219.h>
 #include <tda18219/tda18219regs.h>
 
@@ -324,6 +325,7 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 	gpio_set(GPIOA, TDA_PIN_ENB);
 
 	do {
+		IWDG_KR = IWDG_KR_RESET;
 		uint32_t rtc_counter = rtc_get_counter_val();
 		/* LSE clock is 32768 Hz. Prescaler is set to 16.
 		 *

@@ -22,6 +22,7 @@
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/rtc.h>
+#include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/systick.h>
 
@@ -188,6 +189,7 @@ int dev_cc_run(void* priv __attribute__((unused)),
 	}
 
 	do {
+		IWDG_KR = IWDG_KR_RESET;
 		uint32_t rtc_counter = rtc_get_counter_val();
 		/* LSE clock is 32768 Hz. Prescaler is set to 16.
 		 *
