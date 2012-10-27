@@ -15,7 +15,7 @@ if [ "$#" -ne 1 ]; then
 	exit 1
 fi
 
-DUT="$1"
+DUT=`echo "$1"|sed -s 's/.*\///'`
 
 shopt -s extglob
 
