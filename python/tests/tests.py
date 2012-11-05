@@ -1,6 +1,31 @@
 import unittest
 
-from vesna.spectrumsensor import Device, DeviceConfig, SweepConfig
+from vesna.spectrumsensor import Device, DeviceConfig, SweepConfig, DeviceConfig
+
+class TestDeviceConfig(unittest.TestCase):
+	def setUp(self):
+		self.d = Device(0, "test")
+
+		self.dc = DeviceConfig(0, "test", self.d)
+		self.dc.base = 1000
+		self.dc.spacing = 30
+		self.dc.num = 1000
+
+	def test_get_full_sweep_config_1(self):
+		sc = self.dc.get_full_sweep_config()
+		self.assertEquals(sc.step_ch, 1)
+
+	def test_get_full_sweep_config_2(self):
+		sc = self.dc.get_full_sweep_config(step_hz=5)
+		self.assertEquals(sc.step_ch, 1)
+
+	def test_get_full_sweep_config_3(self):
+		sc = self.dc.get_full_sweep_config(step_hz=35)
+		self.assertEquals(sc.step_ch, 1)
+
+	def test_get_full_sweep_config_3(self):
+		sc = self.dc.get_full_sweep_config(step_hz=45)
+		self.assertEquals(sc.step_ch, 2)
 
 class TestSweepConfig(unittest.TestCase):
 	def setUp(self):

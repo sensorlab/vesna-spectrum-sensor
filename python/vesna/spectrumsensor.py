@@ -27,8 +27,13 @@ class DeviceConfig:
 		"""
 		return start_hz >= self.get_start_hz() and stop_hz <= self.get_stop_hz()
 
-	def get_full_sweep_config(self):
-		return SweepConfig(self, 0, self.num, 1)
+	def get_full_sweep_config(self, step_hz=None):
+		if step_hz is None:
+			step_ch = 1
+		else:
+			step_ch = max(1, int(round(float(step_hz) / self.spacing)))
+
+		return SweepConfig(self, 0, self.num, step_ch)
 
 	def get_sweep_config(self, start_hz, stop_hz, step_hz):
 		assert self.covers(start_hz, stop_hz)
