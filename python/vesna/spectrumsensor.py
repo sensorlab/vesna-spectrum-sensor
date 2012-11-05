@@ -58,10 +58,13 @@ class SweepConfig:
 		self.stop_ch = stop_ch
 		self.step_ch = step_ch
 
+		# given (start_ch - stop_ch) range may not be an integer number of step_ch
+		last_ch = stop_ch - (stop_ch - start_ch - 1) % step_ch - 1
+
 		# real frequency start, step, stop
 		# (stop_hz is the frequency of the last channel)
 		self.start_hz = config.ch_to_hz(start_ch)
-		self.stop_hz = config.ch_to_hz(stop_ch - 1)
+		self.stop_hz = config.ch_to_hz(last_ch)
 		self.step_hz = config.spacing * step_ch
 
 		self.num_channels = len(range(start_ch, stop_ch, step_ch))
