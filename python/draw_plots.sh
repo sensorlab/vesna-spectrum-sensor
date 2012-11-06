@@ -10,16 +10,18 @@ function template {
 	done
 }
 
-if [ "$#" -ne 1 ]; then
-	echo "USAGE: $0 dut_id"
+if [ "$#" -lt 1 ]; then
+	echo "USAGE: $0 dut_id [...]"
 	exit 1
 fi
 
-DUT=`echo "$1"|sed -s 's/.*\///'`
-
 shopt -s extglob
 
-gnuplot << EOF
+for DUTRAW in "$@"; do
+
+	DUT=`echo "$DUTRAW"|sed -s 's/.*\///'`
+
+gnuplot -p << EOF
 set term wxt 0
 set xlabel "f [MHz]"
 set ylabel "Pout [dBm]"
@@ -54,6 +56,6 @@ plot \
 `template "log/${DUT}_settle_time_m50dbm_*([0-9])hz.log" '\"${FILE}\" title \"Pin = 50 dBm, f = ${NUM} Hz\",'` \
 `template "log/${DUT}_settle_time_m90dbm_*([0-9])hz.log" '\"${FILE}\" title \"Pin = 90 dBm, f = ${NUM} Hz\",'` \
 1/0 notitle lt -3 
-
-pause mouse
 EOF
+
+done
