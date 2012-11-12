@@ -23,7 +23,7 @@ class DeviceConfig:
 		return self.ch_to_hz(self.num - 1)
 
 	def covers(self, start_hz, stop_hz):
-		"""Return true is this configuration can cover the given band
+		"""Return true if this configuration can cover the given band
 		"""
 		return start_hz >= self.get_start_hz() and stop_hz <= self.get_stop_hz()
 
