@@ -74,7 +74,10 @@ class SweepConfig:
 
 		self.num_channels = len(range(start_ch, stop_ch, step_ch))
 
-class Sweep: pass
+class Sweep:
+	def __init__(self):
+		self.timestamp = None
+		self.data = []
 
 class ConfigList:
 	def __init__(self):
