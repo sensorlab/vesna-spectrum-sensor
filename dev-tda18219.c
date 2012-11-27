@@ -31,7 +31,7 @@
 #include "dev-tda18219.h"
 #include "spectrum.h"
 
-uint16_t buff[5000];
+uint16_t buff[1024];
 
 struct calibration_point {
 	unsigned int freq;
