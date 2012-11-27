@@ -17,12 +17,14 @@
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <libopencm3/stm32/f1/adc.h>
 #include <libopencm3/stm32/f1/dma.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/rtc.h>
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/iwdg.h>
 #include <tda18219/tda18219.h>
 #include <tda18219/tda18219regs.h>
 
@@ -30,6 +32,43 @@
 #include "spectrum.h"
 
 uint16_t buff[5000];
+
+struct calibration_point {
+	unsigned int freq;
+	int offset;
+};
+
+struct dev_tda18219_priv {
+	const struct tda18219_standard* standard;
+	const struct calibration_point* calibration;
+};
+
+static int get_calibration_offset(const struct calibration_point* calibration, unsigned int freq)
+{
+	int offset;
+	struct calibration_point prev = { 0, 0 };
+	struct calibration_point next;
+
+	while(calibration->freq != 0) {
+		next = *calibration;
+
+		if(next.freq == freq) {
+			offset = next.offset;
+			break;
+		} else if(next.freq > freq) {
+			offset = prev.offset + ((int) (freq - prev.freq))* (next.offset - prev.offset) / ((int) (next.freq - prev.freq));
+			break;
+		} else {
+			prev = next;
+		}
+
+		calibration++;
+	}
+
+	assert(calibration->freq != 0);
+
+	return offset;
+}
 
 static void setup_stm32f1_peripherals(void)
 {
@@ -229,8 +268,10 @@ int dev_tda18219_reset(void* priv __attribute__((unused)))
 
 int dev_tda18219_setup(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config) 
 {
+	const struct dev_tda18219_priv* dev_priv = sweep_config->dev_config->priv;
+
 	tda18219_power_on();
-	tda18219_set_standard((struct tda18219_standard*) sweep_config->dev_config->priv);
+	tda18219_set_standard(dev_priv->standard);
 	tda18219_power_standby();
 	return E_SPECTRUM_OK;
 }
@@ -261,6 +302,8 @@ static void dev_tda18219_get_ad8307_input_power(void)
 
 int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_sweep_config* sweep_config)
 {
+	const struct dev_tda18219_priv* dev_priv = sweep_config->dev_config->priv;
+
 	int r;
 	short int *data;
 
@@ -276,6 +319,7 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 	gpio_set(GPIOA, TDA_PIN_ENB);
 
 	do {
+		IWDG_KR = IWDG_KR_RESET;
 		uint32_t rtc_counter = rtc_get_counter_val();
 		/* LSE clock is 32768 Hz. Prescaler is set to 16.
 		 *
@@ -332,7 +376,57 @@ void dev_tda18219_print_status(void)
 	}
 }
 
-const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
+static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = {
+	{ 470000, 1351 },
+	{ 480000, 1387 },
+	{ 490000, 1419 },
+	{ 500000, 1425 },
+	{ 510000, 1423 },
+	{ 520000, 1406 },
+	{ 530000, 1392 },
+	{ 540000, 1382 },
+	{ 550000, 1368 },
+	{ 560000, 1382 },
+	{ 570000, 1325 },
+	{ 580000, 1289 },
+	{ 590000, 1156 },
+	{ 600000, 957 },
+	{ 610000, 769 },
+	{ 620000, 577 },
+	{ 630000, 739 },
+	{ 640000, 765 },
+	{ 650000, 802 },
+	{ 660000, 867 },
+	{ 670000, 877 },
+	{ 680000, 933 },
+	{ 690000, 941 },
+	{ 700000, 1007 },
+	{ 710000, 1048 },
+	{ 720000, 1124 },
+	{ 730000, 1142 },
+	{ 740000, 1225 },
+	{ 750000, 1211 },
+	{ 760000, 1251 },
+	{ 770000, 1246 },
+	{ 780000, 1222 },
+	{ 790000, 1250 },
+	{ 800000, 1266 },
+	{ 810000, 1214 },
+	{ 820000, 1096 },
+	{ 830000, 929 },
+	{ 840000, 769 },
+	{ 850000, 623 },
+	{ 860000, 433 },
+	{ 870000, 242 },
+	{ 0, 0 }
+};
+
+static struct dev_tda18219_priv dev_tda18219_dvbt_1700khz_priv = {
+	.standard		= &tda18219_standard_dvbt_1700khz,
+	.calibration		= dev_tda18219_dvbt_1700khz_calibration
+};
+
+static const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 	.name			= "DVB-T 1.7 MHz",
 
 	// UHF: 470 MHz to 862 MHz
@@ -343,16 +437,83 @@ const struct spectrum_dev_config dev_tda18219_dvbt_1700khz = {
 
 	.channel_time_ms	= 50,
 
-	.priv			= &tda18219_standard_dvbt_1700khz
+	.priv			= &dev_tda18219_dvbt_1700khz_priv
 };
 
-const struct spectrum_dev_config* dev_tda18219_config_list[] = { &dev_tda18219_dvbt_1700khz };
+static const struct calibration_point dev_tda18219_dvbt_8000khz_calibration[] = {
+	{ 470000, 43 },
+	{ 480000, 91 },
+	{ 490000, 111 },
+	{ 500000, 115 },
+	{ 510000, 112 },
+	{ 520000, 107 },
+	{ 530000, 92 },
+	{ 540000, 77 },
+	{ 550000, 69 },
+	{ 560000, 81 },
+	{ 570000, 23 },
+	{ 580000, -26 },
+	{ 590000, -153 },
+	{ 600000, -353 },
+	{ 610000, -546 },
+	{ 620000, -742 },
+	{ 630000, -566 },
+	{ 640000, -541 },
+	{ 650000, -501 },
+	{ 660000, -440 },
+	{ 670000, -423 },
+	{ 680000, -367 },
+	{ 690000, -369 },
+	{ 700000, -304 },
+	{ 710000, -248 },
+	{ 720000, -182 },
+	{ 730000, -163 },
+	{ 740000, -82 },
+	{ 750000, -89 },
+	{ 760000, -34 },
+	{ 770000, -24 },
+	{ 780000, -48 },
+	{ 790000, -34 },
+	{ 800000, -22 },
+	{ 810000, -75 },
+	{ 820000, -209 },
+	{ 830000, -376 },
+	{ 840000, -533 },
+	{ 850000, -681 },
+	{ 860000, -805 },
+	{ 870000, -929 },
+	{ 0, 0 }
+};
 
-const struct spectrum_dev dev_tda18219 = {
+static struct dev_tda18219_priv dev_tda18219_dvbt_8000khz_priv = {
+	.standard		= &tda18219_standard_dvbt_8000khz,
+	.calibration		= dev_tda18219_dvbt_8000khz_calibration
+};
+
+static const struct spectrum_dev_config dev_tda18219_dvbt_8000khz = {
+	.name			= "DVB-T 8.0 MHz",
+
+	// UHF: 470 MHz to 862 MHz
+	.channel_base_hz 	= 470000000,
+	.channel_spacing_hz	= 1000,
+	.channel_bw_hz		= 8000000,
+	.channel_num		= 392000,
+
+	.channel_time_ms	= 50,
+
+	.priv			= &dev_tda18219_dvbt_8000khz_priv
+};
+
+static const struct spectrum_dev_config* dev_tda18219_config_list[] = {
+	&dev_tda18219_dvbt_1700khz,
+	&dev_tda18219_dvbt_8000khz
+};
+
+static const struct spectrum_dev dev_tda18219 = {
 	.name = "tda18219hn",
 
 	.dev_config_list	= dev_tda18219_config_list,
-	.dev_config_num		= 1,
+	.dev_config_num		= sizeof(dev_tda18219_config_list)/sizeof(struct spectrum_dev_config*),
 
 	.dev_reset		= dev_tda18219_reset,
 	.dev_setup		= dev_tda18219_setup,

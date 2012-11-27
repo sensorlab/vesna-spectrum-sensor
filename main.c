@@ -22,6 +22,8 @@
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rtc.h>
+#include <libopencm3/stm32/f1/scb.h>
+#include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/nvic.h>
 
@@ -39,6 +41,8 @@ static int report = 0;
 
 static struct spectrum_sweep_config sweep_config;
 static const struct spectrum_dev* dev = NULL;
+
+extern void (*const vector_table[]) (void);
 
 /* Set up all the peripherals */
 
@@ -75,6 +79,8 @@ static void setup_usart(void)
 
 static void setup(void)
 {
+	SCB_VTOR = (u32) vector_table;
+
 	rcc_clock_setup_in_hsi_out_48mhz();
 
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
@@ -191,6 +197,7 @@ static void command_report_on(void)
 static void command_report_off(void)
 {
 	report = 0;
+	printf("ok\n");
 }
 
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
@@ -214,6 +221,8 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	sweep_config.channel_stop = stop;
 
 	sweep_config.cb = report_cb;
+
+	printf("ok\n");
 }
 
 static void command_status(void)
@@ -284,6 +293,7 @@ int main(void)
 			dispatch(usart_buffer);
 			usart_buffer_attn = 0;
 		}
+		IWDG_KR = IWDG_KR_RESET;
 		if (report) {
 			r = spectrum_run(dev, &sweep_config);
 			if (r) {

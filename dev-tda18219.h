@@ -35,8 +35,6 @@
 #	define TDA_PIN_OUT	GPIO2
 #endif
 
-// Configuration Registers
-
 int dev_tda18219_register(void);
 void dev_tda18219_print_status(void);
 

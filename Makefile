@@ -61,7 +61,7 @@ ifeq ($(MODEL),null)
 	MODEL_OK = ok
 endif
 
-all: $(BINARY).bin
+all: $(BINARY).elf
 
 %.bin: %.elf
 	$(OBJCOPY) -Obinary $(*).elf $(*).bin
@@ -78,14 +78,13 @@ clean:
 	rm -f *.elf
 	rm -f *.bin
 
-%.u: %.bin
+%.u: %.elf
 	$(OPENOCD) $(OPENOCD_PARAMS) -c "\
 		reset_config trst_and_srst; \
 		init; \
 		reset halt; \
 		poll; \
-		stm32f1x mass_erase 0; \
-		flash write_bank 0 $< 0; \
+		flash write_image erase $< 0 elf; \
 		reset run; \
 		shutdown \
 	"
