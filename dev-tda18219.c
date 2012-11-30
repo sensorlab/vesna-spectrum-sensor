@@ -324,6 +324,13 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 	tda18219_power_on();
 	gpio_set(GPIOA, TDA_PIN_ENB);
 
+	int ch = sweep_config->channel_start;
+
+	int freq = sweep_config->dev_config->channel_base_hz + \
+			sweep_config->dev_config->channel_spacing_hz * ch;
+
+	tda18219_set_frequency(dev_priv->standard, freq);
+
 	do {
 		IWDG_KR = IWDG_KR_RESET;
 		uint32_t rtc_counter = rtc_get_counter_val();
@@ -334,14 +341,6 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 		 *                       32768
 		 */
 		int timestamp = ((long long) rtc_counter) * 1000 / 2048;
-
-		int ch = sweep_config->channel_start;
-
-		int freq = sweep_config->dev_config->channel_base_hz + \
-				sweep_config->dev_config->channel_spacing_hz * ch;
-
-		tda18219_set_frequency((struct tda18219_standard*) sweep_config->dev_config->priv,
-				freq);
 
 		dev_tda18219_get_ad8307_input_power();
 
