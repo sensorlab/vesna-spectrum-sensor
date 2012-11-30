@@ -1,0 +1,48 @@
+Introduction
+============
+
+This Python module abstracts the serial line protocol used by the VESNA
+spectrum sensor application and provides a high-level object-oriented
+Python interface.
+
+
+Installation
+============
+
+To install system-wide, run:
+
+$ python setup.py install
+
+To run provided unit tests, run:
+
+$ python setup.py test
+
+
+Usage
+=====
+
+The minimal application using this module looks like the following:
+
+	# instantiate the SpectrumSensor class using the path
+	# to the serial device.
+	spectrumsensor = SpectrumSensor("/dev/ttyUSB0")
+
+	# query the attached hardware for supported configurations.
+	config_list = spectrumsensor.get_config_list()
+
+	# get required frequency sweep configuration.
+	sweep_config = config_list.get_sweep_config(...)
+
+	# define callback function that does something with
+	# measurements.
+	def callback(sweep_config, sweep):
+		...
+
+	# start spectrum sensing
+	spectrumsensor.run(sweep_config, callback)
+
+Please refer to docstring documentation for details.
+
+Installation also includes a rftest.py script that performs a series of
+automated hardware tests using a USBTMC attached RF signal generator.
+Run "rftest.py --help" to get a list of available options.

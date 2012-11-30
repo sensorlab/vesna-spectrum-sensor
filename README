@@ -87,7 +87,7 @@ Usage
 =====
 
 Connect VESNA to a serial terminal using 115200 baud, 8 data bits, 1 stop
-bit, no parity. 
+bit, no parity.
 
 You can then use the terminal to interact with the application in a
 command-line fashion (conclude each command with a new line)
@@ -104,6 +104,10 @@ A typical session consists of:
 3. "report-on" command to start the sweep.
 
 4. "report-off" command to stop the sweep.
+
+
+The python/ directory includes Python classes that abstract this interface.
+Please refer to the README in that directory for details.
 
 
 License

@@ -3,31 +3,72 @@ import select
 import serial
 
 class Device:
+	"""A spectrum sensing device.
+
+	A particular hardware model can have one or more physical spectrum sensing devices, each of which
+	can support one or more configurations.
+	"""
 	def __init__(self, id, name):
+		"""Create a new device.
+
+		id -- numeric device id, as returned by the "list" command.
+		name -- string with a human readable name of the device.
+		"""
 		self.id = id
 		self.name = name
 
-class DeviceConfig: 
+class DeviceConfig:
+	"""Configuration for a spectrum sensing device.
+
+	The set of possible configurations for a device is usually hardware-dependent (i.e. a
+	configuration usually reflects physical hardware settings) A configuration defines the usable
+	frequency range, resolution bandwidth and sweep time for a device.
+
+	By convention, when specifying channel ranges, the range is given in the same format
+	as for the range built-in (i.e. inclusive lower bound inclusive, exclusive upper bound).
+	When specifiying frequency ranges, both bounds are inclusive.
+	"""
 	def __init__(self, id, name, device):
+		"""Create a new device configuration.
+
+		id -- numeric configuration id, as returned by the "list" command.
+		name -- string with a human readable name of the configuration.
+		device -- Device object to which this configuration applies.
+		"""
 		self.id = id
 		self.name = name
 		self.device = device
 
 	def ch_to_hz(self, ch):
+		"""Convert channel number to center frequency in hertz."""
+		assert ch >= 0
+		assert ch < self.num
+
 		return self.base + self.spacing * ch
 
 	def get_start_hz(self):
+		"""Return the lowest settable frequency."""
 		return self.ch_to_hz(0)
 
 	def get_stop_hz(self):
+		"""Return the highest settable frequency."""
 		return self.ch_to_hz(self.num - 1)
 
 	def covers(self, start_hz, stop_hz):
-		"""Return true if this configuration can cover the given band
+		"""Return true if this configuration can cover the given frequency band.
+
+		start_hz -- Lower bound of the frequency band to check (inclusive)
+		stop_hz -- Upper bound of the frequency band to check (inclusive)
 		"""
 		return start_hz >= self.get_start_hz() and stop_hz <= self.get_stop_hz()
 
 	def get_full_sweep_config(self, step_hz=None):
+		"""Return a sweep configuration that covers the entire frequency range supported
+		by this device configuration.
+
+		step_hz -- Frequency step to use. By default, step by a single channel.
+		"""
+
 		if step_hz is None:
 			step_ch = 1
 		else:
@@ -36,6 +77,12 @@ class DeviceConfig:
 		return SweepConfig(self, 0, self.num, step_ch)
 
 	def get_sweep_config(self, start_hz, stop_hz, step_hz):
+		"""Return a sweep configuration that covers the specified frequency band.
+
+		start_hz -- Lower bound of the frequency band to sweep (inclusive)
+		stop_hz -- Upper bound of the frequency band to sweep (inclusive)
+		step_hz -- Sweep frequency step
+		"""
 		assert self.covers(start_hz, stop_hz)
 
 		# channel start, step, stop as passed to vesna channel config
@@ -51,7 +98,15 @@ class DeviceConfig:
 				self.device.id, self.id, self.get_start_hz(), self.get_stop_hz())
 
 class SweepConfig:
+	"""Frequency sweep configuration for a spectrum sensing device."""
 	def __init__(self, config, start_ch, stop_ch, step_ch):
+		"""Create a new sweep configuration.
+
+		config -- Device configuration object to use
+		start_ch -- Lowest frequency channel to sweep
+		stop_ch -- One past the highest frequency channel to sweep
+		step_ch -- How many channels in a step
+		"""
 		assert start_ch >= 0
 		assert start_ch < config.num
 		assert stop_ch >= 0
@@ -75,12 +130,22 @@ class SweepConfig:
 		self.num_channels = len(range(start_ch, stop_ch, step_ch))
 
 class Sweep:
+	"""Measurement data from a single frequency sweep.
+
+	Attributes:
+
+	timestamp -- Time when the sweep started (in miliseconds since the start of sensing)
+	data -- List of measurements, one power measurement in dBm per channel sweeped.
+	"""
 	def __init__(self):
 		self.timestamp = None
 		self.data = []
 
 class ConfigList:
+	"""List of devices and device configurations supported by attached hardware."""
+
 	def __init__(self):
+		"""Create a new list."""
 		self.configs = []
 		self.devices = []
 
@@ -91,6 +156,11 @@ class ConfigList:
 		self.configs.append(config)
 
 	def get_config(self, device_id, config_id):
+		"""Return the specified device configuration.
+
+		device_id -- numeric device id, as returned by the "list" command.
+		config_id -- numeric configuration id, as returned by the "list" command.
+		"""
 		for config in self.configs:
 			if config.id == config_id and config.device.id == device_id:
 				return config
@@ -98,6 +168,12 @@ class ConfigList:
 		return None
 
 	def get_sweep_config(self, start_hz, stop_hz, step_hz):
+		"""Return best frequency sweep configuration for specified requirements.
+
+		start_hz -- Lower bound of the frequency band to sweep (inclusive).
+		stop_hz -- Upper bound of the frequency band to sweep (inclusive).
+		step_hz -- Preferred frequency step to use.
+		"""
 
 		candidates = []
 
@@ -114,10 +190,18 @@ class ConfigList:
 			return None
 
 class SpectrumSensor:
+	"""Top-level abstraction of the attached spectrum sensing hardware."""
+
 	def __init__(self, device):
+		"""Create a new spectrum sensor object.
+
+		device -- path to the character device for the RS232 port with the spectrum sensor.
+		"""
 		self.comm = serial.Serial(device, 115200, timeout=.5)
 	
 	def get_config_list(self):
+		"""Query and return the list of supported device configurations."""
+
 		self.comm.write("report-off\n")
 
 		while self.comm.readline() != 'ok\n': pass
@@ -155,6 +239,7 @@ class SpectrumSensor:
 		return config_list
 
 	def get_status(self):
+		"""Query and return the string with device status."""
 		self.comm.write("status\n")
 
 		resp = []
@@ -169,6 +254,19 @@ class SpectrumSensor:
 		return resp
 
 	def run(self, sweep_config, cb):
+		"""Run the specified frequency sweep.
+
+		sweep_config -- frequency sweep configuration object
+		cb -- callback function.
+
+		This function continuously runs the specified frequency sweep on the attached
+		hardware.  The provided callback function is called for each completed sweep:
+
+		cb(sweep_config, sweep)
+
+		Where sweep_config is the SweepConfig object provided when calling run() and sweep
+		the Sweep object with measured data.
+		"""
 		self.comm.write("select channel %d:%d:%d config %d,%d\n" % (
 				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
 				sweep_config.config.device.id, sweep_config.config.id))
