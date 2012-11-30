@@ -190,13 +190,13 @@ class SpectrumSensor:
 
 			try:
 				fields = line.split()
-				if len(fields) != sweep_config.num_channels + 4:
+				if len(fields) != 1024 + 4:
 					raise ValueError
 
 				sweep = Sweep()
 
 				sweep.timestamp = float(fields[1])
-				sweep.data = map(float, fields[3:-1])
+				sweep.data = map(int, fields[3:-1])
 			except ValueError:
 				print "Ignoring corrupted line: %s" % (line,)
 				continue
