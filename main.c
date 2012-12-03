@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <libopencm3/stm32/f1/flash.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rtc.h>
@@ -27,6 +28,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/nvic.h>
 
+#include "rcc.h"
 #include "spectrum.h"
 #include "dev-dummy.h"
 #include "dev-tda18219.h"
@@ -81,7 +83,7 @@ static void setup(void)
 {
 	SCB_VTOR = (u32) vector_table;
 
-	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_clock_setup_in_hsi_out_56mhz();
 
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
 			RCC_APB2ENR_IOPAEN |
