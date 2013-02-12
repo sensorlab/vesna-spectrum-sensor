@@ -127,7 +127,18 @@ class SweepConfig:
 		self.stop_hz = config.ch_to_hz(last_ch)
 		self.step_hz = config.spacing * step_ch
 
-		self.num_channels = len(range(start_ch, stop_ch, step_ch))
+		self.num_channels = len(self.get_ch_list())
+
+	def get_ch_list(self):
+		"""Return a list of channels covered by this configuration
+		"""
+		return range(self.start_ch, self.stop_ch, self.step_ch)
+
+	def get_hz_list(self):
+		"""Return a list of frequencies covered by this
+		configuration
+		"""
+		return map(self.config.ch_to_hz, self.get_ch_list())
 
 class Sweep:
 	"""Measurement data from a single frequency sweep.
