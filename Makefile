@@ -1,11 +1,14 @@
 BINARY = spectrum-sensor
 
+VERSION		= $(shell git describe --always)
+
 PREFIX		?= arm-none-eabi
 CC		= $(PREFIX)-gcc
 LD		= $(PREFIX)-gcc
 OBJCOPY		= $(PREFIX)-objcopy
 CFLAGS		+= -Os -g -Wall -Wextra -I$(TOOLCHAIN_DIR)/include \
-		   -fno-common -mcpu=cortex-m3 -mthumb -msoft-float -MD -DSTM32F1
+		   -fno-common -mcpu=cortex-m3 -mthumb -msoft-float -MD -DSTM32F1 \
+		   -DVERSION=\"$(VERSION)\"
 LDSCRIPT	?= vesna.ld
 LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \

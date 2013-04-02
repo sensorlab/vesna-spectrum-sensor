@@ -233,6 +233,11 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	printf("ok\n");
 }
 
+static void command_version(void)
+{
+	printf("%s\n", VERSION);
+}
+
 static void command_status(void)
 {
 #ifdef TUNER_TDA18219
@@ -268,6 +273,8 @@ static void dispatch(const char* cmd)
 				&start, &step, &stop,
 				&dev_id, &config_id) == 5) {
 		command_select(start, step, stop, dev_id, config_id);
+	} else if (!strcmp(cmd, "version")) {
+		command_version();
 	} else {
 		printf("error: unknown command: %s\n", cmd);
 	}

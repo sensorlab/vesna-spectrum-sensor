@@ -264,6 +264,18 @@ class SpectrumSensor:
 
 		return resp
 
+	def get_fw_version(self):
+		"""Query and return version of the firmware on VESNA."""
+		self.comm.write("version\n")
+		resp = self.comm.readline()
+
+		if resp.startswith("error: unknown command:"):
+			resp = None
+		else:
+			resp = resp.strip()
+
+		return resp
+
 	def run(self, sweep_config, cb):
 		"""Run the specified frequency sweep.
 
