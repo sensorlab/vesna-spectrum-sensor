@@ -97,6 +97,9 @@ ifndef MODEL_OK
 	$(error Please select hardware model with MODEL environment)
 endif
 
-.PHONY: clean check-model
+test:
+	$(MAKE) -C tests test
+
+.PHONY: clean check-model test
 
 -include $(OBJS:.o=.d)
