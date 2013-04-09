@@ -8,9 +8,22 @@ UNITY_OBJ = $(UNITY)/src/unity.o
 
 TESTS =
 
+DEPS =	$(TESTS:test_%_run=%.d) \
+	$(TESTS:test_%_run=test_%.d) \
+	$(TESTS:test_%_run=test_%_runner.d)
+
 all: test
 
 test: $(TESTS)
+
+test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.d: %.c
+	@set -e; rm -f $@; \
+	$(CC) -M $(CFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
 
 %_run: %_runner
 	./$^
@@ -21,6 +34,8 @@ test: $(TESTS)
 clean:
 	rm -f *.o 
 	rm -f *_runner *_runner.c
+
+include $(DEPS)
 
 vpath %.c ..
 
