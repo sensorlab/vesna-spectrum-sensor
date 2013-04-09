@@ -6,7 +6,7 @@ CFLAGS += -g -Wall $(INCLUDES)
 
 UNITY_OBJ = $(UNITY)/src/unity.o
 
-TESTS =
+TESTS = test_buffer_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \
