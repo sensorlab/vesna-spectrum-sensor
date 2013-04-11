@@ -6,7 +6,8 @@ CFLAGS += -g -Wall $(INCLUDES)
 
 UNITY_OBJ = $(UNITY)/src/unity.o
 
-TESTS = test_buffer_run
+TESTS =	test_buffer_run \
+	test_device_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \
@@ -32,7 +33,7 @@ test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
 	ruby $(UNITY)/auto/generate_test_runner.rb $^ $@
 
 clean:
-	rm -f *.o 
+	rm -f *.o *.d
 	rm -f *_runner *_runner.c
 
 include $(DEPS)

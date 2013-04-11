@@ -21,7 +21,6 @@
 #include <string.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
-#include <libopencm3/stm32/f1/rtc.h>
 #include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/usart.h>
@@ -32,25 +31,24 @@
 #include "dev-tda18219.h"
 #include "dev-cc.h"
 
+#include "run.h"
+#include "device-dummy.h"
+
 #define USART_BUFFER_SIZE		128
+#define DATA_BUFFER_SIZE		32
 
 static char usart_buffer[USART_BUFFER_SIZE];
 static int usart_buffer_len = 0;
 static volatile int usart_buffer_attn = 0;
-static int report = 0;
 
-static struct spectrum_sweep_config sweep_config;
-static const struct spectrum_dev* dev = NULL;
+static struct vss_sweep_config current_sweep_config;
+
+static struct vss_device_run current_device_run;
+static uint16_t data_buffer[DATA_BUFFER_SIZE];
 
 extern void (*const vector_table[]) (void);
 
 /* Set up all the peripherals */
-
-static void setup_rtc(void) 
-{
-	rtc_awake_from_off(LSE);
-	rtc_set_prescale_val(15);
-}
 
 static void setup_usart(void) 
 {
@@ -96,7 +94,6 @@ static void setup(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 
 	setup_usart();
-	setup_rtc();
 }
 
 void usart1_isr(void)
@@ -137,23 +134,6 @@ int _write(int file, char *ptr, int len)
 	}
 }
 
-static int report_cb(const struct spectrum_sweep_config* sweep_config, int timestamp, const short int data_list[])
-{
-	int channel_num = spectrum_sweep_channel_num(sweep_config);
-	int n;
-	printf("TS %d.%03d DS", timestamp/1000, timestamp%1000);
-	for(n = 0; n < channel_num; n++) {
-		printf(" %d.%02d", data_list[n]/100, abs(data_list[n]%100));
-	}
-	printf(" DE\n");
-
-	if(usart_buffer_attn) {
-		return E_SPECTRUM_STOP_SWEEP;
-	} else {
-		return E_SPECTRUM_OK;
-	}
-}
-
 static void command_help(void)
 {
 	printf( "VESNA spectrum sensing application\n\n"
@@ -175,60 +155,63 @@ static void command_help(void)
 
 static void command_list(void)
 {
-	int dev_id, config_id;
-	for(dev_id = 0; dev_id < spectrum_dev_num; dev_id++) {
-		const struct spectrum_dev* dev = spectrum_dev_list[dev_id];
+	int dev_id = -1;
+	int config_id = 0;
 
-		printf("device %d: %s\n", dev_id, dev->name);
+	const struct vss_device* device = NULL;
 
-		for(config_id = 0; config_id < dev->dev_config_num; config_id++) {
-			const struct spectrum_dev_config* dev_config = dev->dev_config_list[config_id];
-			printf("  channel config %d,%d: %s\n", dev_id, config_id, dev_config->name);
-			printf("    base: %lld Hz\n", dev_config->channel_base_hz);
-			printf("    spacing: %d Hz\n", dev_config->channel_spacing_hz);
-			printf("    bw: %d Hz\n", dev_config->channel_bw_hz);
-			printf("    num: %d\n", dev_config->channel_num);
-			printf("    time: %d ms\n", dev_config->channel_time_ms);
+	int n;
+	for(n = 0; n < vss_device_config_list_num; n++) {
+		const struct vss_device_config* device_config = vss_device_config_list[n];
+
+		if(device_config->device != device) {
+			device = device_config->device;
+			dev_id++;
+
+			printf("device %d: %s\n", dev_id, device->name);
+
+			config_id = 0;
 		}
+
+		printf("  channel config %d,%d: %s\n", dev_id, config_id, device_config->name);
+		printf("    base: %lld Hz\n", device_config->channel_base_hz);
+		printf("    spacing: %d Hz\n", device_config->channel_spacing_hz);
+		printf("    bw: %d Hz\n", device_config->channel_bw_hz);
+		printf("    num: %d\n", device_config->channel_num);
+		printf("    time: %d ms\n", device_config->channel_time_ms);
+
+		config_id++;
 	}
 }
 
 static void command_report_on(void)
 {
-	if (dev == NULL) {
+	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
 	} else {
-		report = 1;
+		vss_device_run_init(&current_device_run, &current_sweep_config, -1, data_buffer);
+		vss_device_run_start(&current_device_run);
 	}
 }
 
 static void command_report_off(void)
 {
-	report = 0;
-	printf("ok\n");
+	vss_device_run_stop(&current_device_run);
 }
 
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
 {
-	if (dev_id < 0 || dev_id >= spectrum_dev_num) {
-		printf("error: unknown device %d\n", dev_id);
+	const struct vss_device_config* device_config = vss_device_config_get(dev_id, config_id);
+
+	if(device_config == NULL) {
+		printf("error: unknown config %d,%d\n", dev_id, config_id);
 		return;
 	}
 
-	dev = spectrum_dev_list[dev_id];
-
-	if (config_id < 0 || config_id >= dev->dev_config_num) {
-		printf("error: unknown config %d\n", config_id);
-	}
-
-	const struct spectrum_dev_config* dev_config = dev->dev_config_list[config_id];
-
-	sweep_config.dev_config = dev_config;
-	sweep_config.channel_start = start;
-	sweep_config.channel_step = step;
-	sweep_config.channel_stop = stop;
-
-	sweep_config.cb = report_cb;
+	current_sweep_config.device_config = device_config;
+	current_sweep_config.channel_start = start;
+	current_sweep_config.channel_step = step;
+	current_sweep_config.channel_stop = stop;
 
 	printf("ok\n");
 }
@@ -293,28 +276,126 @@ int main(void)
 #endif
 
 #ifdef TUNER_NULL
-	dev_dummy_register();
+	vss_device_dummy_register();
+
+	/*
+	struct vss_sweep_config co = {
+		.device_config = vss_device_config_list[0],
+		.channel_start = 0,
+		.channel_step = 1,
+		.channel_stop = 20,
+	};
+
+	struct vss_device_run ru;
+	uint16_t b[5];
+
+	unsigned int last_overflow_num = 0;
+
+	vss_device_run_init(&ru, &co, 10, b);
+
+	vss_device_run_start(&ru);
+
+	unsigned int channel = ru.sweep_config->channel_start;
+	int state = 0;
+
+	int32_t timestamp = 0;
+
+	while(1) {
+		const uint16_t* d;
+		size_t l;
+
+		if(ru.overflow_num != last_overflow_num) {
+			last_overflow_num = ru.overflow_num;
+			printf("ERROR: overflow\n");
+		}
+
+		vss_buffer_read_block(&ru.buffer, &d, &l);
+		size_t n;
+		for(n = 0; n < l; n++) {
+			switch(state) {
+				case 0:
+					timestamp = d[n];
+
+					state = 1;
+					break;
+				case 1:
+					timestamp |= d[n] << 16;
+					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
+
+					state = 2;
+					break;
+
+				case 2:
+					printf(" %d.%02d", d[n]/100, abs(d[n]%100));
+
+					channel += ru.sweep_config->channel_step;
+					if(channel >= ru.sweep_config->channel_stop) {
+						printf(" DE\n");
+						channel = ru.sweep_config->channel_start;
+						state = 0;
+					}
+
+					break;
+			}
+		}
+		vss_buffer_release_block(&ru.buffer);
+	}
+	*/
 #endif
 
-	int r;
-	
-	r = spectrum_reset();
-	if (r) {
-		printf("spectrum_reset(): error %d\n", r);
-	}
+	unsigned int last_overflow_num = 0;
 
-	while (1) {
+	unsigned int channel = current_device_run.sweep_config->channel_start;
+	int state = 0;
+
+	int32_t timestamp = 0;
+
+	while(1) {
 		if (usart_buffer_attn) {
 			dispatch(usart_buffer);
 			usart_buffer_attn = 0;
 		}
+
 		IWDG_KR = IWDG_KR_RESET;
-		if (report) {
-			r = spectrum_run(dev, &sweep_config);
-			if (r) {
-				printf("error: spectrum_run(): %d\n", r);
+
+		const uint16_t* d;
+		size_t l;
+
+		if(current_device_run.overflow_num != last_overflow_num) {
+			last_overflow_num = current_device_run.overflow_num;
+			printf("error: overflow\n");
+		}
+
+		vss_buffer_read_block(&current_device_run.buffer, &d, &l);
+		size_t n;
+		for(n = 0; n < l; n++) {
+			switch(state) {
+				case 0:
+					timestamp = d[n];
+
+					state = 1;
+					break;
+				case 1:
+					timestamp |= d[n] << 16;
+					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
+
+					state = 2;
+					break;
+
+				case 2:
+					printf(" %d.%02d", d[n]/100, abs(d[n]%100));
+
+					channel += current_device_run.sweep_config->channel_step;
+					if(channel >= current_device_run.sweep_config->channel_stop) {
+						printf(" DE\n");
+						channel = current_device_run.sweep_config->channel_start;
+						state = 0;
+					}
+
+					break;
 			}
 		}
+		vss_buffer_release_block(&current_device_run.buffer);
 	}
 
 	return 0;
