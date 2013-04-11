@@ -11,20 +11,22 @@ void vss_buffer_init_size(struct vss_buffer* buffer, uint16_t* data, size_t data
 
 size_t vss_buffer_size(const struct vss_buffer* buffer)
 {
-	if(buffer->released <= buffer->write) {
-		return buffer->write - buffer->released;
+	uint16_t *write = buffer->write;
+	if(buffer->released <= write) {
+		return write - buffer->released;
 	} else {
-		return (buffer->end - buffer->released) + (buffer->write - buffer->start);
+		return (buffer->end - buffer->released) + (write - buffer->start);
 	}
 }
 
 void vss_buffer_read_block(struct vss_buffer* buffer, const uint16_t** data, size_t* data_len)
 {
 	*data = buffer->released;
+	uint16_t *write = buffer->write;
 
-	if(buffer->released <= buffer->write) {
-		*data_len = buffer->write - buffer->released;
-		buffer->read = buffer->write;
+	if(buffer->released <= write) {
+		*data_len = write - buffer->released;
+		buffer->read = write;
 	} else {
 		*data_len = buffer->end - buffer->released;
 		buffer->read = buffer->start;

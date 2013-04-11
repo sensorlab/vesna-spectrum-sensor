@@ -9,7 +9,7 @@ struct vss_buffer {
 	uint16_t* end;
 
 	uint16_t* read;
-	uint16_t* write;
+	uint16_t* volatile write;
 	uint16_t* released;
 };
 
