@@ -42,7 +42,7 @@ static volatile int usart_buffer_attn = 0;
 static struct vss_sweep_config current_sweep_config;
 
 static struct vss_device_run current_device_run;
-static uint16_t data_buffer[DATA_BUFFER_SIZE];
+static power_t data_buffer[DATA_BUFFER_SIZE];
 
 extern void (*const vector_table[]) (void);
 
@@ -303,12 +303,12 @@ int main(void)
 
 		int channel;
 		uint32_t timestamp;
-		uint16_t power;
+		power_t power;
 
 		while(vss_device_run_read_parse(&current_device_run, &ctx,
 								&timestamp, &channel, &power) == VSS_OK) {
-			if(channel != -1) {
-				if(channel == current_device_run.sweep_config->channel_start) {
+			if(channel >= 0) {
+				if((unsigned) channel == current_device_run.sweep_config->channel_start) {
 					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
 				}
 

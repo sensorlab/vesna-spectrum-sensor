@@ -29,7 +29,7 @@
 
 static struct vss_device_run* current_device_run = NULL;
 
-typedef short int (*data_f)(void);
+typedef power_t (*data_f)(void);
 
 static int vss_device_dummy_init()
 {
@@ -57,7 +57,7 @@ static int dev_dummy_status(void* priv __attribute__((unused)), char* buffer, si
 
 static void do_stuff(void)
 {
-	uint16_t result = ((data_f) current_device_run->sweep_config->device_config->priv)();
+	power_t result = ((data_f) current_device_run->sweep_config->device_config->priv)();
 
 	if(vss_device_run_insert(current_device_run, result, vss_rtc_read()) == VSS_OK) {
 		vss_timer_schedule(CHANNEL_TIME_MS);
@@ -96,7 +96,7 @@ static const struct vss_device device_dummy = {
 	.priv 			= NULL
 };
 
-static short int get_zero(void)
+static power_t get_zero(void)
 {
 	return 0;
 }
@@ -116,7 +116,7 @@ static const struct vss_device_config dev_dummy_null_config = {
 	.priv			= get_zero
 };
 
-static short int get_random(void)
+static power_t get_random(void)
 {
 	return -(rand() % 10000);
 }

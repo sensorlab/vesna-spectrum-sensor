@@ -23,7 +23,7 @@ struct vss_device_run {
 };
 
 struct vss_device_run_read_result {
-	const uint16_t* data;
+	const power_t* data;
 	size_t len;
 
 	size_t p;
@@ -36,7 +36,7 @@ struct vss_device_run_read_result {
 
 void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sweep_config* sweep_config, 
 		int sweep_num);
-int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint32_t timestamp);
+int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp);
 
 int vss_device_run_start(struct vss_device_run* run);
 int vss_device_run_stop(struct vss_device_run* run);
@@ -44,6 +44,6 @@ int vss_device_run_is_running(struct vss_device_run* run);
 
 void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_result* ctx);
 int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_read_result *ctx,
-		uint32_t* timestamp, int* channel, uint16_t* power);
+		uint32_t* timestamp, int* channel, power_t* power);
 
 #endif

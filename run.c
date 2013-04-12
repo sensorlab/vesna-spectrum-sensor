@@ -14,7 +14,7 @@ void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sw
 	device_run->read_channel = sweep_config->channel_start;
 }
 
-static void vss_device_run_write(struct vss_device_run* device_run, uint16_t data)
+static void vss_device_run_write(struct vss_device_run* device_run, power_t data)
 {
 	if(vss_buffer_write(&device_run->buffer, data)) {
 		device_run->overflow_num++;
@@ -27,7 +27,7 @@ static void vss_device_run_insert_timestamp(struct vss_device_run* device_run, u
 	vss_device_run_write(device_run, (timestamp >> 16) & 0x0000ffff);
 }
 
-int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint32_t timestamp)
+int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp)
 {
 	if(device_run->write_channel == device_run->sweep_config->channel_start) {
 		vss_device_run_insert_timestamp(device_run, timestamp);
@@ -84,7 +84,7 @@ void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_
 }
 
 int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_read_result *ctx,
-		uint32_t* timestamp, int* channel, uint16_t* power)
+		uint32_t* timestamp, int* channel, power_t* power)
 {
 	if(ctx->p >= ctx->len) {
 		vss_buffer_release_block(&run->buffer);
@@ -93,7 +93,7 @@ int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_
 
 	switch(run->read_state) {
 		case 0:
-			*timestamp = ctx->data[ctx->p];
+			*timestamp = (uint16_t) ctx->data[ctx->p];
 			*channel = -1;
 
 			run->read_state = 1;

@@ -4,7 +4,7 @@
 #define buffer_data_len 1024
 
 static struct vss_device_run run;
-static uint16_t buffer_data[buffer_data_len];
+static power_t buffer_data[buffer_data_len];
 
 int run_f(void* priv, struct vss_device_run* run)
 {
@@ -50,12 +50,14 @@ void test_start(void)
 
 void test_single_run(void)
 {
+	const power_t v = 0x70fe;
+
 	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
 	vss_device_run_start(&run);
 
 	int cnt = 0;
 	while(1) {
-		int r = vss_device_run_insert(&run, 0xc0fe, 0xdeadbeef);
+		int r = vss_device_run_insert(&run, v, 0xdeadbeef);
 		if(r == VSS_OK) {
 			cnt++;
 		} else if(r == VSS_STOP) {
@@ -71,19 +73,21 @@ void test_single_run(void)
 
 void test_infinite_run(void)
 {
+	const power_t v = 0x70fe;
+
 	vss_device_run_init(&run, &sweep_config, -1, buffer_data);
 	vss_device_run_start(&run);
 
 	int cnt, r;
 	for(cnt = 0; cnt < 100; cnt++) {
-		r = vss_device_run_insert(&run, 0xc0fe, 0xdeadbeef);
+		r = vss_device_run_insert(&run, v, 0xdeadbeef);
 		TEST_ASSERT_EQUAL(VSS_OK, r);
 	}
 
 	vss_device_run_stop(&run);
 
 	for(cnt = 0; cnt < 100; cnt++) {
-		r = vss_device_run_insert(&run, 0xc0fe, 0xdeadbeef);
+		r = vss_device_run_insert(&run, v, 0xdeadbeef);
 		if(r != VSS_OK) break;
 	}
 
@@ -94,12 +98,14 @@ void test_infinite_run(void)
 
 void test_read(void)
 {
+	const power_t v = 0x70fe;
+
 	vss_device_run_init(&run, &sweep_config, -1, buffer_data);
 	vss_device_run_start(&run);
 
 	int cnt;
 	for(cnt = 0; cnt < 10; cnt++) {
-		vss_device_run_insert(&run, 0xc0fe, 0xdeadbeef);
+		vss_device_run_insert(&run, v, 0xdeadbeef);
 	}
 
 	struct vss_device_run_read_result ctx;
@@ -107,13 +113,13 @@ void test_read(void)
 
 	int channel;
 	uint32_t timestamp;
-	uint16_t power;
+	power_t power;
 
 	cnt = 0;
 	while(vss_device_run_read_parse(&run, &ctx, &timestamp, &channel, &power) == VSS_OK) {
 		if(channel != -1) {
 			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
-			TEST_ASSERT_EQUAL(0xc0fe, power);
+			TEST_ASSERT_EQUAL(v, power);
 			cnt++;
 		}
 	}

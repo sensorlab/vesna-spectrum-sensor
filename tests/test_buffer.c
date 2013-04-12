@@ -4,7 +4,7 @@
 #define buffer_data_len 1024
 
 static struct vss_buffer buffer;
-static uint16_t buffer_data[buffer_data_len];
+static power_t buffer_data[buffer_data_len];
 
 void setUp(void)
 {
@@ -23,7 +23,7 @@ void test_new_is_empty(void)
 
 void test_empty_read(void)
 {
-	const uint16_t *ptr;
+	const power_t *ptr;
 	size_t len;
 
 	vss_buffer_read_block(&buffer, &ptr, &len);
@@ -33,13 +33,13 @@ void test_empty_read(void)
 
 void test_read_write(void)
 {
-	const uint16_t v = 0xc0fe;
+	const power_t v = 0x70fe;
 
 	int r = vss_buffer_write(&buffer, v);
 
 	TEST_ASSERT_EQUAL(0, r);
 
-	const uint16_t* ptr;
+	const power_t* ptr;
 	size_t len;
 
 	vss_buffer_read_block(&buffer, &ptr, &len);
@@ -50,7 +50,7 @@ void test_read_write(void)
 
 void test_write_full(void)
 {
-	const uint16_t v = 0xc0fe;
+	const power_t v = 0x70fe;
 
 	size_t n;
 	for(n = 0; n < buffer_data_len - 1; n++) {
@@ -72,7 +72,7 @@ void prepare_wrap_around(void)
 	for(n = 0; n < buffer_data_len/2; n++) {
 		vss_buffer_write(&buffer, 0);
 
-		const uint16_t* ptr;
+		const power_t* ptr;
 		size_t len;
 		vss_buffer_read_block(&buffer, &ptr, &len);
 		vss_buffer_release_block(&buffer);
@@ -101,7 +101,7 @@ void test_write_full_wrap_around(void)
 {
 	prepare_wrap_around();
 
-	const uint16_t v = 0xc0fe;
+	const power_t v = 0x70fe;
 
 	size_t n;
 	for(n = 0; n < buffer_data_len - 1; n++) {
@@ -120,14 +120,14 @@ void test_read_wrap_around(void)
 {
 	prepare_wrap_around();
 
-	const uint16_t v = 0xc0fe;
+	const power_t v = 0x70fe;
 
 	size_t n;
 	for(n = 0; n < buffer_data_len - 1; n++) {
 		vss_buffer_write(&buffer, v);
 	}
 
-	const uint16_t* data;
+	const power_t* data;
 	size_t len;
 
 	size_t sum = 0;
@@ -146,15 +146,15 @@ void test_read_wrap_around(void)
 
 void test_dont_overwrite_values_just_read(void)
 {
-	const uint16_t v1 = 0xc0fe;
-	const uint16_t v2 = 0xbeef;
+	const power_t v1 = 0x70fe;
+	const power_t v2 = 0xbeef;
 
 	size_t n;
 	for(n = 0; n < 100; n++) {
 		vss_buffer_write(&buffer, v1);
 	}
 
-	const uint16_t* data;
+	const power_t* data;
 	size_t len;
 
 	vss_buffer_read_block(&buffer, &data, &len);
