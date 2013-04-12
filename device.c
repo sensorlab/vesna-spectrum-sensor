@@ -4,6 +4,16 @@
 int vss_device_config_list_num;
 const struct vss_device_config* vss_device_config_list[VSS_MAX_DEVICE_CONFIG];
 
+int vss_device_run(const struct vss_device* device, struct vss_device_run* run)
+{
+	return device->run(device->priv, run);
+}
+
+int vss_device_status(const struct vss_device* device, char* buffer, size_t len)
+{
+	return device->status(device->priv, buffer, len);
+}
+
 int vss_device_config_add(const struct vss_device_config* device_config)
 {
 	if(vss_device_config_list_num >= VSS_MAX_DEVICE_CONFIG) return VSS_TOO_MANY;

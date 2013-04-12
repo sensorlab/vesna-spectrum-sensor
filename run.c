@@ -58,7 +58,7 @@ int vss_device_run_start(struct vss_device_run* run)
 
 	const struct vss_device* device = run->sweep_config->device_config->device;
 
-	int r = device->run(device->priv, run);
+	int r = vss_device_run(device, run);
 	if(r != VSS_OK) {
 		run->running = 0;
 	}

@@ -77,6 +77,9 @@ struct vss_sweep_config {
 extern int vss_device_config_list_num;
 extern const struct vss_device_config* vss_device_config_list[];
 
+int vss_device_run(const struct vss_device* device, struct vss_device_run* run);
+int vss_device_status(const struct vss_device* device, char* buffer, size_t len);
+
 int vss_device_config_add(const struct vss_device_config* device_config);
 const struct vss_device_config* vss_device_config_get(int device_id, int config_id);
 
