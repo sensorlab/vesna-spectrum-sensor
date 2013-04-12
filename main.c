@@ -304,7 +304,7 @@ int main(void)
 		while(vss_device_run_read_parse(&current_device_run, &ctx,
 								&timestamp, &channel, &power) == VSS_OK) {
 			if(channel != -1) {
-				if(channel == 0) {
+				if(channel == current_device_run.sweep_config->channel_start) {
 					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
 				}
 
