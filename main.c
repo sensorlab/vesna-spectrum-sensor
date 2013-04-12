@@ -277,78 +277,9 @@ int main(void)
 
 #ifdef TUNER_NULL
 	vss_device_dummy_register();
-
-	/*
-	struct vss_sweep_config co = {
-		.device_config = vss_device_config_list[0],
-		.channel_start = 0,
-		.channel_step = 1,
-		.channel_stop = 20,
-	};
-
-	struct vss_device_run ru;
-	uint16_t b[5];
-
-	unsigned int last_overflow_num = 0;
-
-	vss_device_run_init(&ru, &co, 10, b);
-
-	vss_device_run_start(&ru);
-
-	unsigned int channel = ru.sweep_config->channel_start;
-	int state = 0;
-
-	int32_t timestamp = 0;
-
-	while(1) {
-		const uint16_t* d;
-		size_t l;
-
-		if(ru.overflow_num != last_overflow_num) {
-			last_overflow_num = ru.overflow_num;
-			printf("ERROR: overflow\n");
-		}
-
-		vss_buffer_read_block(&ru.buffer, &d, &l);
-		size_t n;
-		for(n = 0; n < l; n++) {
-			switch(state) {
-				case 0:
-					timestamp = d[n];
-
-					state = 1;
-					break;
-				case 1:
-					timestamp |= d[n] << 16;
-					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
-
-					state = 2;
-					break;
-
-				case 2:
-					printf(" %d.%02d", d[n]/100, abs(d[n]%100));
-
-					channel += ru.sweep_config->channel_step;
-					if(channel >= ru.sweep_config->channel_stop) {
-						printf(" DE\n");
-						channel = ru.sweep_config->channel_start;
-						state = 0;
-					}
-
-					break;
-			}
-		}
-		vss_buffer_release_block(&ru.buffer);
-	}
-	*/
 #endif
 
 	unsigned int last_overflow_num = 0;
-
-	unsigned int channel = current_device_run.sweep_config->channel_start;
-	int state = 0;
-
-	int32_t timestamp = 0;
 
 	while(1) {
 		if (usart_buffer_attn) {
@@ -358,44 +289,33 @@ int main(void)
 
 		IWDG_KR = IWDG_KR_RESET;
 
-		const uint16_t* d;
-		size_t l;
-
 		if(current_device_run.overflow_num != last_overflow_num) {
 			last_overflow_num = current_device_run.overflow_num;
 			printf("error: overflow\n");
 		}
 
-		vss_buffer_read_block(&current_device_run.buffer, &d, &l);
-		size_t n;
-		for(n = 0; n < l; n++) {
-			switch(state) {
-				case 0:
-					timestamp = d[n];
+		struct vss_device_run_read_result ctx;
+		vss_device_run_read(&current_device_run, &ctx);
 
-					state = 1;
-					break;
-				case 1:
-					timestamp |= d[n] << 16;
+		int channel;
+		uint32_t timestamp;
+		uint16_t power;
+
+		while(vss_device_run_read_parse(&current_device_run, &ctx,
+								&timestamp, &channel, &power) == VSS_OK) {
+			if(channel != -1) {
+				if(channel == 0) {
 					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
+				}
 
-					state = 2;
-					break;
+				printf(" %d.%02d", power/100, abs(power%100));
 
-				case 2:
-					printf(" %d.%02d", d[n]/100, abs(d[n]%100));
-
-					channel += current_device_run.sweep_config->channel_step;
-					if(channel >= current_device_run.sweep_config->channel_stop) {
-						printf(" DE\n");
-						channel = current_device_run.sweep_config->channel_start;
-						state = 0;
-					}
-
-					break;
+				if(channel + current_device_run.sweep_config->channel_step
+						>= current_device_run.sweep_config->channel_stop) {
+					printf(" DE\n");
+				}
 			}
 		}
-		vss_buffer_release_block(&current_device_run.buffer);
 	}
 
 	return 0;

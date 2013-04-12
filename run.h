@@ -14,9 +14,19 @@ struct vss_device_run {
 
 	volatile unsigned int overflow_num;
 
-	unsigned int channel;
+	unsigned int write_channel;
+
+	unsigned int read_channel;
+	int read_state;
 
 	volatile int running;
+};
+
+struct vss_device_run_read_result {
+	const uint16_t* data;
+	size_t len;
+
+	size_t p;
 };
 
 #define vss_device_run_init(device_run, sweep_config, sweep_num, data) {\
@@ -31,5 +41,9 @@ int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint
 int vss_device_run_start(struct vss_device_run* run);
 int vss_device_run_stop(struct vss_device_run* run);
 int vss_device_run_is_running(struct vss_device_run* run);
+
+void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_result* ctx);
+int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_read_result *ctx,
+		uint32_t* timestamp, int* channel, uint16_t* power);
 
 #endif

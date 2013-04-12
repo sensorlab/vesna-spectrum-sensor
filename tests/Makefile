@@ -7,7 +7,8 @@ CFLAGS += -g -Wall $(INCLUDES)
 UNITY_OBJ = $(UNITY)/src/unity.o
 
 TESTS =	test_buffer_run \
-	test_device_run
+	test_device_run \
+	test_run_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \
@@ -16,6 +17,8 @@ DEPS =	$(TESTS:test_%_run=%.d) \
 all: test
 
 test: $(TESTS)
+
+test_run_runner: test_run_runner.o test_run.o run.o buffer.o $(UNITY_OBJ)
 
 test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^

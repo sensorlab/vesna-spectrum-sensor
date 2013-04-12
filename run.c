@@ -7,8 +7,11 @@ void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sw
 	device_run->sweep_num = sweep_num;
 
 	device_run->overflow_num = 0;
-	device_run->channel = sweep_config->channel_start;
+	device_run->write_channel = sweep_config->channel_start;
 	device_run->running = 0;
+
+	device_run->read_state = 0;
+	device_run->read_channel = sweep_config->channel_start;
 }
 
 static void vss_device_run_write(struct vss_device_run* device_run, uint16_t data)
@@ -26,17 +29,17 @@ static void vss_device_run_insert_timestamp(struct vss_device_run* device_run, u
 
 int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint32_t timestamp)
 {
-	if(device_run->channel == device_run->sweep_config->channel_start) {
+	if(device_run->write_channel == device_run->sweep_config->channel_start) {
 		vss_device_run_insert_timestamp(device_run, timestamp);
 	}
 
 	vss_device_run_write(device_run, data);
 
-	device_run->channel += device_run->sweep_config->channel_step;
-	if(device_run->channel >= device_run->sweep_config->channel_stop) {
+	device_run->write_channel += device_run->sweep_config->channel_step;
+	if(device_run->write_channel >= device_run->sweep_config->channel_stop) {
 		if(device_run->sweep_num > 1) {
 			device_run->sweep_num--;
-			device_run->channel = device_run->sweep_config->channel_start;
+			device_run->write_channel = device_run->sweep_config->channel_start;
 
 			return VSS_OK;
 		} else {
@@ -72,4 +75,48 @@ int vss_device_run_stop(struct vss_device_run* run)
 int vss_device_run_is_running(struct vss_device_run* run)
 {
 	return run->running;
+}
+
+void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_result* ctx)
+{
+	ctx->p = 0;
+	vss_buffer_read_block(&run->buffer, &ctx->data, &ctx->len);
+}
+
+int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_read_result *ctx,
+		uint32_t* timestamp, int* channel, uint16_t* power)
+{
+	if(ctx->p >= ctx->len) {
+		vss_buffer_release_block(&run->buffer);
+		return VSS_STOP;
+	}
+
+	switch(run->read_state) {
+		case 0:
+			*timestamp = ctx->data[ctx->p];
+			*channel = -1;
+
+			run->read_state = 1;
+			break;
+		case 1:
+			*timestamp |= ctx->data[ctx->p] << 16;
+			*channel = -1;
+
+			run->read_state = 2;
+			break;
+
+		case 2:
+			*power = ctx->data[ctx->p];
+			*channel = run->read_channel;
+
+			run->read_channel += run->sweep_config->channel_step;
+			if(run->read_channel >= run->sweep_config->channel_stop) {
+				run->read_channel = run->sweep_config->channel_start;
+				run->read_state = 0;
+			}
+			break;
+	}
+
+	ctx->p++;
+	return VSS_OK;
 }
