@@ -198,7 +198,11 @@ static void command_report_on(void)
 
 static void command_report_off(void)
 {
-	vss_device_run_stop(&current_device_run);
+	if(!vss_device_run_is_running(&current_device_run)) {
+		printf("ok\n");
+	} else {
+		vss_device_run_stop(&current_device_run);
+	}
 }
 
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
