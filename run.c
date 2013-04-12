@@ -1,7 +1,7 @@
 #include "run.h"
 
 void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sweep_config* sweep_config, 
-		unsigned int sweep_num)
+		int sweep_num)
 {
 	device_run->sweep_config = sweep_config;
 	device_run->sweep_num = sweep_num;
@@ -37,7 +37,7 @@ int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint
 
 	device_run->write_channel += device_run->sweep_config->channel_step;
 	if(device_run->write_channel >= device_run->sweep_config->channel_stop) {
-		if(device_run->sweep_num > 1) {
+		if(device_run->sweep_num > 1 || device_run->sweep_num < 0) {
 			device_run->sweep_num--;
 			device_run->write_channel = device_run->sweep_config->channel_start;
 

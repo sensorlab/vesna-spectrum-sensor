@@ -10,7 +10,7 @@ struct vss_device_run {
 
 	const struct vss_sweep_config* sweep_config;
 
-	volatile unsigned int sweep_num;
+	volatile int sweep_num;
 
 	volatile unsigned int overflow_num;
 
@@ -35,7 +35,7 @@ struct vss_device_run_read_result {
 }
 
 void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sweep_config* sweep_config, 
-		unsigned int sweep_num);
+		int sweep_num);
 int vss_device_run_insert(struct vss_device_run* device_run, uint16_t data, uint32_t timestamp);
 
 int vss_device_run_start(struct vss_device_run* run);
