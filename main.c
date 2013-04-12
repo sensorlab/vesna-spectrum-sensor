@@ -227,19 +227,17 @@ static void command_version(void)
 
 static void command_status(void)
 {
-#ifdef TUNER_TDA18219
-	dev_tda18219_print_status();
-#endif
-
-#ifdef TUNER_CC
-#if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNE_ISMTV_868)
-	dev_cc1101_print_status();
-#endif
-
-#if defined(MODEL_SNR_TRX_2400) || defined(MODEL_SNE_ISMTV_2400)
-	dev_cc2500_print_status();
-#endif
-#endif
+	if (current_sweep_config.device_config == NULL) {
+		printf("error: set channel config first\n");
+	} else {
+		char buff[256];
+		int r = vss_device_status(current_sweep_config.device_config->device, buff, sizeof(buff));
+		if(r != VSS_OK) {
+			printf("error: vss_device_status returned %d\n", r);
+		} else {
+			printf("%s", buff);
+		}
+	}
 }
 
 static void dispatch(const char* cmd)

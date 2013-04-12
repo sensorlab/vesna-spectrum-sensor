@@ -46,11 +46,12 @@ static int vss_device_dummy_init()
 
 static int dev_dummy_status(void* priv __attribute__((unused)), char* buffer, size_t len)
 {
-	if(len < 1) {
+	const char* status = "dummy device\n";
+	if(len < strlen(status) + 1) {
 		return VSS_TOO_MANY;
 	}
 
-	strncpy(buffer, "", len);
+	strncpy(buffer, status, len);
 	return VSS_OK;
 }
 
