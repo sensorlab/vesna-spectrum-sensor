@@ -60,6 +60,8 @@ static void do_stuff(void)
 
 	if(vss_device_run_insert(current_device_run, result, vss_rtc_read()) == VSS_OK) {
 		vss_timer_schedule(CHANNEL_TIME_MS);
+	} else {
+		current_device_run = NULL;
 	}
 }
 
@@ -71,7 +73,7 @@ void tim4_isr(void)
 
 static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
 {
-	if(current_device_run != NULL && current_device_run->running) {
+	if(current_device_run != NULL) {
 		return VSS_TOO_MANY;
 	}
 

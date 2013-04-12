@@ -190,7 +190,11 @@ static void command_report_on(void)
 		printf("error: set channel config first\n");
 	} else {
 		vss_device_run_init(&current_device_run, &current_sweep_config, -1, data_buffer);
-		vss_device_run_start(&current_device_run);
+
+		int r = vss_device_run_start(&current_device_run);
+		if(r) {
+			printf("error: vss_device_run_start returned %d\n", r);
+		}
 	}
 }
 
@@ -313,6 +317,9 @@ int main(void)
 				if(channel + current_device_run.sweep_config->channel_step
 						>= current_device_run.sweep_config->channel_stop) {
 					printf(" DE\n");
+					if(!vss_device_run_is_running(&current_device_run)) {
+						printf("ok\n");
+					}
 				}
 			}
 		}
