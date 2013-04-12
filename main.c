@@ -26,13 +26,11 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/nvic.h>
 
-#include "spectrum.h"
-#include "dev-dummy.h"
+#include "device-dummy.h"
 #include "dev-tda18219.h"
 #include "dev-cc.h"
 
 #include "run.h"
-#include "device-dummy.h"
 
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32

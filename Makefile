@@ -14,7 +14,7 @@ LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-OBJS		+= main.o spectrum.o device.o buffer.o run.o timer.o rtc.o device-dummy.o
+OBJS		+= main.o device.o buffer.o run.o timer.o rtc.o
 LIBS		+= -lopencm3_stm32f1
 
 OPENOCD		?= openocd
@@ -59,7 +59,7 @@ ifeq ($(MODEL),snr-trx-2400)
 endif
 
 ifeq ($(MODEL),null)
-	OBJS += dev-dummy.o
+	OBJS += device-dummy.o
 	CFLAGS += -DTUNER_NULL
 	MODEL_OK = ok
 endif

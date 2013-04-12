@@ -18,7 +18,7 @@ all: test
 
 test: $(TESTS)
 
-test_run_runner: test_run_runner.o test_run.o run.o buffer.o $(UNITY_OBJ)
+test_run_runner: test_run_runner.o test_run.o run.o buffer.o device.o $(UNITY_OBJ)
 
 test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
