@@ -45,7 +45,7 @@ const struct vss_device_config* vss_device_config_get(int device_id, int config_
 			return device_config;
 		}
 
-		config_id++;
+		config_id_o++;
 	}
 
 	return NULL;
