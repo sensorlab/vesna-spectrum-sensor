@@ -108,8 +108,8 @@ static void dev_cc_prepare_measurement(struct vss_device_run* device_run)
 
 static void dev_cc_take_measurement(struct vss_device_run* device_run)
 {
-	uint8_t reg;
-	vss_cc_read_reg(CC_REG_RSSI, &reg);
+	int8_t reg;
+	vss_cc_read_reg(CC_REG_RSSI, (uint8_t*) &reg);
 
 	power_t rssi_dbm_100 = -5920 + reg * 50;
 
