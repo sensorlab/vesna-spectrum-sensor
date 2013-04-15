@@ -31,7 +31,7 @@ static struct vss_device_run* current_device_run = NULL;
 
 typedef power_t (*data_f)(void);
 
-static int vss_device_dummy_init()
+static int vss_device_dummy_init(void)
 {
 	int r;
 	

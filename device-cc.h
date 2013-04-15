@@ -19,7 +19,7 @@
  * 		Tomaz Solc, <tomaz.solc@ijs.si> */
 #ifndef HAVE_DEV_CC_H
 #define HAVE_DEV_CC_H
-int dev_cc_register(void);
-void dev_cc1101_print_status(void);
-void dev_cc2500_print_status(void);
+
+int vss_device_cc_register(void);
+
 #endif

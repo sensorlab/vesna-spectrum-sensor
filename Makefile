@@ -41,7 +41,7 @@ ifeq ($(MODEL),sne-ismtv-868)
 endif
 
 ifeq ($(MODEL),sne-ismtv-2400)
-	OBJS += dev-cc.o
+	OBJS += cc.o device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_2400
 	MODEL_OK = ok
 endif
@@ -58,7 +58,7 @@ ifeq ($(MODEL),snr-trx-2400)
 	MODEL_OK = ok
 endif
 
-ifeq ($(MODEL),null)
+ifeq ($(MODEL),dummy)
 	OBJS += device-dummy.o
 	CFLAGS += -DTUNER_NULL
 	MODEL_OK = ok

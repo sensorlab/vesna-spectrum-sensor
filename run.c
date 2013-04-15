@@ -27,6 +27,11 @@ static void vss_device_run_insert_timestamp(struct vss_device_run* device_run, u
 	vss_device_run_write(device_run, (timestamp >> 16) & 0x0000ffff);
 }
 
+unsigned int vss_device_run_get_channel(struct vss_device_run* device_run)
+{
+	return device_run->write_channel;
+}
+
 int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp)
 {
 	if(device_run->write_channel == device_run->sweep_config->channel_start) {

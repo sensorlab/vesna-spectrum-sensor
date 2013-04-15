@@ -36,6 +36,8 @@ struct vss_device_run_read_result {
 
 void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sweep_config* sweep_config, 
 		int sweep_num);
+
+unsigned int vss_device_run_get_channel(struct vss_device_run* device_run);
 int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp);
 
 int vss_device_run_start(struct vss_device_run* run);

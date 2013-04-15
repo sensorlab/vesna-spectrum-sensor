@@ -20,112 +20,139 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "dev-cc.h"
-#include "spectrum.h"
+#include "cc.h"
+#include "rtc.h"
+#include "run.h"
+#include "timer.h"
 
-int dev_cc_reset(void* priv __attribute__((unused))) 
+#include "device-cc.h"
+
+static struct vss_device_run* current_device_run = NULL;
+
+static int vss_device_cc_init(void)
 {
-	setup_stm32f1_peripherals();
-	cc_reset();
-	return E_SPECTRUM_OK;
+	int r;
+
+	r = vss_timer_init();
+	if(r) return r;
+
+	r = vss_rtc_init();
+	if(r) return r;
+
+	r = vss_cc_init();
+	if(r) return r;
+
+	return VSS_OK;
 }
 
-int dev_cc_setup(void* priv __attribute__((unused)), 
-		const struct spectrum_sweep_config* sweep_config) 
+static int dev_cc_status_ic(char* buffer, size_t len, const char* ic)
 {
-	uint8_t *init_seq = (uint8_t*) sweep_config->dev_config->priv;
+	int r;
 
-	cc_strobe(CC_STROBE_SIDLE);
-	cc_wait_state(CC_MARCSTATE_IDLE);
+	uint8_t partnum, version;
+
+	r = vss_cc_read_reg(CC_REG_PARTNUM, &partnum);
+	if(r) return r;
+
+	r = vss_cc_read_reg(CC_REG_VERSION, &version);
+	if(r) return r;
+
+	snprintf(buffer, len, 
+			"IC          : %s\n"
+			"Part number : %02hhx\n"
+			"Version     : %02hhx\n",
+			ic, partnum, version);
+		
+	return VSS_OK;
+}
+
+static int dev_cc1101_status(void* priv __attribute__((unused)), char* buffer, size_t len)
+{
+	return dev_cc_status_ic(buffer, len, "CC1101");
+}
+
+static int dev_cc2500_status(void* priv __attribute__((unused)), char* buffer, size_t len)
+{
+	return dev_cc_status_ic(buffer, len, "CC2500");
+}
+
+static int dev_cc_setup(const uint8_t* init_seq)
+{
+	vss_cc_strobe(CC_STROBE_SIDLE);
+	vss_cc_wait_state(CC_MARCSTATE_IDLE);
 
 	int n;
 	for(n = 0; init_seq[n] != 0xff; n += 2) {
 		uint8_t reg = init_seq[n];
 		uint8_t value = init_seq[n+1];
-		cc_write_reg(reg, value);
+		vss_cc_write_reg(reg, value);
 	}
 
-	return E_SPECTRUM_OK;
+	return VSS_OK;
 }
 
-int dev_cc_run(void* priv __attribute__((unused)),
-		const struct spectrum_sweep_config* sweep_config)
+static void dev_cc_prepare_measurement(struct vss_device_run* device_run)
 {
-	int r;
-	short int *data;
-	/* FIXME: calculate value according to the formula in the datasheet */
-	const uint32_t rssi_delay_us = 5000;
+	unsigned int ch = vss_device_run_get_channel(device_run);
 
-	rtc_set_counter_val(0);
+	vss_cc_strobe(CC_STROBE_SIDLE);
+	vss_cc_wait_state(CC_MARCSTATE_IDLE);
 
-	int channel_num = spectrum_sweep_channel_num(sweep_config);
-	data = calloc(channel_num, sizeof(*data));
-	if (data == NULL) {
-		return E_SPECTRUM_TOOMANY;
-	}
+	vss_cc_write_reg(CC_REG_CHANNR, ch);
 
-	do {
-		IWDG_KR = IWDG_KR_RESET;
-		uint32_t rtc_counter = rtc_get_counter_val();
-		/* LSE clock is 32768 Hz. Prescaler is set to 16.
-		 *
-		 *                 rtc_counter * 16
-		 * t [ms] = 1000 * ----------------
-		 *                       32768
-		 */
-		int timestamp = ((long long) rtc_counter) * 1000 / 2048;
+	vss_cc_strobe(CC_STROBE_SRX);
+	vss_cc_wait_state(CC_MARCSTATE_RX);
 
-		int n, ch;
-		for(		ch = sweep_config->channel_start, n = 0; 
-				ch < sweep_config->channel_stop && n < channel_num; 
-				ch += sweep_config->channel_step, n++) {
+	vss_timer_schedule(5);
+}
 
-			cc_strobe(CC_STROBE_SIDLE);
-			cc_wait_state(CC_MARCSTATE_IDLE);
+static void dev_cc_take_measurement(struct vss_device_run* device_run)
+{
+	uint8_t reg;
+	vss_cc_read_reg(CC_REG_RSSI, &reg);
 
-			cc_write_reg(CC_REG_CHANNR, ch);
+	power_t rssi_dbm_100 = -5920 + reg * 50;
 
-			cc_strobe(CC_STROBE_SRX);
-			cc_wait_state(CC_MARCSTATE_RX);
-
-			systick_udelay(rssi_delay_us);
-
-			int8_t reg = cc_read_reg(CC_REG_RSSI);
-
-			int rssi_dbm_100 = -5920 + ((int) reg) * 50;
-			data[n] = rssi_dbm_100;
-		}
-		r = sweep_config->cb(sweep_config, timestamp, data);
-	} while(!r);
-
-	free(data);
-
-	if (r == E_SPECTRUM_STOP_SWEEP) {
-		return E_SPECTRUM_OK;
+	if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+		dev_cc_prepare_measurement(device_run);
 	} else {
-		return r;
+		current_device_run = NULL;
 	}
 }
 
-static void dev_cc_print_status(void)
+int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
 {
-	printf("Part number : %02x\n", cc_read_reg(CC_REG_PARTNUM));
-	printf("Version     : %02x\n", cc_read_reg(CC_REG_VERSION));
+	if(current_device_run != NULL) {
+		return VSS_TOO_MANY;
+	}
+	current_device_run = device_run;
+
+	int r = dev_cc_setup(device_run->sweep_config->device_config->priv);
+	if(r) return r;
+
+	vss_rtc_reset();
+
+	dev_cc_prepare_measurement(device_run);
+
+	return VSS_OK;
 }
 
-void dev_cc1101_print_status(void)
+void tim4_isr(void)
 {
-	printf("IC          : CC1101\n\n");
-	dev_cc_print_status();
+	vss_timer_ack();
+	dev_cc_take_measurement(current_device_run);
 }
 
-void dev_cc2500_print_status(void)
-{
-	printf("IC          : CC2500\n\n");
-	dev_cc_print_status();
-}
+static const struct vss_device device_cc1101 = {
+	.name = "cc1101",
 
-uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
+	.run			= dev_cc_run,
+	.status			= dev_cc1101_status,
+
+	.priv 			= NULL
+};
+
+static uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 60.267857
 	 * Base frequency = 862.999695
@@ -194,7 +221,7 @@ uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 	0xFF,                 0xFF
 };
 
-uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 105.468750
 	 * Base frequency = 867.999985
@@ -263,7 +290,7 @@ uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 210.937500
 	 * Base frequency = 867.999985
@@ -332,7 +359,7 @@ uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 421.875000
 	 * Base frequency = 867.999985
@@ -401,7 +428,7 @@ uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
 	/* Base frequency = 868.299911
 	 * Channel spacing = 199.813843
 	 * RX filter BW = 421.875000
@@ -470,7 +497,7 @@ uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
 	/* Base frequency = 867.999985
 	 * Channel spacing = 199.813843
 	 * RX filter BW = 843.750000
@@ -539,7 +566,7 @@ uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
 	/* Base frequency = 905.999634
 	 * Channel spacing = 399.627686
 	 * RX filter BW = 421.875000
@@ -608,7 +635,7 @@ uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
 	/* Base frequency = 905.999634
 	 * Channel spacing = 399.627686
 	 * RX filter BW = 843.750000
@@ -677,8 +704,10 @@ uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_60khz = {
+static const struct vss_device_config dev_cc1101_868mhz_60khz = {
 	.name			= "868 MHz ISM, 60 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 862999695,
 	.channel_spacing_hz	= 49953,
@@ -690,8 +719,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_60khz = {
 	.priv			= dev_cc1101_868mhz_60khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
+static const struct vss_device_config dev_cc1101_868mhz_100khz = {
 	.name			= "868 MHz ISM, 100 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -703,8 +734,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
 	.priv			= dev_cc1101_868mhz_100khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_200khz = {
 	.name			= "868 MHz ISM, 200 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -716,8 +749,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
 	.priv			= dev_cc1101_868mhz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
+static const struct vss_device_config dev_cc1101_868mhz_400khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -729,8 +764,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
 	.priv			= dev_cc1101_868mhz_400khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_400khz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_400khz_200khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth, 200 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 868299911,
 	.channel_spacing_hz	= 199814,
@@ -742,8 +779,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_400khz_200khz = {
 	.priv			= dev_cc1101_868mhz_400khz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_800khz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_800khz_200khz = {
 	.name			= "868 MHz ISM, 800 kHz bandwidth, 200 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 199814,
@@ -755,8 +794,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_800khz_200khz = {
 	.priv			= dev_cc1101_868mhz_800khz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_905mhz_400khz_400khz = {
+static const struct vss_device_config dev_cc1101_905mhz_400khz_400khz = {
 	.name			= "905 MHz, 400 kHz bandwidth, 400 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 905999634,
 	.channel_spacing_hz	= 399628,
@@ -768,8 +809,10 @@ const struct spectrum_dev_config dev_cc1101_905mhz_400khz_400khz = {
 	.priv			= dev_cc1101_905mhz_400khz_400khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_905mhz_800khz_400khz = {
+static const struct vss_device_config dev_cc1101_905mhz_800khz_400khz = {
 	.name			= "905 MHz, 800 kHz bandwidth, 400 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 905999634,
 	.channel_spacing_hz	= 399628,
@@ -781,31 +824,16 @@ const struct spectrum_dev_config dev_cc1101_905mhz_800khz_400khz = {
 	.priv			= dev_cc1101_905mhz_800khz_400khz_init_seq
 };
 
-const struct spectrum_dev_config* dev_cc1101_config_list[] = {
-	&dev_cc1101_868mhz_60khz,
-	&dev_cc1101_868mhz_100khz,
-	&dev_cc1101_868mhz_200khz,
-	&dev_cc1101_868mhz_400khz,
-	&dev_cc1101_868mhz_400khz_200khz,
-	&dev_cc1101_868mhz_800khz_200khz,
-	&dev_cc1101_905mhz_400khz_400khz,
-	&dev_cc1101_905mhz_800khz_400khz
-};
+static const struct vss_device device_cc2500 = {
+	.name = "cc2500",
 
-const struct spectrum_dev dev_cc1101 = {
-	.name = "cc1101",
-
-	.dev_config_list	= dev_cc1101_config_list,
-	.dev_config_num		= 8,
-
-	.dev_reset		= dev_cc_reset,
-	.dev_setup		= dev_cc_setup,
-	.dev_run		= dev_cc_run,
+	.run			= dev_cc_run,
+	.status			= dev_cc2500_status,
 
 	.priv 			= NULL
 };
 
-uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
+static uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
 	CC_REG_IOCFG2,         0x2E,
 	CC_REG_IOCFG1,         0x2E,
 	CC_REG_IOCFG0,         0x2E,
@@ -870,7 +898,7 @@ uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
 	0xFF,		       0xFF
 };
 
-uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
+static uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
 	CC_REG_IOCFG2,         0x2E,
 	CC_REG_IOCFG1,         0x2E,
 	CC_REG_IOCFG0,         0x2E,
@@ -935,8 +963,10 @@ uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
 	0xFF,		       0xFF
 };
 
-const struct spectrum_dev_config dev_cc2500_2400mhz_60khz = {
+static const struct vss_device_config dev_cc2500_2400mhz_60khz = {
 	.name			= "2.4 GHz ISM, 60 kHz bandwidth",
+
+	.device			= &device_cc2500,
 
 	.channel_base_hz 	= 2399999908ll,
 	.channel_spacing_hz	= 399628,
@@ -948,8 +978,10 @@ const struct spectrum_dev_config dev_cc2500_2400mhz_60khz = {
 	.priv			= dev_cc2500_2400mhz_60khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc2500_2400mhz_400khz = {
+static const struct vss_device_config dev_cc2500_2400mhz_400khz = {
 	.name			= "2.4 GHz ISM, 400 kHz bandwidth",
+
+	.device			= &device_cc2500,
 
 	.channel_base_hz 	= 2399999908ll,
 	.channel_spacing_hz	= 399628,
@@ -961,31 +993,28 @@ const struct spectrum_dev_config dev_cc2500_2400mhz_400khz = {
 	.priv			= dev_cc2500_2400mhz_400khz_init_seq
 };
 
-const struct spectrum_dev_config* dev_cc2500_config_list[] = {
-	&dev_cc2500_2400mhz_400khz,
-	&dev_cc2500_2400mhz_60khz
-};
-
-const struct spectrum_dev dev_cc2500 = {
-	.name = "cc2500",
-
-	.dev_config_list	= dev_cc2500_config_list,
-	.dev_config_num		= 2,
-
-	.dev_reset		= dev_cc_reset,
-	.dev_setup		= dev_cc_setup,
-	.dev_run		= dev_cc_run,
-
-	.priv 			= NULL
-};
-
-int dev_cc_register(void)
+int vss_device_cc_register(void)
 {
+	int r;
+	
+	r = vss_device_cc_init();
+	if(r) return r;
+
 #if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNE_ISMTV_868)
-	return spectrum_add_dev(&dev_cc1101);
+	device_config_add(&dev_cc1101_868mhz_60khz);
+	device_config_add(&dev_cc1101_868mhz_100khz);
+	device_config_add(&dev_cc1101_868mhz_200khz);
+	device_config_add(&dev_cc1101_868mhz_400khz);
+	device_config_add(&dev_cc1101_868mhz_400khz_200khz);
+	device_config_add(&dev_cc1101_868mhz_800khz_200khz);
+	device_config_add(&dev_cc1101_905mhz_400khz_400khz);
+	device_config_add(&dev_cc1101_905mhz_800khz_400khz);
 #endif
 
 #if defined(MODEL_SNR_TRX_2400) || defined(MODEL_SNE_ISMTV_2400)
-	return spectrum_add_dev(&dev_cc2500);
+	vss_device_config_add(&dev_cc2500_2400mhz_60khz);
+	vss_device_config_add(&dev_cc2500_2400mhz_400khz);
 #endif
+
+	return VSS_OK;
 }

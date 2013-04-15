@@ -27,8 +27,8 @@
 #include <libopencm3/stm32/nvic.h>
 
 #include "device-dummy.h"
+#include "device-cc.h"
 #include "dev-tda18219.h"
-#include "dev-cc.h"
 
 #include "run.h"
 
@@ -276,7 +276,7 @@ int main(void)
 #endif
 
 #ifdef TUNER_CC
-	dev_cc_register();
+	vss_device_cc_register();
 #endif
 
 #ifdef TUNER_NULL
