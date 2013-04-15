@@ -20,5 +20,12 @@ int vss_rtc_reset(void)
 
 uint32_t vss_rtc_read(void)
 {
-	return rtc_get_counter_val();
+	uint32_t val = rtc_get_counter_val();
+	/* LSE clock is 32768 Hz. Prescaler is set to 16.
+	 *
+	 *                 rtc_counter * 16
+	 * t [ms] = 1000 * ----------------
+	 *                       32768
+	 */
+	return ((long long) val) * 1000 / 2048;
 }
