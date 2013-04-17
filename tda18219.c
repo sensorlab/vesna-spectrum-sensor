@@ -42,6 +42,8 @@ int vss_tda18219_init(void)
 
 	nvic_enable_irq(NVIC_EXTI1_IRQ);
 	nvic_enable_irq(NVIC_EXTI9_5_IRQ);
+	nvic_set_priority(NVIC_EXTI1_IRQ, 2);
+	nvic_set_priority(NVIC_EXTI9_5_IRQ, 2);
 
 	/* GPIO pin for TDA18219 IF AGC */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
