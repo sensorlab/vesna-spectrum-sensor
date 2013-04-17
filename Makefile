@@ -29,13 +29,13 @@ endif
 
 ifeq ($(MODEL),sne-ismtv-uhf)
 	LIBS += -ltda18219
-	OBJS += dev-tda18219.o
+	OBJS += tda18219.o ad8307.o device-tda18219.o
 	CFLAGS += -DTUNER_TDA18219 -DMODEL_SNE_ISMTV_UHF
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),sne-ismtv-868)
-	OBJS += dev-cc.o
+	OBJS += cc.o device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_868
 	MODEL_OK = ok
 endif
@@ -47,13 +47,13 @@ ifeq ($(MODEL),sne-ismtv-2400)
 endif
 
 ifeq ($(MODEL),snr-trx-868)
-	OBJS += dev-cc.o
+	OBJS += cc.o device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_868
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),snr-trx-2400)
-	OBJS += dev-cc.o
+	OBJS += cc.o device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_2400
 	MODEL_OK = ok
 endif
