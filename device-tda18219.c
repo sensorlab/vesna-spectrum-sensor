@@ -177,14 +177,15 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 void exti9_5_isr(void)
 {
-	current_state = dev_tda18219_state(current_device_run, current_state);
 	tda18219_irq_ack();
+	current_state = dev_tda18219_state(current_device_run, current_state);
+
 }
 
 void exti1_isr(void)
 {
-	current_state = dev_tda18219_state(current_device_run, current_state);
 	tda18219_irq_ack();
+	current_state = dev_tda18219_state(current_device_run, current_state);
 }
 
 int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
