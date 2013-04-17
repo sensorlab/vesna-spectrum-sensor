@@ -164,6 +164,7 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 				return RUN_MEASUREMENT;
 			} else {
 				current_device_run = NULL;
+				dev_tda18219_turn_off();
 				return OFF;
 			}
 
