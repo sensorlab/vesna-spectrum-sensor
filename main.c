@@ -28,7 +28,7 @@
 
 #include "device-dummy.h"
 #include "device-cc.h"
-#include "dev-tda18219.h"
+#include "device-tda18219.h"
 
 #include "run.h"
 
@@ -232,7 +232,7 @@ static void command_status(void)
 	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
 	} else {
-		char buff[256];
+		char buff[1024];
 		int r = vss_device_status(current_sweep_config.device_config->device, buff, sizeof(buff));
 		if(r != VSS_OK) {
 			printf("error: vss_device_status returned %d\n", r);
@@ -272,7 +272,7 @@ int main(void)
 	setup();
 
 #ifdef TUNER_TDA18219
-	dev_tda18219_register();
+	vss_device_tda18219_register();
 #endif
 
 #ifdef TUNER_CC

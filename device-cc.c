@@ -57,11 +57,12 @@ static int dev_cc_status_ic(char* buffer, size_t len, const char* ic)
 	r = vss_cc_read_reg(CC_REG_VERSION, &version);
 	if(r) return r;
 
-	snprintf(buffer, len, 
+	int wlen = snprintf(buffer, len, 
 			"IC          : %s\n"
 			"Part number : %02hhx\n"
 			"Version     : %02hhx\n",
 			ic, partnum, version);
+	if(wlen >= len) return VSS_TOO_MANY;
 		
 	return VSS_OK;
 }
