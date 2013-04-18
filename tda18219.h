@@ -19,9 +19,6 @@
 #endif
 
 int vss_tda18219_init(void);
-uint8_t tda18219_read_reg(uint8_t reg);
-void tda18219_write_reg(uint8_t reg, uint8_t value);
-void tda18219_wait_irq(void);
-void tda18219_irq_ack(void);
+void vss_tda18219_irq_ack(void);
 
 #endif

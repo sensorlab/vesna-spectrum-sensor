@@ -67,7 +67,12 @@ int vss_tda18219_init(void)
 	return VSS_OK;
 }
 
-uint8_t tda18219_read_reg(uint8_t reg)
+void vss_tda18219_irq_ack(void)
+{
+	exti_reset_request(TDA_PIN_IRQ);
+}
+
+int tda18219_read_reg(uint8_t reg, uint8_t* value)
 {
 	uint32_t __attribute__((unused)) reg32;
 
@@ -113,11 +118,12 @@ uint8_t tda18219_read_reg(uint8_t reg)
 
 	while (!(I2C_SR1(I2C1) & I2C_SR1_RxNE));
 
-	uint8_t value = I2C_DR(I2C1);
-	return value;
+	*value = I2C_DR(I2C1);
+
+	return 0;
 }
 
-void tda18219_write_reg(uint8_t reg, uint8_t value)
+int tda18219_write_reg(uint8_t reg, uint8_t value)
 {
 	uint32_t __attribute__((unused)) reg32;
 
@@ -145,14 +151,13 @@ void tda18219_write_reg(uint8_t reg, uint8_t value)
 	while (!(I2C_SR1(I2C1) & (I2C_SR1_BTF | I2C_SR1_TxE)));
 
 	i2c_send_stop(I2C1);
+
+	return 0;
 }
 
-void tda18219_wait_irq(void)
+int tda18219_wait_irq(void)
 {
 	while(!gpio_get(GPIOA, TDA_PIN_IRQ));
-}
 
-void tda18219_irq_ack(void)
-{
-	exti_reset_request(TDA_PIN_IRQ);
+	return 0;
 }

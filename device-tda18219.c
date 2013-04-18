@@ -90,9 +90,14 @@ static int vss_device_tda18219_init(void)
 	r = vss_ad8307_init();
 	if(r) return r;
 
-	tda18219_power_on();
-	tda18219_init();
-	tda18219_power_standby();
+	r = tda18219_power_on();
+	if(r) return VSS_ERROR;
+
+	r = tda18219_init();
+	if(r) return VSS_ERROR;
+
+	r = tda18219_power_standby();
+	if(r) return VSS_ERROR;
 
 	return VSS_OK;
 }
@@ -101,8 +106,11 @@ int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 {
 	int r;
 
-	tda18219_power_on();
-	tda18219_set_standard(priv->standard);
+	r = tda18219_power_on();
+	if(r) return VSS_ERROR;
+
+	r = tda18219_set_standard(priv->standard);
+	if(r) return VSS_ERROR;
 
 	r = vss_ad8307_power_on();
 	if(r) return r;
@@ -117,7 +125,8 @@ int dev_tda18219_turn_off(void)
 	r = vss_ad8307_power_off();
 	if(r) return r;
 
-	tda18219_power_standby();
+	r = tda18219_power_standby();
+	if(r) return VSS_ERROR;
 
 	return VSS_OK;
 }
@@ -134,33 +143,35 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 	unsigned int ch = vss_device_run_get_channel(device_run);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
-	int rssi_dbuv, rssi_dbm_100;
+	uint8_t rssi_dbuv;
+	int rssi_dbm_100;
+	int r;
 
 	switch(state) {
 		case SET_FREQUENCY:
-			tda18219_set_frequency(priv->standard, freq);
+			r = tda18219_set_frequency(priv->standard, freq);
 			return RUN_MEASUREMENT;
 
 		case RUN_MEASUREMENT:
-			tda18219_get_input_power_prepare();
+			r = tda18219_get_input_power_prepare();
 			return READ_MEASUREMENT;
 
 		case READ_MEASUREMENT:
 
-			rssi_dbuv = tda18219_get_input_power_read();
+			r = tda18219_get_input_power_read(&rssi_dbuv);
 			if(rssi_dbuv < 40) {
 				// internal power detector in TDA18219 doesn't go below 40 dBuV
 				rssi_dbm_100 = vss_ad8307_get_input_power();
 			} else {
 				// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
-				rssi_dbm_100 = rssi_dbuv * 100 - 9000 - 1875;
+				rssi_dbm_100 = ((int) rssi_dbuv) * 100 - 9000 - 1875;
 			}
 
 			// extra offset determined by measurement
 			rssi_dbm_100 -= get_calibration_offset(priv->calibration, freq / 1000);
 
 			if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
-				tda18219_set_frequency(priv->standard, freq);
+				r = tda18219_set_frequency(priv->standard, freq);
 				return RUN_MEASUREMENT;
 			} else {
 				current_device_run = NULL;
@@ -175,13 +186,13 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 void exti9_5_isr(void)
 {
-	tda18219_irq_ack();
+	vss_tda18219_irq_ack();
 	current_state = dev_tda18219_state(current_device_run, current_state);
 }
 
 void exti1_isr(void)
 {
-	tda18219_irq_ack();
+	vss_tda18219_irq_ack();
 	current_state = dev_tda18219_state(current_device_run, current_state);
 }
 
