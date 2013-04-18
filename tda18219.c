@@ -11,6 +11,8 @@
 #include "tda18219.h"
 #include "vss.h"
 
+#include "device-tda18219.h"
+
 int vss_tda18219_init(void)
 {
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, 
@@ -40,10 +42,15 @@ int vss_tda18219_init(void)
 	exti_set_trigger(TDA_PIN_IRQ, EXTI_TRIGGER_RISING);
 	exti_enable_request(TDA_PIN_IRQ);
 
-	nvic_enable_irq(NVIC_EXTI1_IRQ);
-	nvic_enable_irq(NVIC_EXTI9_5_IRQ);
-	nvic_set_priority(NVIC_EXTI1_IRQ, 2);
-	nvic_set_priority(NVIC_EXTI9_5_IRQ, 2);
+	uint8_t irqn;
+	if(TDA_PIN_IRQ == GPIO1) {
+		irqn = NVIC_EXTI1_IRQ;
+	} else if(TDA_PIN_IRQ == GPIO7) {
+		irqn = NVIC_EXTI9_5_IRQ;
+	}
+
+	nvic_enable_irq(irqn);
+	nvic_set_priority(irqn, 2);
 
 	/* GPIO pin for TDA18219 IF AGC */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
@@ -67,9 +74,16 @@ int vss_tda18219_init(void)
 	return VSS_OK;
 }
 
-void vss_tda18219_irq_ack(void)
+void exti1_isr(void)
 {
 	exti_reset_request(TDA_PIN_IRQ);
+	vss_device_tda18219_isr();
+}
+
+void exti9_5_isr(void)
+{
+	exti_reset_request(TDA_PIN_IRQ);
+	vss_device_tda18219_isr();
 }
 
 int tda18219_read_reg(uint8_t reg, uint8_t* value)

@@ -62,7 +62,7 @@ static int dev_cc_status_ic(char* buffer, size_t len, const char* ic)
 			"Part number : %02hhx\n"
 			"Version     : %02hhx\n",
 			ic, partnum, version);
-	if(wlen >= len) return VSS_TOO_MANY;
+	if(wlen >= (int) len) return VSS_TOO_MANY;
 		
 	return VSS_OK;
 }
@@ -121,7 +121,7 @@ static void dev_cc_take_measurement(struct vss_device_run* device_run)
 	}
 }
 
-int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
+static int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
 {
 	if(current_device_run != NULL) {
 		return VSS_TOO_MANY;
@@ -138,9 +138,8 @@ int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run* device
 	return VSS_OK;
 }
 
-void tim4_isr(void)
+void vss_device_cc_timer_isr(void)
 {
-	vss_timer_ack();
 	dev_cc_take_measurement(current_device_run);
 }
 

@@ -21,5 +21,6 @@
 #define HAVE_DEV_CC_H
 
 int vss_device_cc_register(void);
+void vss_device_cc_timer_isr(void);
 
 #endif

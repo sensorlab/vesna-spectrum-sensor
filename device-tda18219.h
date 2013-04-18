@@ -19,5 +19,6 @@
 #define HAVE_DEV_TDA18219_H
 
 int vss_device_tda18219_register(void);
+void vss_device_tda18219_isr(void);
 
 #endif

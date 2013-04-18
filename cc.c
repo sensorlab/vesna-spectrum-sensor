@@ -5,8 +5,11 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/systick.h>
 
-#include "vss.h"
 #include "cc.h"
+#include "vss.h"
+#include "timer.h"
+
+#include "device-cc.h"
 
 #if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNR_TRX_2400)
 
@@ -149,4 +152,10 @@ int vss_cc_wait_state(uint8_t state)
 	} while(new_state != state);
 
 	return VSS_OK;
+}
+
+void tim4_isr(void)
+{
+	vss_timer_ack();
+	vss_device_cc_timer_isr();
 }
