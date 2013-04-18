@@ -39,10 +39,13 @@ static char usart_buffer[USART_BUFFER_SIZE];
 static int usart_buffer_len = 0;
 static volatile int usart_buffer_attn = 0;
 
-static struct vss_sweep_config current_sweep_config;
+static struct vss_sweep_config current_sweep_config = {
+	.device_config = NULL
+};
 
 static struct vss_device_run current_device_run;
 static power_t data_buffer[DATA_BUFFER_SIZE];
+static int has_started = 0;
 
 extern void (*const vector_table[]) (void);
 
@@ -193,12 +196,14 @@ static void command_report_on(void)
 		if(r) {
 			printf("error: vss_device_run_start returned %d\n", r);
 		}
+
+		has_started = 1;
 	}
 }
 
 static void command_report_off(void)
 {
-	if(!vss_device_run_is_running(&current_device_run)) {
+	if(!has_started) {
 		printf("ok\n");
 	} else {
 		vss_device_run_stop(&current_device_run);
@@ -283,8 +288,6 @@ int main(void)
 	vss_device_dummy_register();
 #endif
 
-	unsigned int last_overflow_num = 0;
-
 	while(1) {
 		if (usart_buffer_attn) {
 			dispatch(usart_buffer);
@@ -293,10 +296,7 @@ int main(void)
 
 		IWDG_KR = IWDG_KR_RESET;
 
-		if(current_device_run.overflow_num != last_overflow_num) {
-			last_overflow_num = current_device_run.overflow_num;
-			printf("error: overflow\n");
-		}
+		int has_finished = (vss_device_run_get_state(&current_device_run) == VSS_DEVICE_RUN_FINISHED);
 
 		struct vss_device_run_read_result ctx;
 		vss_device_run_read(&current_device_run, &ctx);
@@ -317,11 +317,19 @@ int main(void)
 				if(channel + current_device_run.sweep_config->channel_step
 						>= current_device_run.sweep_config->channel_stop) {
 					printf(" DE\n");
-					if(!vss_device_run_is_running(&current_device_run)) {
-						printf("ok\n");
-					}
 				}
+
 			}
+		}
+
+		if(has_finished && has_started) {
+			const char* msg = vss_device_run_get_error(&current_device_run);
+			if(msg) {
+				printf("error: %s\n", msg);
+			} else {
+				printf("ok\n");
+			}
+			has_started = 0;
 		}
 	}
 

@@ -6,25 +6,34 @@ void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sw
 	device_run->sweep_config = sweep_config;
 	device_run->sweep_num = sweep_num;
 
-	device_run->overflow_num = 0;
+	device_run->state = VSS_DEVICE_RUN_NEW;
 	device_run->write_channel = sweep_config->channel_start;
-	device_run->running = 0;
+	device_run->error_msg = NULL;
 
 	device_run->read_state = 0;
 	device_run->read_channel = sweep_config->channel_start;
 }
 
-static void vss_device_run_write(struct vss_device_run* device_run, power_t data)
+static int vss_device_run_write(struct vss_device_run* device_run, power_t data)
 {
 	if(vss_buffer_write(&device_run->buffer, data)) {
-		device_run->overflow_num++;
+		vss_device_run_set_error(device_run, "buffer overflow");
+		return VSS_ERROR;
+	} else {
+		return VSS_OK;
 	}
 }
 
-static void vss_device_run_insert_timestamp(struct vss_device_run* device_run, uint32_t timestamp)
+static int vss_device_run_insert_timestamp(struct vss_device_run* device_run, uint32_t timestamp)
 {
-	vss_device_run_write(device_run, (timestamp >>  0) & 0x0000ffff);
-	vss_device_run_write(device_run, (timestamp >> 16) & 0x0000ffff);
+	if(vss_device_run_write(device_run, (timestamp >>  0) & 0x0000ffff)) {
+		return VSS_ERROR;
+	}
+	if(vss_device_run_write(device_run, (timestamp >> 16) & 0x0000ffff)) {
+		return VSS_ERROR;
+	}
+
+	return VSS_OK;
 }
 
 unsigned int vss_device_run_get_channel(struct vss_device_run* device_run)
@@ -35,10 +44,14 @@ unsigned int vss_device_run_get_channel(struct vss_device_run* device_run)
 int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp)
 {
 	if(device_run->write_channel == device_run->sweep_config->channel_start) {
-		vss_device_run_insert_timestamp(device_run, timestamp);
+		if(vss_device_run_insert_timestamp(device_run, timestamp)) {
+			return VSS_STOP;
+		}
 	}
 
-	vss_device_run_write(device_run, data);
+	if(vss_device_run_write(device_run, data)) {
+		return VSS_STOP;
+	}
 
 	device_run->write_channel += device_run->sweep_config->channel_step;
 	if(device_run->write_channel >= device_run->sweep_config->channel_stop) {
@@ -48,8 +61,7 @@ int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint3
 
 			return VSS_OK;
 		} else {
-			device_run->running = 0;
-
+			device_run->state = VSS_DEVICE_RUN_FINISHED;
 			return VSS_STOP;
 		}
 	} else {
@@ -57,15 +69,26 @@ int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint3
 	}
 }
 
+void vss_device_run_set_error(struct vss_device_run* run, const char* msg)
+{
+	run->error_msg = msg;
+	run->state = VSS_DEVICE_RUN_FINISHED;
+}
+
+const char* vss_device_run_get_error(struct vss_device_run* run)
+{
+	return run->error_msg;
+}
+
 int vss_device_run_start(struct vss_device_run* run)
 {
-	run->running = 1;
+	run->state = VSS_DEVICE_RUN_RUNNING;
 
 	const struct vss_device* device = run->sweep_config->device_config->device;
 
 	int r = vss_device_run(device, run);
 	if(r != VSS_OK) {
-		run->running = 0;
+		run->state = VSS_DEVICE_RUN_FINISHED;
 	}
 
 	return r;
@@ -77,9 +100,9 @@ int vss_device_run_stop(struct vss_device_run* run)
 	return VSS_OK;
 }
 
-int vss_device_run_is_running(struct vss_device_run* run)
+enum vss_device_run_state vss_device_run_get_state(struct vss_device_run* run)
 {
-	return run->running;
+	return run->state;
 }
 
 void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_result* ctx)

@@ -38,14 +38,14 @@ void tearDown(void)
 void test_init(void)
 {
 	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
-	TEST_ASSERT_FALSE(vss_device_run_is_running(&run));
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_NEW, vss_device_run_get_state(&run));
 }
 
 void test_start(void)
 {
 	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
 	vss_device_run_start(&run);
-	TEST_ASSERT_TRUE(vss_device_run_is_running(&run));
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_device_run_get_state(&run));
 }
 
 void test_single_run(void)
@@ -93,7 +93,7 @@ void test_infinite_run(void)
 
 	TEST_ASSERT_EQUAL(VSS_STOP, r);
 	TEST_ASSERT_TRUE(cnt <= 10);
-	TEST_ASSERT_FALSE(vss_device_run_is_running(&run));
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_device_run_get_state(&run));
 }
 
 void test_read(void)
@@ -125,4 +125,63 @@ void test_read(void)
 	}
 
 	TEST_ASSERT_EQUAL(10, cnt);
+}
+
+void test_get_channel(void)
+{
+	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
+	vss_device_run_start(&run);
+
+	int channel = vss_device_run_get_channel(&run);
+	TEST_ASSERT_EQUAL(sweep_config.channel_start, channel);
+
+	vss_device_run_insert(&run, 0, 0);
+
+	channel = vss_device_run_get_channel(&run);
+	TEST_ASSERT_EQUAL(sweep_config.channel_start + sweep_config.channel_step, channel);
+}
+
+void test_set_error(void)
+{
+	const char* msg = "Test error message";
+
+	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
+	vss_device_run_start(&run);
+
+	vss_device_run_set_error(&run, msg);
+
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_device_run_get_state(&run));
+}
+
+void test_get_error(void)
+{
+	const char* msg = "Test error message";
+
+	vss_device_run_init(&run, &sweep_config, 1, buffer_data);
+	vss_device_run_start(&run);
+
+	const char* msg2 = vss_device_run_get_error(&run);
+	TEST_ASSERT_EQUAL(NULL, msg2);
+
+	vss_device_run_set_error(&run, msg);
+
+	msg2 = vss_device_run_get_error(&run);
+
+	TEST_ASSERT_EQUAL(msg, msg2);
+}
+
+void test_overflow(void)
+{
+	const power_t v = 0x70fe;
+
+	vss_device_run_init(&run, &sweep_config, -1, buffer_data);
+	vss_device_run_start(&run);
+
+	int n;
+	for(n = 0; n < buffer_data_len+100; n++) {
+		vss_device_run_insert(&run, v, 0xdeadbeef);
+	}
+
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_device_run_get_state(&run));
+	TEST_ASSERT_TRUE(vss_device_run_get_error(&run));
 }

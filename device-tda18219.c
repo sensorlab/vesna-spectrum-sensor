@@ -62,7 +62,7 @@ static int get_calibration_offset(const struct calibration_point* calibration, u
 			offset = next.offset;
 			break;
 		} else if(next.freq > freq) {
-			offset = prev.offset + ((int) (freq - prev.freq)) * (next.offset - prev.offset) / 
+			offset = prev.offset + ((int) (freq - prev.freq)) * (next.offset - prev.offset) /
 					((int) (next.freq - prev.freq));
 			break;
 		} else {
@@ -102,26 +102,29 @@ static int vss_device_tda18219_init(void)
 	return VSS_OK;
 }
 
-int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
+int dev_tda18219_turn_on(struct vss_device_run* device_run)
 {
 	int r;
-
 	r = tda18219_power_on();
 	if(r) return VSS_ERROR;
 
+	const struct dev_tda18219_priv* priv = device_run->sweep_config->device_config->priv;
 	r = tda18219_set_standard(priv->standard);
 	if(r) return VSS_ERROR;
 
 	r = vss_ad8307_power_on();
 	if(r) return r;
 
+	current_device_run = device_run;
+
 	return VSS_OK;
 }
 
 int dev_tda18219_turn_off(void)
 {
-	int r;
+	current_device_run = NULL;
 
+	int r;
 	r = vss_ad8307_power_off();
 	if(r) return r;
 
@@ -150,15 +153,34 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 	switch(state) {
 		case SET_FREQUENCY:
 			r = tda18219_set_frequency(priv->standard, freq);
+			if(r) {
+				vss_device_run_set_error(device_run,
+						"tda18219_set_frequency() returned an error");
+				dev_tda18219_turn_off();
+				return OFF;
+			}
 			return RUN_MEASUREMENT;
 
 		case RUN_MEASUREMENT:
 			r = tda18219_get_input_power_prepare();
+			if(r) {
+				vss_device_run_set_error(device_run,
+						"tda18219_get_input_power_prepare() returned an error");
+				dev_tda18219_turn_off();
+				return OFF;
+			}
 			return READ_MEASUREMENT;
 
 		case READ_MEASUREMENT:
 
 			r = tda18219_get_input_power_read(&rssi_dbuv);
+			if(r) {
+				vss_device_run_set_error(device_run,
+						"tda18219_get_input_power_read() returned an error");
+				dev_tda18219_turn_off();
+				return OFF;
+			}
+
 			if(rssi_dbuv < 40) {
 				// internal power detector in TDA18219 doesn't go below 40 dBuV
 				rssi_dbm_100 = vss_ad8307_get_input_power();
@@ -172,9 +194,15 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 			if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
 				r = tda18219_set_frequency(priv->standard, freq);
+				if(r) {
+					vss_device_run_set_error(device_run,
+						"tda18219_set_frequency() returned an error");
+					dev_tda18219_turn_off();
+					return OFF;
+				}
+
 				return RUN_MEASUREMENT;
 			} else {
-				current_device_run = NULL;
 				dev_tda18219_turn_off();
 				return OFF;
 			}
@@ -194,9 +222,8 @@ int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_device_run* 
 	if(current_device_run != NULL) {
 		return VSS_TOO_MANY;
 	}
-	current_device_run = device_run;
 
-	int r = dev_tda18219_turn_on(device_run->sweep_config->device_config->priv);
+	int r = dev_tda18219_turn_on(device_run);
 	if(r) return r;
 
 	vss_rtc_reset();
@@ -234,7 +261,7 @@ static int dev_tda18219_status(void* priv __attribute__((unused)), char* buffer,
 	for(n = 0; n < 12; n++) {
 		size_t r = snprintf(&buffer[wlen], len - wlen,
 				"RF cal %02d   : %d%s\n",
-				n, status.calibration_ncaps[n], 
+				n, status.calibration_ncaps[n],
 				status.calibration_error[n] ? " (error)" : "");
 		if(r >= len - wlen) return VSS_TOO_MANY;
 

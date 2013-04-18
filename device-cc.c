@@ -57,7 +57,7 @@ static int dev_cc_status_ic(char* buffer, size_t len, const char* ic)
 	r = vss_cc_read_reg(CC_REG_VERSION, &version);
 	if(r) return r;
 
-	int wlen = snprintf(buffer, len, 
+	int wlen = snprintf(buffer, len,
 			"IC          : %s\n"
 			"Part number : %02hhx\n"
 			"Version     : %02hhx\n",
@@ -79,43 +79,74 @@ static int dev_cc2500_status(void* priv __attribute__((unused)), char* buffer, s
 
 static int dev_cc_setup(const uint8_t* init_seq)
 {
-	vss_cc_strobe(CC_STROBE_SIDLE);
-	vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	int r;
+
+	r = vss_cc_strobe(CC_STROBE_SIDLE);
+	if(r) return r;
+
+	r = vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	if(r) return r;
 
 	int n;
 	for(n = 0; init_seq[n] != 0xff; n += 2) {
 		uint8_t reg = init_seq[n];
 		uint8_t value = init_seq[n+1];
-		vss_cc_write_reg(reg, value);
+
+		r = vss_cc_write_reg(reg, value);
+		if(r) return r;
 	}
 
 	return VSS_OK;
 }
 
-static void dev_cc_prepare_measurement(struct vss_device_run* device_run)
+static int dev_cc_prepare_measurement(struct vss_device_run* device_run)
 {
 	unsigned int ch = vss_device_run_get_channel(device_run);
 
-	vss_cc_strobe(CC_STROBE_SIDLE);
-	vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	int r;
 
-	vss_cc_write_reg(CC_REG_CHANNR, ch);
+	r = vss_cc_strobe(CC_STROBE_SIDLE);
+	if(r) return r;
 
-	vss_cc_strobe(CC_STROBE_SRX);
-	vss_cc_wait_state(CC_MARCSTATE_RX);
+	r = vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	if(r) return r;
+
+	r = vss_cc_write_reg(CC_REG_CHANNR, ch);
+	if(r) return r;
+
+	r = vss_cc_strobe(CC_STROBE_SRX);
+	if(r) return r;
+
+	r = vss_cc_wait_state(CC_MARCSTATE_RX);
+	if(r) return r;
 
 	vss_timer_schedule(5);
+
+	return VSS_OK;
 }
 
 static void dev_cc_take_measurement(struct vss_device_run* device_run)
 {
+	int r;
 	int8_t reg;
-	vss_cc_read_reg(CC_REG_RSSI, (uint8_t*) &reg);
+	r = vss_cc_read_reg(CC_REG_RSSI, (uint8_t*) &reg);
+	if(r) {
+		vss_device_run_set_error(device_run,
+				"vss_cc_read_reg for RSSI returned an error");
+		current_device_run = NULL;
+		return;
+	}
 
 	power_t rssi_dbm_100 = -5920 + reg * 50;
 
 	if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
-		dev_cc_prepare_measurement(device_run);
+		r = dev_cc_prepare_measurement(device_run);
+		if(r) {
+			vss_device_run_set_error(device_run,
+				"dev_cc_prepare_measurement() returned an error");
+			current_device_run = NULL;
+			return;
+		}
 	} else {
 		current_device_run = NULL;
 	}
@@ -128,12 +159,15 @@ static int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run*
 	}
 	current_device_run = device_run;
 
-	int r = dev_cc_setup(device_run->sweep_config->device_config->priv);
+	int r;
+	r = dev_cc_setup(device_run->sweep_config->device_config->priv);
 	if(r) return r;
 
-	vss_rtc_reset();
+	r = vss_rtc_reset();
+	if(r) return r;
 
-	dev_cc_prepare_measurement(device_run);
+	r = dev_cc_prepare_measurement(device_run);
+	if(r) return r;
 
 	return VSS_OK;
 }
