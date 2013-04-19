@@ -77,6 +77,56 @@ static int get_calibration_offset(const struct calibration_point* calibration, u
 	return offset;
 }
 
+static int get_input_power(int* rssi_dbm_100)
+{
+	uint8_t rssi_dbuv;
+
+	int r = tda18219_get_input_power_read(&rssi_dbuv);
+	if(r) return r;
+
+	if(rssi_dbuv < 40) {
+		// internal power detector in TDA18219 doesn't go below 40 dBuV
+		unsigned n = vss_ad8307_get_input_sample();
+
+		/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
+		 *
+		 *              3.3 V
+		 *     Kad = ----------
+		 *           (2^12 - 1)
+		 *
+		 * AD8307
+		 *
+		 *     Kdet = 25 mV/dB  (slope)
+		 *     Adet = -84 dBm   (intercept)
+		 *
+		 * Since we are using this detector for low power signals only, TDA18219 is
+		 * at maximum gain.
+		 *
+		 *     AGC1 = 15 dB
+		 *     AGC2 = -2 dB
+		 *     AGC3 = 30 dB (guess based on measurement)
+		 *     AGC4 = 14 dB
+		 *     AGC5 = 9 dB
+		 *     --------------
+		 *     Atuner = 66 dB
+		 *
+		 * Pinput [dBm] = N * Kad / Kdet - Adet - Atuner
+		 *
+		 *                  3.3 V * 1000
+		 *              = N ------------ - 84 - 66
+		 *                  4095 * 25 V
+		 *
+		 * Note we are returning [dBm * 100]
+		 */
+		*rssi_dbm_100 = n * 3300 / 1024 - 15000;
+	} else {
+		// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
+		*rssi_dbm_100 = ((int) rssi_dbuv) * 100 - 9000 - 1875;
+	}
+
+	return VSS_OK;
+}
+
 static int vss_device_tda18219_init(void)
 {
 	int r;
@@ -146,7 +196,6 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 	unsigned int ch = vss_device_run_get_channel(device_run);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
-	uint8_t rssi_dbuv;
 	int rssi_dbm_100;
 	int r;
 
@@ -173,20 +222,12 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 		case READ_MEASUREMENT:
 
-			r = tda18219_get_input_power_read(&rssi_dbuv);
+			r = get_input_power(&rssi_dbm_100);
 			if(r) {
 				vss_device_run_set_error(device_run,
-						"tda18219_get_input_power_read() returned an error");
+						"get_input_power() returned an error");
 				dev_tda18219_turn_off();
 				return OFF;
-			}
-
-			if(rssi_dbuv < 40) {
-				// internal power detector in TDA18219 doesn't go below 40 dBuV
-				rssi_dbm_100 = vss_ad8307_get_input_power();
-			} else {
-				// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
-				rssi_dbm_100 = ((int) rssi_dbuv) * 100 - 9000 - 1875;
 			}
 
 			// extra offset determined by measurement

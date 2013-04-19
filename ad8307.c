@@ -63,11 +63,11 @@ int vss_ad8307_power_off(void)
 	return VSS_OK;
 }
 
-int vss_ad8307_get_input_power(void)
+unsigned vss_ad8307_get_input_sample(void)
 {
 	const int nsamples = 100;
 
-	int acc = 0;
+	unsigned acc = 0;
 	int n;
 	for(n = 0; n < nsamples; n++) {
 		adc_on(ADC1);
@@ -76,35 +76,5 @@ int vss_ad8307_get_input_power(void)
 	}
 	acc /= nsamples;
 
-	/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
-	 *
-	 *              3.3 V
-	 *     Kad = ----------
-	 *           (2^12 - 1)
-	 *
-	 * AD8307
-	 *
-	 *     Kdet = 25 mV/dB  (slope)
-	 *     Adet = -84 dBm   (intercept)
-	 *
-	 * Since we are using this detector for low power signals only, TDA18219 is
-	 * at maximum gain.
-	 *
-	 *     AGC1 = 15 dB
-	 *     AGC2 = -2 dB
-	 *     AGC3 = 30 dB (guess based on measurement)
-	 *     AGC4 = 14 dB
-	 *     AGC5 = 9 dB
-	 *     --------------
-	 *     Atuner = 66 dB
-	 *
-	 * Pinput [dBm] = N * Kad / Kdet - Adet - Atuner
-	 *
-	 *                  3.3 V * 1000
-	 *              = N ------------ - 84 - 66
-	 *                  4095 * 25 V
-	 *
-	 * Note we are returning [dBm * 100]
-	 */
-	return acc * 3300 / 1024 - 15000;
+	return acc;
 }
