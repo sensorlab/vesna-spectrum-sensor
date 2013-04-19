@@ -1,9 +1,6 @@
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/f1/rtc.h>
-#include <libopencm3/stm32/iwdg.h>
 #include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/systick.h>
 
 #include "cc.h"
 #include "vss.h"
