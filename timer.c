@@ -10,7 +10,7 @@ int vss_timer_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM4EN);
 
 	nvic_enable_irq(NVIC_TIM4_IRQ);
-	nvic_set_priority(NVIC_TIM4_IRQ, 2);
+	nvic_set_priority(NVIC_TIM4_IRQ, 255);
 
 	timer_reset(TIM4);
 	timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);

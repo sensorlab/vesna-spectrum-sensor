@@ -89,6 +89,7 @@ static void setup(void)
 			RCC_APB2ENR_USART1EN);
 
 	nvic_enable_irq(NVIC_USART1_IRQ);
+	nvic_set_priority(NVIC_USART1_IRQ, 0);
 
 	/* GPIO pin for the LED */
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
