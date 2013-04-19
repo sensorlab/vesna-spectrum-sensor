@@ -189,6 +189,8 @@ static void command_report_on(void)
 {
 	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
+	} if (has_started) {
+		printf("error: stop current sweep first\n");
 	} else {
 		vss_device_run_init(&current_device_run, &current_sweep_config, -1, data_buffer);
 
@@ -212,6 +214,10 @@ static void command_report_off(void)
 
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
 {
+	if(has_started) {
+		printf("error: stop current sweep first\n");
+	}
+
 	const struct vss_device_config* device_config = vss_device_config_get(dev_id, config_id);
 
 	if(device_config == NULL) {
