@@ -212,6 +212,9 @@ class SpectrumSensor:
 		"""
 		self.comm = serial.Serial(device, 115200, timeout=.5)
 
+		self.comm.write("report-off\n")
+		self._wait_for_ok()
+
 	def _wait_for_ok(self):
 		while True:
 			r = self.comm.readline()
@@ -222,10 +225,6 @@ class SpectrumSensor:
 	
 	def get_config_list(self):
 		"""Query and return the list of supported device configurations."""
-
-		self.comm.write("report-off\n")
-
-		self._wait_for_ok()
 
 		self.comm.write("list\n")
 
