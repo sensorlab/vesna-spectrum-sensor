@@ -429,6 +429,9 @@ def test_ident(dut, gen):
 	if dut.replay:
 		log("  *** REPLAY ***")
 
+	log("    Firmware version:")
+	log("      %s" % (dut.spectrumsensor.get_fw_version()))
+
 	log("    Device status:")
 	resp = dut.spectrumsensor.get_status()
 	for line in resp:
