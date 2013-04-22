@@ -433,7 +433,7 @@ def test_ident(dut, gen):
 	log("      %s" % (dut.spectrumsensor.get_fw_version()))
 
 	log("    Device status:")
-	resp = dut.spectrumsensor.get_status()
+	resp = dut.spectrumsensor.get_status(dut.config)
 	for line in resp:
 		log("      %s" % (line.strip(),))
 
