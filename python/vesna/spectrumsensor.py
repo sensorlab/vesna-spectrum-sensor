@@ -2,6 +2,8 @@ import re
 import select
 import serial
 
+class SpectrumSensorException(Exception): pass
+
 class Device:
 	"""A spectrum sensing device.
 
@@ -209,13 +211,21 @@ class SpectrumSensor:
 		device -- path to the character device for the RS232 port with the spectrum sensor.
 		"""
 		self.comm = serial.Serial(device, 115200, timeout=.5)
+
+	def _wait_for_ok(self):
+		while True:
+			r = self.comm.readline()
+			if r == 'ok\n':
+				break
+			elif r.startswith("error:"):
+				raise SpectrumSensorException(r.strip())
 	
 	def get_config_list(self):
 		"""Query and return the list of supported device configurations."""
 
 		self.comm.write("report-off\n")
 
-		while self.comm.readline() != 'ok\n': pass
+		self._wait_for_ok()
 
 		self.comm.write("list\n")
 
@@ -294,7 +304,7 @@ class SpectrumSensor:
 				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
 				sweep_config.config.device.id, sweep_config.config.id))
 
-		while self.comm.readline() != 'ok\n': pass
+		self._wait_for_ok()
 
 		self.comm.write("report-on\n")
 
@@ -329,4 +339,4 @@ class SpectrumSensor:
 
 		self.comm.write("report-off\n")
 
-		while self.comm.readline() != 'ok\n': pass
+		self._wait_for_ok()
