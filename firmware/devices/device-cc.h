@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+/* Copyright (C) 2013 SensorLab, Jozef Stefan Institute
  * http://sensorlab.ijs.si
  *
  * This program is free software: you can redistribute it and/or modify
