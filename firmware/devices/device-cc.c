@@ -22,12 +22,12 @@
 
 #include "cc.h"
 #include "rtc.h"
-#include "run.h"
+#include "task.h"
 #include "timer.h"
 
 #include "device-cc.h"
 
-static struct vss_device_run* current_device_run = NULL;
+static struct vss_task* current_task = NULL;
 
 static int vss_device_cc_init(void)
 {
@@ -99,9 +99,9 @@ static int dev_cc_setup(const uint8_t* init_seq)
 	return VSS_OK;
 }
 
-static int dev_cc_prepare_measurement(struct vss_device_run* device_run)
+static int dev_cc_prepare_measurement(struct vss_task* task)
 {
-	unsigned int ch = vss_device_run_get_channel(device_run);
+	unsigned int ch = vss_task_get_channel(task);
 
 	int r;
 
@@ -125,48 +125,48 @@ static int dev_cc_prepare_measurement(struct vss_device_run* device_run)
 	return VSS_OK;
 }
 
-static void dev_cc_take_measurement(struct vss_device_run* device_run)
+static void dev_cc_take_measurement(struct vss_task* task)
 {
 	int r;
 	int8_t reg;
 	r = vss_cc_read_reg(CC_REG_RSSI, (uint8_t*) &reg);
 	if(r) {
-		vss_device_run_set_error(device_run,
+		vss_task_set_error(task,
 				"vss_cc_read_reg for RSSI returned an error");
-		current_device_run = NULL;
+		current_task = NULL;
 		return;
 	}
 
 	power_t rssi_dbm_100 = -5920 + reg * 50;
 
-	if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
-		r = dev_cc_prepare_measurement(device_run);
+	if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+		r = dev_cc_prepare_measurement(task);
 		if(r) {
-			vss_device_run_set_error(device_run,
+			vss_task_set_error(task,
 				"dev_cc_prepare_measurement() returned an error");
-			current_device_run = NULL;
+			current_task = NULL;
 			return;
 		}
 	} else {
-		current_device_run = NULL;
+		current_task = NULL;
 	}
 }
 
-static int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
+static int dev_cc_run(void* priv __attribute__((unused)), struct vss_task* task)
 {
-	if(current_device_run != NULL) {
+	if(current_task != NULL) {
 		return VSS_TOO_MANY;
 	}
-	current_device_run = device_run;
+	current_task = task;
 
 	int r;
-	r = dev_cc_setup(device_run->sweep_config->device_config->priv);
+	r = dev_cc_setup(task->sweep_config->device_config->priv);
 	if(r) return r;
 
 	r = vss_rtc_reset();
 	if(r) return r;
 
-	r = dev_cc_prepare_measurement(device_run);
+	r = dev_cc_prepare_measurement(task);
 	if(r) return r;
 
 	return VSS_OK;
@@ -174,7 +174,7 @@ static int dev_cc_run(void* priv __attribute__((unused)), struct vss_device_run*
 
 void vss_device_cc_timer_isr(void)
 {
-	dev_cc_take_measurement(current_device_run);
+	dev_cc_take_measurement(current_task);
 }
 
 static const struct vss_device device_cc1101 = {

@@ -30,7 +30,7 @@
 #include "device-cc.h"
 #include "device-tda18219.h"
 
-#include "run.h"
+#include "task.h"
 
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32
@@ -43,7 +43,7 @@ static struct vss_sweep_config current_sweep_config = {
 	.device_config = NULL
 };
 
-static struct vss_device_run current_device_run;
+static struct vss_task current_task;
 static power_t data_buffer[DATA_BUFFER_SIZE];
 static int has_started = 0;
 
@@ -193,11 +193,11 @@ static void command_report_on(void)
 	} if (has_started) {
 		printf("error: stop current sweep first\n");
 	} else {
-		vss_device_run_init(&current_device_run, &current_sweep_config, -1, data_buffer);
+		vss_task_init(&current_task, &current_sweep_config, -1, data_buffer);
 
-		int r = vss_device_run_start(&current_device_run);
+		int r = vss_task_start(&current_task);
 		if(r) {
-			printf("error: vss_device_run_start returned %d\n", r);
+			printf("error: vss_task_start returned %d\n", r);
 		}
 
 		has_started = 1;
@@ -209,7 +209,7 @@ static void command_report_off(void)
 	if(!has_started) {
 		printf("ok\n");
 	} else {
-		vss_device_run_stop(&current_device_run);
+		vss_task_stop(&current_task);
 	}
 }
 
@@ -303,26 +303,26 @@ int main(void)
 
 		IWDG_KR = IWDG_KR_RESET;
 
-		int has_finished = (vss_device_run_get_state(&current_device_run) == VSS_DEVICE_RUN_FINISHED);
+		int has_finished = (vss_task_get_state(&current_task) == VSS_DEVICE_RUN_FINISHED);
 
-		struct vss_device_run_read_result ctx;
-		vss_device_run_read(&current_device_run, &ctx);
+		struct vss_task_read_result ctx;
+		vss_task_read(&current_task, &ctx);
 
 		int channel;
 		uint32_t timestamp;
 		power_t power;
 
-		while(vss_device_run_read_parse(&current_device_run, &ctx,
+		while(vss_task_read_parse(&current_task, &ctx,
 								&timestamp, &channel, &power) == VSS_OK) {
 			if(channel >= 0) {
-				if((unsigned) channel == current_device_run.sweep_config->channel_start) {
+				if((unsigned) channel == current_task.sweep_config->channel_start) {
 					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
 				}
 
 				printf(" %d.%02d", power/100, abs(power%100));
 
-				if(channel + current_device_run.sweep_config->channel_step
-						>= current_device_run.sweep_config->channel_stop) {
+				if(channel + current_task.sweep_config->channel_step
+						>= current_task.sweep_config->channel_stop) {
 					printf(" DE\n");
 				}
 
@@ -330,7 +330,7 @@ int main(void)
 		}
 
 		if(has_finished && has_started) {
-			const char* msg = vss_device_run_get_error(&current_device_run);
+			const char* msg = vss_task_get_error(&current_task);
 			if(msg) {
 				printf("error: %s\n", msg);
 			} else {

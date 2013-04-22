@@ -5,14 +5,14 @@
 
 #include "buffer.h"
 
-struct vss_device_run;
+struct vss_task;
 
 /** @brief Callback for starting a spectrum sensing device.
  *
  * @param priv Pointer to the implementation specific data structure.
- * @param device_run Pointer to task to start.
+ * @param task Pointer to task to start.
  * @return VSS_OK on success or an error code otherwise. */
-typedef int (*vss_device_run_t)(void* priv, struct vss_device_run* device_run);
+typedef int (*vss_device_run_t)(void* priv, struct vss_task* task);
 
 /** @brief Callback for obtaining device status.
  *
@@ -106,7 +106,7 @@ struct vss_sweep_config {
 extern int vss_device_config_list_num;
 extern const struct vss_device_config* vss_device_config_list[];
 
-int vss_device_run(const struct vss_device* device, struct vss_device_run* run);
+int vss_device_run(const struct vss_device* device, struct vss_task* task);
 int vss_device_status(const struct vss_device* device, char* buffer, size_t len);
 
 int vss_device_config_add(const struct vss_device_config* device_config);

@@ -24,7 +24,7 @@
 #include "ad8307.h"
 #include "device.h"
 #include "rtc.h"
-#include "run.h"
+#include "task.h"
 #include "tda18219.h"
 #include "vss.h"
 
@@ -37,7 +37,7 @@ enum state_t {
 	SET_FREQUENCY };
 
 static enum state_t current_state = OFF;
-static struct vss_device_run* current_device_run = NULL;
+static struct vss_task* current_task = NULL;
 
 struct calibration_point {
 	unsigned int freq;
@@ -152,27 +152,27 @@ static int vss_device_tda18219_init(void)
 	return VSS_OK;
 }
 
-int dev_tda18219_turn_on(struct vss_device_run* device_run)
+int dev_tda18219_turn_on(struct vss_task* task)
 {
 	int r;
 	r = tda18219_power_on();
 	if(r) return VSS_ERROR;
 
-	const struct dev_tda18219_priv* priv = device_run->sweep_config->device_config->priv;
+	const struct dev_tda18219_priv* priv = task->sweep_config->device_config->priv;
 	r = tda18219_set_standard(priv->standard);
 	if(r) return VSS_ERROR;
 
 	r = vss_ad8307_power_on();
 	if(r) return r;
 
-	current_device_run = device_run;
+	current_task = task;
 
 	return VSS_OK;
 }
 
 int dev_tda18219_turn_off(void)
 {
-	current_device_run = NULL;
+	current_task = NULL;
 
 	int r;
 	r = vss_ad8307_power_off();
@@ -184,16 +184,16 @@ int dev_tda18219_turn_off(void)
 	return VSS_OK;
 }
 
-enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t state)
+enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 {
 	if(state == OFF) {
 		return OFF;
 	}
 
-	const struct vss_device_config* device_config = device_run->sweep_config->device_config;
+	const struct vss_device_config* device_config = task->sweep_config->device_config;
 	const struct dev_tda18219_priv* priv = device_config->priv;
 
-	unsigned int ch = vss_device_run_get_channel(device_run);
+	unsigned int ch = vss_task_get_channel(task);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
 	int rssi_dbm_100;
@@ -203,7 +203,7 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 		case SET_FREQUENCY:
 			r = tda18219_set_frequency(priv->standard, freq);
 			if(r) {
-				vss_device_run_set_error(device_run,
+				vss_task_set_error(task,
 						"tda18219_set_frequency() returned an error");
 				dev_tda18219_turn_off();
 				return OFF;
@@ -213,7 +213,7 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 		case RUN_MEASUREMENT:
 			r = tda18219_get_input_power_prepare();
 			if(r) {
-				vss_device_run_set_error(device_run,
+				vss_task_set_error(task,
 						"tda18219_get_input_power_prepare() returned an error");
 				dev_tda18219_turn_off();
 				return OFF;
@@ -224,7 +224,7 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 			r = get_input_power(&rssi_dbm_100);
 			if(r) {
-				vss_device_run_set_error(device_run,
+				vss_task_set_error(task,
 						"get_input_power() returned an error");
 				dev_tda18219_turn_off();
 				return OFF;
@@ -233,10 +233,10 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 			// extra offset determined by measurement
 			rssi_dbm_100 -= get_calibration_offset(priv->calibration, freq / 1000);
 
-			if(vss_device_run_insert(device_run, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+			if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
 				r = tda18219_set_frequency(priv->standard, freq);
 				if(r) {
-					vss_device_run_set_error(device_run,
+					vss_task_set_error(task,
 						"tda18219_set_frequency() returned an error");
 					dev_tda18219_turn_off();
 					return OFF;
@@ -255,21 +255,21 @@ enum state_t dev_tda18219_state(struct vss_device_run* device_run, enum state_t 
 
 void vss_device_tda18219_isr(void)
 {
-	current_state = dev_tda18219_state(current_device_run, current_state);
+	current_state = dev_tda18219_state(current_task, current_state);
 }
 
-int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
+int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_task* task)
 {
-	if(current_device_run != NULL) {
+	if(current_task != NULL) {
 		return VSS_TOO_MANY;
 	}
 
-	int r = dev_tda18219_turn_on(device_run);
+	int r = dev_tda18219_turn_on(task);
 	if(r) return r;
 
 	vss_rtc_reset();
 
-	current_state = dev_tda18219_state(device_run, SET_FREQUENCY);
+	current_state = dev_tda18219_state(task, SET_FREQUENCY);
 	return VSS_OK;
 }
 

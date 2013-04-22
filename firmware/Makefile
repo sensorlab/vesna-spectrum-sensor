@@ -14,7 +14,7 @@ LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-OBJS		+= main.o device.o buffer.o run.o platform/timer.o platform/rtc.o
+OBJS		+= main.o device.o buffer.o task.o platform/timer.o platform/rtc.o
 LIBS		+= -lopencm3_stm32f1
 
 OPENOCD		?= openocd
@@ -77,6 +77,8 @@ all: $(BINARY).elf
 
 clean:
 	rm -f *.o *.d *.elf *.bin
+	rm -f platform/*.o platform/*.d
+	rm -f devices/*.o devices/*.d
 	$(MAKE) -C tests clean
 
 %.u: %.elf

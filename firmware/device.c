@@ -7,12 +7,12 @@ const struct vss_device_config* vss_device_config_list[VSS_MAX_DEVICE_CONFIG];
 /** @brief Start a spectrum sensing device.
  *
  * @param device Pointer to the device to start.
- * @param run Pointer to the device task to start.
+ * @param task Pointer to the device task to start.
  * @return VSS_OK on success or an error code otherwise.
  */
-int vss_device_run(const struct vss_device* device, struct vss_device_run* run)
+int vss_device_run(const struct vss_device* device, struct vss_task* task)
 {
-	return device->run(device->priv, run);
+	return device->run(device->priv, task);
 }
 
 /** @brief Obtain a spectrum sensing device status.

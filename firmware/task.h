@@ -23,7 +23,7 @@
 /** @brief State of the task.
  *
  * During its life time, a task goes from NEW to RUNNING to FINISHED. */
-enum vss_device_run_state {
+enum vss_task_state {
 	/** @brief A newly created task. */
 	VSS_DEVICE_RUN_NEW,
 	/** @brief Task currently running on a device. */
@@ -33,7 +33,7 @@ enum vss_device_run_state {
 };
 
 /** @brief Spectrum sensing task. */
-struct vss_device_run {
+struct vss_task {
 	/** @brief Circular buffer for storing the measurements. */
 	struct vss_buffer buffer;
 
@@ -41,7 +41,7 @@ struct vss_device_run {
 	const struct vss_sweep_config* sweep_config;
 
 	/** @brief Current state of the task. */
-	enum vss_device_run_state state;
+	enum vss_task_state state;
 
 	/** @brief Remaining number of sweeps.
 	 *
@@ -62,7 +62,7 @@ struct vss_device_run {
 };
 
 /** @brief Result of a buffer read operation. */
-struct vss_device_run_read_result {
+struct vss_task_read_result {
 	/** @brief Pointer to the current block being read. */
 	const power_t* data;
 
@@ -79,7 +79,7 @@ struct vss_device_run_read_result {
  *
  * @code{.c}
  * power_t data[512];
- * struct vss_device_run device_run;
+ * struct vss_task device_run;
  *
  * vss_buffer_init(&device_run, &sweep_config, sweep_num, data);
  * @endcode
@@ -89,26 +89,26 @@ struct vss_device_run_read_result {
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for infinite).
  * @param data Array to use as buffer storage.
  */
-#define vss_device_run_init(device_run, sweep_config, sweep_num, data) {\
+#define vss_task_init(device_run, sweep_config, sweep_num, data) {\
 	vss_buffer_init(&(device_run)->buffer, data); \
-	vss_device_run_init_(device_run, sweep_config, sweep_num); \
+	vss_task_init_(device_run, sweep_config, sweep_num); \
 }
 
 /** @name User interface */
 
 /** @{ */
 
-void vss_device_run_init_(struct vss_device_run* device_run, const struct vss_sweep_config* sweep_config,
+void vss_task_init_(struct vss_task* device_run, const struct vss_sweep_config* sweep_config,
 		int sweep_num);
 
-int vss_device_run_start(struct vss_device_run* run);
-int vss_device_run_stop(struct vss_device_run* run);
+int vss_task_start(struct vss_task* task);
+int vss_task_stop(struct vss_task* task);
 
-enum vss_device_run_state vss_device_run_get_state(struct vss_device_run* run);
-const char* vss_device_run_get_error(struct vss_device_run* run);
+enum vss_task_state vss_task_get_state(struct vss_task* task);
+const char* vss_task_get_error(struct vss_task* task);
 
-void vss_device_run_read(struct vss_device_run* run, struct vss_device_run_read_result* ctx);
-int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_read_result *ctx,
+void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx);
+int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 		uint32_t* timestamp, int* channel, power_t* power);
 
 /** @} */
@@ -117,9 +117,9 @@ int vss_device_run_read_parse(struct vss_device_run* run, struct vss_device_run_
 
 /** @{ */
 
-unsigned int vss_device_run_get_channel(struct vss_device_run* device_run);
-int vss_device_run_insert(struct vss_device_run* device_run, power_t data, uint32_t timestamp);
-void vss_device_run_set_error(struct vss_device_run* run, const char* msg);
+unsigned int vss_task_get_channel(struct vss_task* device_run);
+int vss_task_insert(struct vss_task* device_run, power_t data, uint32_t timestamp);
+void vss_task_set_error(struct vss_task* task, const char* msg);
 
 /** @} */
 

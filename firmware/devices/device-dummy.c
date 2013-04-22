@@ -20,14 +20,14 @@
 
 #include "vss.h"
 #include "rtc.h"
-#include "run.h"
+#include "task.h"
 #include "timer.h"
 
 #include "device-dummy.h"
 
 #define CHANNEL_TIME_MS	5
 
-static struct vss_device_run* current_device_run = NULL;
+static struct vss_task* current_task = NULL;
 
 typedef int (*data_f)(power_t *val);
 
@@ -60,17 +60,17 @@ static void do_stuff(void)
 	power_t result;
 
 	int r;
-	r = ((data_f) current_device_run->sweep_config->device_config->priv)(&result);
+	r = ((data_f) current_task->sweep_config->device_config->priv)(&result);
 	if(r) {
-		vss_device_run_set_error(current_device_run, "test error");
-		current_device_run = NULL;
+		vss_task_set_error(current_task, "test error");
+		current_task = NULL;
 		return;
 	}
 
-	if(vss_device_run_insert(current_device_run, result, vss_rtc_read()) == VSS_OK) {
+	if(vss_task_insert(current_task, result, vss_rtc_read()) == VSS_OK) {
 		vss_timer_schedule(CHANNEL_TIME_MS);
 	} else {
-		current_device_run = NULL;
+		current_task = NULL;
 	}
 }
 
@@ -80,15 +80,15 @@ void tim4_isr(void)
 	do_stuff();	
 }
 
-static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_device_run* device_run)
+static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* task)
 {
-	if(current_device_run != NULL) {
+	if(current_task != NULL) {
 		return VSS_TOO_MANY;
 	}
 
 	vss_rtc_reset();
 
-	current_device_run = device_run;
+	current_task = task;
 
 	vss_timer_schedule(CHANNEL_TIME_MS);
 

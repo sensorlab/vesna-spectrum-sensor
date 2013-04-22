@@ -8,7 +8,7 @@ UNITY_OBJ = $(UNITY)/src/unity.o
 
 TESTS =	test_buffer_run \
 	test_device_run \
-	test_run_run
+	test_task_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \
@@ -18,7 +18,7 @@ all: test
 
 test: $(TESTS)
 
-test_run_runner: test_run_runner.o test_run.o run.o buffer.o device.o $(UNITY_OBJ)
+test_task_runner: test_task_runner.o test_task.o task.o buffer.o device.o $(UNITY_OBJ)
 
 test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
