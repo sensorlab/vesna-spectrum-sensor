@@ -212,6 +212,9 @@ class SpectrumSensor:
 		"""
 		self.comm = serial.Serial(device, 115200, timeout=.5)
 
+		self.comm.write("report-off\n")
+		self._wait_for_ok()
+
 	def _wait_for_ok(self):
 		while True:
 			r = self.comm.readline()
@@ -222,10 +225,6 @@ class SpectrumSensor:
 	
 	def get_config_list(self):
 		"""Query and return the list of supported device configurations."""
-
-		self.comm.write("report-off\n")
-
-		self._wait_for_ok()
 
 		self.comm.write("list\n")
 
@@ -259,8 +258,11 @@ class SpectrumSensor:
 
 		return config_list
 
-	def get_status(self):
+	def get_status(self, config):
 		"""Query and return the string with device status."""
+		sweep_config = SweepConfig(config, 0, 1, 1)
+		self._select_channel(sweep_config)
+
 		self.comm.write("status\n")
 
 		resp = []
@@ -286,6 +288,13 @@ class SpectrumSensor:
 
 		return resp
 
+	def _select_channel(self, sweep_config):
+		self.comm.write("select channel %d:%d:%d config %d,%d\n" % (
+				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
+				sweep_config.config.device.id, sweep_config.config.id))
+
+		self._wait_for_ok()
+
 	def run(self, sweep_config, cb):
 		"""Run the specified frequency sweep.
 
@@ -300,11 +309,8 @@ class SpectrumSensor:
 		Where sweep_config is the SweepConfig object provided when calling run() and sweep
 		the Sweep object with measured data.
 		"""
-		self.comm.write("select channel %d:%d:%d config %d,%d\n" % (
-				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
-				sweep_config.config.device.id, sweep_config.config.id))
 
-		self._wait_for_ok()
+		self._select_channel(sweep_config)
 
 		self.comm.write("report-on\n")
 
