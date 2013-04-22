@@ -74,6 +74,7 @@ Compilation
 To compile and upload firmware to a VESNA using OpenOCD and Olimex
 ARM-USB-OCD:
 
+$ cd firmware
 $ make MODEL=sne-crewtv spectrum-sensor.u
 
 Set the MODEL variable to the name of the hardware model you are
@@ -81,6 +82,17 @@ using.
 
 If you want to run the application using the VESNA bootloader, add
 "LDSCRIPT=vesna_app.ld" to the make command-line.
+
+To run unit tests, make sure that Unity framework is installed in a directory
+along side vesna-spectrum-sensor:
+
+$ ls
+Unity  vesna-spectrum-sensor
+
+Then run "make test":
+
+$ cd vesna-spectrum-sensor/firmware
+$ make test
 
 
 Usage

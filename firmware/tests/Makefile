@@ -1,4 +1,4 @@
-UNITY ?= ../../Unity
+UNITY ?= ../../../Unity
 
 INCLUDES += -I$(UNITY)/src -I..
 

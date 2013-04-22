@@ -6,7 +6,7 @@ PREFIX		?= arm-none-eabi
 CC		= $(PREFIX)-gcc
 LD		= $(PREFIX)-gcc
 OBJCOPY		= $(PREFIX)-objcopy
-CFLAGS		+= -Os -g -Wall -Wextra -I$(TOOLCHAIN_DIR)/include \
+CFLAGS		+= -Os -g -Wall -Wextra -I$(TOOLCHAIN_DIR)/include -Iplatform -Idevices -I.\
 		   -fno-common -mcpu=cortex-m3 -mthumb -msoft-float -MD -DSTM32F1 \
 		   -DVERSION=\"$(VERSION)\"
 LDSCRIPT	?= vesna.ld
@@ -14,7 +14,7 @@ LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-OBJS		+= main.o device.o buffer.o run.o timer.o rtc.o
+OBJS		+= main.o device.o buffer.o run.o platform/timer.o platform/rtc.o
 LIBS		+= -lopencm3_stm32f1
 
 OPENOCD		?= openocd
@@ -22,44 +22,44 @@ OPENOCD_PARAMS  ?= -f interface/olimex-arm-usb-ocd.cfg -f target/stm32f1x.cfg
 
 ifeq ($(MODEL),sne-crewtv)
 	LIBS += -ltda18219
-	OBJS += tda18219.o ad8307.o device-tda18219.o
+	OBJS += platform/tda18219.o platform/ad8307.o devices/device-tda18219.o
 	CFLAGS += -DTUNER_TDA18219 -DMODEL_SNE_CREWTV
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),sne-ismtv-uhf)
 	LIBS += -ltda18219
-	OBJS += tda18219.o ad8307.o device-tda18219.o
+	OBJS += platform/tda18219.o platform/ad8307.o devices/device-tda18219.o
 	CFLAGS += -DTUNER_TDA18219 -DMODEL_SNE_ISMTV_UHF
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),sne-ismtv-868)
-	OBJS += cc.o device-cc.o
+	OBJS += platform/cc.o devices/device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_868
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),sne-ismtv-2400)
-	OBJS += cc.o device-cc.o
+	OBJS += platform/cc.o devices/device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNE_ISMTV_2400
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),snr-trx-868)
-	OBJS += cc.o device-cc.o
+	OBJS += platform/cc.o devices/device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_868
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),snr-trx-2400)
-	OBJS += cc.o device-cc.o
+	OBJS += platform/cc.o devices/device-cc.o
 	CFLAGS += -DTUNER_CC -DMODEL_SNR_TRX_2400
 	MODEL_OK = ok
 endif
 
 ifeq ($(MODEL),dummy)
-	OBJS += device-dummy.o
+	OBJS += devices/device-dummy.o
 	CFLAGS += -DTUNER_NULL
 	MODEL_OK = ok
 endif
