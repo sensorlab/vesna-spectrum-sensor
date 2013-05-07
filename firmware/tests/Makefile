@@ -8,7 +8,8 @@ UNITY_OBJ = $(UNITY)/src/unity.o
 
 TESTS =	test_buffer_run \
 	test_device_run \
-	test_task_run
+	test_task_run \
+	test_calibration_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \

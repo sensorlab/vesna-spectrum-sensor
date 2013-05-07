@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 #include <tda18219/tda18219.h>
 #include <tda18219/tda18219regs.h>
 
@@ -27,6 +28,7 @@
 #include "task.h"
 #include "tda18219.h"
 #include "vss.h"
+#include "calibration.h"
 
 #include "device-tda18219.h"
 
@@ -39,43 +41,10 @@ enum state_t {
 static enum state_t current_state = OFF;
 static struct vss_task* current_task = NULL;
 
-struct calibration_point {
-	unsigned int freq;
-	int offset;
-};
-
 struct dev_tda18219_priv {
 	const struct tda18219_standard* standard;
 	const struct calibration_point* calibration;
 };
-
-static int get_calibration_offset(const struct calibration_point* calibration, unsigned int freq)
-{
-	int offset;
-	struct calibration_point prev = { 0, 0 };
-	struct calibration_point next;
-
-	while(calibration->freq != 0) {
-		next = *calibration;
-
-		if(next.freq == freq) {
-			offset = next.offset;
-			break;
-		} else if(next.freq > freq) {
-			offset = prev.offset + ((int) (freq - prev.freq)) * (next.offset - prev.offset) /
-					((int) (next.freq - prev.freq));
-			break;
-		} else {
-			prev = next;
-		}
-
-		calibration++;
-	}
-
-	assert(calibration->freq != 0);
-
-	return offset;
-}
 
 static int get_input_power(int* rssi_dbm_100)
 {
@@ -231,7 +200,10 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			}
 
 			// extra offset determined by measurement
-			rssi_dbm_100 -= get_calibration_offset(priv->calibration, freq / 1000);
+			int calibration = get_calibration(priv->calibration, freq / 1000);
+			assert(calibration != INT_MIN);
+
+			rssi_dbm_100 -= calibration;
 
 			if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
 				r = tda18219_set_frequency(priv->standard, freq);
@@ -363,7 +335,7 @@ static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = 
 	{ 850000, 623 },
 	{ 860000, 433 },
 	{ 870000, 242 },
-	{ 0, 0 }
+	{ INT_MIN, INT_MIN }
 };
 
 static struct dev_tda18219_priv dev_tda18219_dvbt_1700khz_priv = {
@@ -429,7 +401,7 @@ static const struct calibration_point dev_tda18219_dvbt_8000khz_calibration[] = 
 	{ 850000, -681 },
 	{ 860000, -805 },
 	{ 870000, -929 },
-	{ 0, 0 }
+	{ INT_MIN, INT_MIN }
 };
 
 static struct dev_tda18219_priv dev_tda18219_dvbt_8000khz_priv = {
