@@ -514,7 +514,7 @@ def main():
 		pass
 
 	global log_f
-	log_f = open("log/%s.log" % (options.name,), "w")
+	log_f = open("%s/%s.log" % (options.log_path, options.name), "w")
 
 	run_tests(options)
 
