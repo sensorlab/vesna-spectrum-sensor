@@ -245,7 +245,7 @@ def test_freq_sweep(dut, gen):
 		log("    Range %.1f - %.1f Hz" % (f_hz_list[0], f_hz_list[-1]))
 		log("      max absolute error %.1f dBm" % (max_error([p_dbm]*len(f_hz_list), pout_dbm_list)))
 
-	log("End power ramp test")
+	log("End frequency sweep test")
 
 def get_settle_time(measurements, settled):
 	mmax = max(settled)
