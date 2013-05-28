@@ -176,7 +176,7 @@ def test_power_ramp(dut, gen):
 		gen.rf_off()
 
 
-		f = open("log/%s_power_ramp_%dhz.log" % (dut.name, f_hz,), "w")
+		f = open("%s/%s_power_ramp_%dhz.log" % (dut.log_path, dut.name, f_hz,), "w")
 		f.write("# Pin [dBm]\tPout [dBm]\n")
 		for p_dbm, pout_dbm in zip(p_dbm_list, pout_dbm_list):
 			f.write("%f\t%f\n" % (p_dbm, pout_dbm))
@@ -235,7 +235,7 @@ def test_freq_sweep(dut, gen):
 
 		gen.rf_off()
 
-		path = ("log/%s_freq_sweep_%ddbm.log" % (dut.name, p_dbm)).replace("-", "m")
+		path = ("%s/%s_freq_sweep_%ddbm.log" % (dut.log_path, dut.name, p_dbm)).replace("-", "m")
 		f = open(path, "w")
 		f.write("# f [Hz]\tPout [dBm]\n")
 		for f_hz, pout_dbm in zip(f_hz_list, pout_dbm_list):
@@ -408,7 +408,7 @@ def test_ch_filter(dut, gen):
 
 		gen.rf_off()
 
-		path = ("log/%s_channel_filter_%dhz.log" % (dut.name, fc_hz))
+		path = ("%s/%s_channel_filter_%dhz.log" % (dut.log_path, dut.name, fc_hz))
 		f = open(path, "w")
 		f.write("# f [Hz]\tPout [dBm]\n")
 		for f_hz, pout_dbm in zip(f_hz_list, pout_dbm_list):
