@@ -180,19 +180,25 @@ class ConfigList:
 
 		return None
 
-	def get_sweep_config(self, start_hz, stop_hz, step_hz):
+	def get_sweep_config(self, start_hz, stop_hz, step_hz, name=None):
 		"""Return best frequency sweep configuration for specified requirements.
 
 		start_hz -- Lower bound of the frequency band to sweep (inclusive).
 		stop_hz -- Upper bound of the frequency band to sweep (inclusive).
 		step_hz -- Preferred frequency step to use.
+		name -- Optional required sub-string in device configuration name.
 		"""
 
 		candidates = []
 
 		for config in self.configs:
-			if config.covers(start_hz, stop_hz):
-				candidates.append(config)
+			if name and name not in config.name:
+				continue
+
+			if not config.covers(start_hz, stop_hz):
+				continue
+
+			candidates.append(config)
 
 		# pick fastest matching config
 		candidates.sort(key=lambda x:x.time, reverse=True)

@@ -1,6 +1,6 @@
 import unittest
 
-from vesna.spectrumsensor import Device, DeviceConfig, SweepConfig, DeviceConfig
+from vesna.spectrumsensor import Device, DeviceConfig, SweepConfig, DeviceConfig, ConfigList
 
 class TestDeviceConfig(unittest.TestCase):
 	def setUp(self):
@@ -49,3 +49,35 @@ class TestSweepConfig(unittest.TestCase):
 
 		self.assertEquals(sc.stop_ch, 50)
 		self.assertEquals(sc.stop_hz, 1039)
+
+class TestConfigList(unittest.TestCase):
+	def test_get_config_name(self):
+		cl = ConfigList()
+
+		d = Device(0, "test")
+		cl._add_device(d)
+
+		def add_dc(id, name, base):
+			dc = DeviceConfig(id, name, d)
+			dc.base = base
+			dc.spacing = 1
+			dc.num = 1000
+			dc.time = 1
+			cl._add_config(dc)
+
+		add_dc(0, "foo 1", 1000)
+		add_dc(1, "foo 2", 2000)
+		add_dc(2, "bar 1", 1000)
+		add_dc(3, "bar 2", 2000)
+
+		sc = cl.get_sweep_config(1500, 1600, 1)
+		self.assertEquals(0, sc.config.id)
+
+		sc = cl.get_sweep_config(2500, 2600, 1)
+		self.assertEquals(1, sc.config.id)
+
+		sc = cl.get_sweep_config(1500, 1600, 1, name="bar")
+		self.assertEquals(2, sc.config.id)
+
+		sc = cl.get_sweep_config(2500, 2600, 1, name="bar")
+		self.assertEquals(3, sc.config.id)
