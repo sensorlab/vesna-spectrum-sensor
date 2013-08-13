@@ -31,6 +31,6 @@
 int vss_ad8307_init(void);
 int vss_ad8307_power_on(void);
 int vss_ad8307_power_off(void);
-unsigned vss_ad8307_get_input_sample(void);
+int vss_ad8307_get_input_samples(unsigned* buffer, unsigned nsamples);
 
 #endif

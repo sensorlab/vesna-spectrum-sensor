@@ -80,18 +80,14 @@ int vss_ad8307_power_off(void)
 	return VSS_OK;
 }
 
-unsigned vss_ad8307_get_input_sample(void)
+int vss_ad8307_get_input_samples(unsigned* buffer, unsigned nsamples)
 {
-	const int nsamples = 100;
-
-	unsigned acc = 0;
-	int n;
+	unsigned n;
 	for(n = 0; n < nsamples; n++) {
 		adc_on(ADC1);
 		while (!(ADC_SR(ADC1) & ADC_SR_EOC));
-		acc += ADC_DR(ADC1);
+		buffer[n] = ADC_DR(ADC1);
 	}
-	acc /= nsamples;
 
-	return acc;
+	return VSS_OK;
 }
