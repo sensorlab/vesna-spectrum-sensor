@@ -114,6 +114,9 @@ struct vss_sweep_config {
 
 	/** @brief Channel of the one after the last measurement. */
 	unsigned int channel_stop;
+
+	/** @brief Number of power samples to average for one data point. */
+	unsigned int n_average;
 };
 
 /** @brief Maximum number of device configuration that can be registered with
