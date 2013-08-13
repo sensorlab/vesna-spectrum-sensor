@@ -147,7 +147,8 @@ static void command_help(void)
 		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
 		"             sweep channels from START to STOP stepping STEP\n"
 		"             channels at a time using DEVICE and CONFIG pre-set\n"
-		"status       print out hardware status\n\n"
+		"status       print out hardware status\n"
+		"version      print out firmware version\n\n"
 
 		"sweep data has the following format:\n"
 		"             TS timestamp DS power ... DE\n"
