@@ -26,5 +26,5 @@ power_t vss_average(power_t* buffer, size_t len)
 		acc += buffer[n];
 	}
 
-	return acc / len;
+	return acc / (int) len;
 }

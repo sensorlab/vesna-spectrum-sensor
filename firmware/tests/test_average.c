@@ -55,3 +55,18 @@ void test_average_ramp(void)
 
 	TEST_ASSERT_EQUAL(50, avg);
 }
+
+void test_average_overflow(void)
+{
+	int size = 101;
+	power_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = -9000;
+	}
+
+	power_t avg = vss_average(buffer, size);
+
+	TEST_ASSERT_EQUAL(-9000, avg);
+}
