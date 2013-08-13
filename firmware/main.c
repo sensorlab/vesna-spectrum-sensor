@@ -218,6 +218,7 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 {
 	if(has_started) {
 		printf("error: stop current sweep first\n");
+		return;
 	}
 
 	const struct vss_device_config* device_config = vss_device_config_get(dev_id, config_id);
