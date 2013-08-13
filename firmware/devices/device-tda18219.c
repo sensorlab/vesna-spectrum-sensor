@@ -216,15 +216,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			rssi_dbm_100 -= calibration;
 
 			if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
-				r = tda18219_set_frequency(priv->standard, freq);
-				if(r) {
-					vss_task_set_error(task,
-						"tda18219_set_frequency() returned an error");
-					dev_tda18219_turn_off();
-					return OFF;
-				}
-
-				return RUN_MEASUREMENT;
+				return dev_tda18219_state(task, SET_FREQUENCY);
 			} else {
 				dev_tda18219_turn_off();
 				return OFF;
