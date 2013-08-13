@@ -1035,14 +1035,14 @@ int vss_device_cc_register(void)
 	if(r) return r;
 
 #if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNE_ISMTV_868)
-	device_config_add(&dev_cc1101_868mhz_60khz);
-	device_config_add(&dev_cc1101_868mhz_100khz);
-	device_config_add(&dev_cc1101_868mhz_200khz);
-	device_config_add(&dev_cc1101_868mhz_400khz);
-	device_config_add(&dev_cc1101_868mhz_400khz_200khz);
-	device_config_add(&dev_cc1101_868mhz_800khz_200khz);
-	device_config_add(&dev_cc1101_905mhz_400khz_400khz);
-	device_config_add(&dev_cc1101_905mhz_800khz_400khz);
+	vss_device_config_add(&dev_cc1101_868mhz_60khz);
+	vss_device_config_add(&dev_cc1101_868mhz_100khz);
+	vss_device_config_add(&dev_cc1101_868mhz_200khz);
+	vss_device_config_add(&dev_cc1101_868mhz_400khz);
+	vss_device_config_add(&dev_cc1101_868mhz_400khz_200khz);
+	vss_device_config_add(&dev_cc1101_868mhz_800khz_200khz);
+	vss_device_config_add(&dev_cc1101_905mhz_400khz_400khz);
+	vss_device_config_add(&dev_cc1101_905mhz_800khz_400khz);
 #endif
 
 #if defined(MODEL_SNR_TRX_2400) || defined(MODEL_SNE_ISMTV_2400)
