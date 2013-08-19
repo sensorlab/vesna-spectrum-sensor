@@ -198,7 +198,7 @@ static void command_report_on(void)
 {
 	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
-	} if (has_started) {
+	} else if (has_started) {
 		printf("error: stop current sweep first\n");
 	} else {
 		vss_task_init(&current_task, &current_sweep_config, -1, data_buffer);
