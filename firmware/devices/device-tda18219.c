@@ -57,7 +57,7 @@ static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
 	if(rssi_dbuv < 40) {
 		// internal power detector in TDA18219 doesn't go below 40 dBuV
 
-		unsigned samples[n_average];
+		uint16_t samples[n_average];
 		r = vss_ad8307_get_input_samples(samples, n_average);
 		if(r) return r;
 
