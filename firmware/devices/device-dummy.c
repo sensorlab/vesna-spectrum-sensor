@@ -31,6 +31,11 @@ static struct vss_task* current_task = NULL;
 
 typedef int (*data_f)(power_t *val);
 
+struct dev_dummy_config_priv {
+	data_f get_rssi;
+	data_f get_baseband;
+};
+
 static int vss_device_dummy_init(void)
 {
 	int r;
@@ -59,8 +64,10 @@ static void do_stuff(void)
 {
 	power_t result;
 
+	const struct dev_dummy_config_priv* priv = current_task->sweep_config->device_config->priv;
+
 	int r;
-	r = ((data_f) current_task->sweep_config->device_config->priv)(&result);
+	r = priv->get_rssi(&result);
 	if(r) {
 		vss_task_set_error(current_task, "test error");
 		current_task = NULL;
@@ -95,12 +102,25 @@ static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* ta
 	return VSS_OK;
 }
 
+static int dev_dummy_baseband(void* priv __attribute__((unused)),
+		const struct vss_sweep_config* sweep_config, power_t* buffer, size_t len)
+{
+	const struct dev_dummy_config_priv* config_priv = sweep_config->device_config->priv;
+
+	size_t n;
+	for(n = 0; n < len; n++) {
+		config_priv->get_baseband(&buffer[n]);
+	}
+
+	return VSS_OK;
+}
+
 static const struct vss_device device_dummy = {
 	.name = "dummy device",
 
 	.run			= dev_dummy_run,
 	.status			= dev_dummy_status,
-	.baseband		= NULL,
+	.baseband		= dev_dummy_baseband,
 
 	.priv 			= NULL
 };
@@ -110,6 +130,11 @@ static int get_zero(power_t* val)
 	*val = 0;
 	return VSS_OK;
 }
+
+static struct dev_dummy_config_priv dev_dummy_null_config_priv = {
+	.get_rssi = get_zero,
+	.get_baseband = get_zero
+};
 
 static const struct vss_device_config dev_dummy_null_config = {
 	.name			= "returns 0 dBm",
@@ -123,14 +148,25 @@ static const struct vss_device_config dev_dummy_null_config = {
 
 	.channel_time_ms	= CHANNEL_TIME_MS,
 
-	.priv			= get_zero
+	.priv			= &dev_dummy_null_config_priv
 };
 
-static int get_random(power_t* val)
+static int get_random_dbm(power_t* val)
 {
 	*val = -(rand() % 10000);
 	return VSS_OK;
 }
+
+static int get_random_baseband(power_t* val)
+{
+	*val = rand() % 4096;
+	return VSS_OK;
+}
+
+static struct dev_dummy_config_priv dev_dummy_random_config_priv = {
+	.get_rssi = get_random_dbm,
+	.get_baseband = get_random_baseband
+};
 
 static const struct vss_device_config dev_dummy_random_config = {
 	.name			= "return random power between 0 and -100 dBm",
@@ -144,13 +180,18 @@ static const struct vss_device_config dev_dummy_random_config = {
 
 	.channel_time_ms	= CHANNEL_TIME_MS,
 
-	.priv			= get_random
+	.priv			= &dev_dummy_random_config_priv
 };
 
 static int get_error(power_t* val __attribute__((unused)))
 {
 	return VSS_ERROR;
 }
+
+static struct dev_dummy_config_priv dev_dummy_error_config_priv = {
+	.get_rssi = get_error,
+	.get_baseband = get_error
+};
 
 static const struct vss_device_config dev_dummy_error_config = {
 	.name			= "always returns an error",
@@ -164,7 +205,7 @@ static const struct vss_device_config dev_dummy_error_config = {
 
 	.channel_time_ms	= CHANNEL_TIME_MS,
 
-	.priv			= get_error
+	.priv			= &dev_dummy_error_config_priv
 };
 
 int vss_device_dummy_register(void) {
