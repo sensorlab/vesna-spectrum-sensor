@@ -305,6 +305,35 @@ class SpectrumSensor:
 		self.comm.write("average %d\n" % (n_average,))
 		self._wait_for_ok()
 
+	def get_baseband(self, sweep_config):
+		"""Obtain a string of continuous baseband samples.
+
+		sweep_config -- frequency sweep configuration object, hardware
+		is tuned to the first channel in the sweep.
+
+		Returns a list of baseband samples
+		"""
+		self._select_channel(sweep_config)
+
+		self.comm.timeout = None
+
+		self.comm.write("baseband\n")
+		line = self.comm.readline()
+
+		self.comm.timeout = 0.5
+
+		fields = line.split()
+		if fields[0] != "DS":
+			raise ValueError
+		if fields[-1] != "DE":
+			raise ValueError
+
+		result = map(int, fields[1:-1])
+
+		self._wait_for_ok()
+
+		return result
+
 	def run(self, sweep_config, cb, n_average=None):
 		"""Run the specified frequency sweep.
 
