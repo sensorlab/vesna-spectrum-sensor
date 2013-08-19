@@ -291,6 +291,7 @@ static const struct vss_device dev_tda18219 = {
 
 	.status		= dev_tda18219_status,
 	.run		= dev_tda18219_run,
+	.baseband	= NULL,
 
 	.priv		= NULL
 };

@@ -33,6 +33,7 @@
 #include "task.h"
 #include "rcc.h"
 
+#define BASEBAND_SAMPLE_NUM		1024
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32
 
@@ -153,6 +154,7 @@ static void command_help(void)
 		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
 		"             sweep channels from START to STOP stepping STEP\n"
 		"             channels at a time using DEVICE and CONFIG pre-set\n"
+		"baseband     obtain a continuous string of baseband samples\n"
 		"average N    set number of hardware samples to average for one\n"
 		"             datapoint\n"
 		"status       print out hardware status\n"
@@ -219,6 +221,27 @@ static void command_report_off(void)
 		printf("ok\n");
 	} else {
 		vss_task_stop(&current_task);
+	}
+}
+
+static void command_baseband(void)
+{
+	if(current_sweep_config.device_config == NULL) {
+		printf("error: set channel config first\n");
+	} else if(has_started) {
+		printf("error: stop current sweep first\n");
+	} else {
+		power_t buffer[BASEBAND_SAMPLE_NUM];
+		vss_device_baseband(current_sweep_config.device_config->device,
+				&current_sweep_config, buffer, BASEBAND_SAMPLE_NUM);
+
+		int n;
+		printf("DS");
+		for(n = 0; n < BASEBAND_SAMPLE_NUM; n++) {
+			printf(" %hd", buffer[n]);
+		}
+		printf(" DE\n");
+		printf("ok\n");
 	}
 }
 
@@ -289,6 +312,8 @@ static void dispatch(const char* cmd)
 		command_report_on();
 	} else if (!strcmp(cmd, "report-off")) {
 		command_report_off();
+	} else if (!strcmp(cmd, "baseband")) {
+		command_baseband();
 	} else if (!strcmp(cmd, "status")) {
 		command_status();
 	} else if (sscanf(cmd, "select channel %d:%d:%d config %d,%d", 

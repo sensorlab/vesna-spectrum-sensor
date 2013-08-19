@@ -44,6 +44,26 @@ int vss_device_status(const struct vss_device* device, char* buffer, size_t len)
 	return device->status(device->priv, buffer, len);
 }
 
+/** @brief Obtain a continuous string of baseband samples.
+ *
+ * Not all devices support this function. Sampling rate and ADC range are device specific.
+ *
+ * @param device Pointer to the device to use.
+ * @param sweep_config Pointer to the sweep config to use for tuning the device.
+ * @param buffer Pointer to caller-allocated buffer where the samples will be
+ * stored.
+ * @param len Size of the buffer in samples.
+ * @return VSS_OK on success or an error code otherwise. */
+int vss_device_baseband(const struct vss_device* device, const struct vss_sweep_config* sweep_config,
+		power_t* buffer, size_t len)
+{
+	if(device->baseband == NULL) {
+		return VSS_NOT_SUPPORTED;
+	} else {
+		return device->baseband(device->priv, sweep_config, buffer, len);
+	}
+}
+
 /** @brief Register a new hardware configuration to the system.
  *
  * @param device_config Pointer to the hardware configuration to register.

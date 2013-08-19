@@ -100,6 +100,7 @@ static const struct vss_device device_dummy = {
 
 	.run			= dev_dummy_run,
 	.status			= dev_dummy_status,
+	.baseband		= NULL,
 
 	.priv 			= NULL
 };
