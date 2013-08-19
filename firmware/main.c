@@ -41,7 +41,11 @@ static volatile int usart_buffer_attn = 0;
 
 static struct vss_sweep_config current_sweep_config = {
 	.device_config = NULL,
+#ifdef TUNER_TDA18219
+	.n_average = 100
+#else
 	.n_average = 10
+#endif
 };
 
 static struct vss_task current_task;
