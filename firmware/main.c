@@ -232,16 +232,21 @@ static void command_baseband(void)
 		printf("error: stop current sweep first\n");
 	} else {
 		power_t buffer[BASEBAND_SAMPLE_NUM];
-		vss_device_baseband(current_sweep_config.device_config->device,
+		int r = vss_device_baseband(current_sweep_config.device_config->device,
 				&current_sweep_config, buffer, BASEBAND_SAMPLE_NUM);
-
-		int n;
-		printf("DS");
-		for(n = 0; n < BASEBAND_SAMPLE_NUM; n++) {
-			printf(" %hd", buffer[n]);
+		if(r == VSS_NOT_SUPPORTED) {
+			printf("error: device doesn't support baseband sampling\n");
+		} else if(r) {
+			printf("error: vss_device_baseband returned %d\n", r);
+		} else {
+			int n;
+			printf("DS");
+			for(n = 0; n < BASEBAND_SAMPLE_NUM; n++) {
+				printf(" %hd", buffer[n]);
+			}
+			printf(" DE\n");
+			printf("ok\n");
 		}
-		printf(" DE\n");
-		printf("ok\n");
 	}
 }
 
