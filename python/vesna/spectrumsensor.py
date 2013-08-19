@@ -301,11 +301,16 @@ class SpectrumSensor:
 
 		self._wait_for_ok()
 
-	def run(self, sweep_config, cb):
+	def _set_average(self, n_average):
+		self.comm.write("average %d\n" % (n_average,))
+		self._wait_for_ok()
+
+	def run(self, sweep_config, cb, n_average=None):
 		"""Run the specified frequency sweep.
 
 		sweep_config -- frequency sweep configuration object
-		cb -- callback function.
+		cb -- callback function
+		n_average -- number of samples to average
 
 		This function continuously runs the specified frequency sweep on the attached
 		hardware.  The provided callback function is called for each completed sweep:
@@ -315,6 +320,9 @@ class SpectrumSensor:
 		Where sweep_config is the SweepConfig object provided when calling run() and sweep
 		the Sweep object with measured data.
 		"""
+
+		if n_average is not None:
+			self._set_average(n_average)
 
 		self._select_channel(sweep_config)
 
