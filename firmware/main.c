@@ -31,6 +31,7 @@
 #include "device-tda18219.h"
 
 #include "task.h"
+#include "rcc.h"
 
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32
@@ -85,7 +86,7 @@ static void setup(void)
 {
 	SCB_VTOR = (u32) vector_table;
 
-	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_clock_setup_in_hsi_out_56mhz();
 
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
 			RCC_APB2ENR_IOPAEN |
