@@ -121,7 +121,7 @@ static int dev_cc_prepare_measurement(struct vss_task* task)
 	r = vss_cc_wait_state(CC_MARCSTATE_RX);
 	if(r) return r;
 
-	vss_timer_schedule(5);
+	vss_timer_schedule(2);
 
 	return VSS_OK;
 }
