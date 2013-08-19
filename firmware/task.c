@@ -75,6 +75,17 @@ unsigned int vss_task_get_channel(struct vss_task* task)
 	return task->write_channel;
 }
 
+/** @brief Get number of samples to average.
+ *
+ * Called by the device driver to get the number of samples to get from the device.
+ *
+ * @param task Pointer to the task.
+ */
+unsigned int vss_task_get_n_average(struct vss_task* task)
+{
+	return task->sweep_config->n_average;
+}
+
 /** @brief Add a new measurement result for the task.
  *
  * Called by the device driver to report a new measurement.

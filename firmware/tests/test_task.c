@@ -41,7 +41,8 @@ static const struct vss_sweep_config sweep_config = {
 
 	.channel_start = 0,
 	.channel_stop = 10,
-	.channel_step = 1
+	.channel_step = 1,
+	.n_average = 10
 };
 
 void setUp(void)
@@ -156,6 +157,15 @@ void test_get_channel(void)
 
 	channel = vss_task_get_channel(&run);
 	TEST_ASSERT_EQUAL(sweep_config.channel_start + sweep_config.channel_step, channel);
+}
+
+void test_get_average(void)
+{
+	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_start(&run);
+
+	int n_average = vss_task_get_n_average(&run);
+	TEST_ASSERT_EQUAL(10, n_average);
 }
 
 void test_set_error(void)

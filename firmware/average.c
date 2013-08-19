@@ -15,22 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
-#ifndef HAVE_AD8307_H
-#define HAVE_AD8307_H
+#include "average.h"
 
-#ifdef MODEL_SNE_CREWTV
-#	define AD8307_PIN_ENB	GPIO6
-#	define AD8307_PIN_OUT	GPIO0
-#endif
+power_t vss_average(power_t* buffer, size_t len)
+{
+	int acc = 0;
 
-#ifdef MODEL_SNE_ISMTV_UHF
-#	define AD8307_PIN_ENB	GPIO0
-#	define AD8307_PIN_OUT	GPIO2
-#endif
+	size_t n;
+	for(n = 0; n < len; n++) {
+		acc += buffer[n];
+	}
 
-int vss_ad8307_init(void);
-int vss_ad8307_power_on(void);
-int vss_ad8307_power_off(void);
-int vss_ad8307_get_input_samples(unsigned* buffer, unsigned nsamples);
-
-#endif
+	return acc / (int) len;
+}

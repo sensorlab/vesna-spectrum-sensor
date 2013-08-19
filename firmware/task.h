@@ -134,7 +134,8 @@ int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 
 /** @{ */
 
-unsigned int vss_task_get_channel(struct vss_task* device_run);
+unsigned int vss_task_get_channel(struct vss_task* task);
+unsigned int vss_task_get_n_average(struct vss_task* task);
 int vss_task_insert(struct vss_task* device_run, power_t data, uint32_t timestamp);
 void vss_task_set_error(struct vss_task* task, const char* msg);
 

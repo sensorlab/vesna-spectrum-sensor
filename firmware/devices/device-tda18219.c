@@ -23,6 +23,7 @@
 #include <tda18219/tda18219regs.h>
 
 #include "ad8307.h"
+#include "average.h"
 #include "device.h"
 #include "rtc.h"
 #include "task.h"
@@ -46,7 +47,7 @@ struct dev_tda18219_priv {
 	const struct calibration_point* calibration;
 };
 
-static int get_input_power(int* rssi_dbm_100)
+static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
 {
 	uint8_t rssi_dbuv;
 
@@ -55,7 +56,10 @@ static int get_input_power(int* rssi_dbm_100)
 
 	if(rssi_dbuv < 40) {
 		// internal power detector in TDA18219 doesn't go below 40 dBuV
-		unsigned n = vss_ad8307_get_input_sample();
+
+		unsigned samples[n_average];
+		r = vss_ad8307_get_input_samples(samples, n_average);
+		if(r) return r;
 
 		/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
 		 *
@@ -87,7 +91,13 @@ static int get_input_power(int* rssi_dbm_100)
 		 *
 		 * Note we are returning [dBm * 100]
 		 */
-		*rssi_dbm_100 = n * 3300 / 1024 - 15000;
+		power_t buffer[n_average];
+		unsigned int n;
+		for(n = 0; n < n_average; n++) {
+			buffer[n] = samples[n] * 3300 / 1024 - 15000;
+		}
+
+		*rssi_dbm_100 = vss_average(buffer, n_average);
 	} else {
 		// P [dBm] = U [dBuV] - 90 - 10 log 75 ohm
 		*rssi_dbm_100 = ((int) rssi_dbuv) * 100 - 9000 - 1875;
@@ -191,7 +201,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 
 		case READ_MEASUREMENT:
 
-			r = get_input_power(&rssi_dbm_100);
+			r = get_input_power(&rssi_dbm_100, vss_task_get_n_average(task));
 			if(r) {
 				vss_task_set_error(task,
 						"get_input_power() returned an error");

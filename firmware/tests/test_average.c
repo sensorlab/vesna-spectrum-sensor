@@ -15,22 +15,58 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
-#ifndef HAVE_AD8307_H
-#define HAVE_AD8307_H
+#include "unity.h"
+#include "average.h"
 
-#ifdef MODEL_SNE_CREWTV
-#	define AD8307_PIN_ENB	GPIO6
-#	define AD8307_PIN_OUT	GPIO0
-#endif
+void setUp(void)
+{
+}
 
-#ifdef MODEL_SNE_ISMTV_UHF
-#	define AD8307_PIN_ENB	GPIO0
-#	define AD8307_PIN_OUT	GPIO2
-#endif
+void tearDown(void)
+{
+}
 
-int vss_ad8307_init(void);
-int vss_ad8307_power_on(void);
-int vss_ad8307_power_off(void);
-int vss_ad8307_get_input_samples(unsigned* buffer, unsigned nsamples);
+void test_average_zeros(void)
+{
+	int size = 100;
+	power_t buffer[size];
+	int n;
 
-#endif
+	for(n = 0; n < size; n++) {
+		buffer[n] = 0;
+	}
+
+	power_t avg = vss_average(buffer, size);
+
+	TEST_ASSERT_EQUAL(0, avg);
+}
+
+void test_average_ramp(void)
+{
+	int size = 101;
+	power_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = n;
+	}
+
+	power_t avg = vss_average(buffer, size);
+
+	TEST_ASSERT_EQUAL(50, avg);
+}
+
+void test_average_overflow(void)
+{
+	int size = 101;
+	power_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = -9000;
+	}
+
+	power_t avg = vss_average(buffer, size);
+
+	TEST_ASSERT_EQUAL(-9000, avg);
+}

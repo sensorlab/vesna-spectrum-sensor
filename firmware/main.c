@@ -40,7 +40,12 @@ static int usart_buffer_len = 0;
 static volatile int usart_buffer_attn = 0;
 
 static struct vss_sweep_config current_sweep_config = {
-	.device_config = NULL
+	.device_config = NULL,
+#ifdef TUNER_TDA18219
+	.n_average = 100
+#else
+	.n_average = 10
+#endif
 };
 
 static struct vss_task current_task;
@@ -147,6 +152,8 @@ static void command_help(void)
 		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
 		"             sweep channels from START to STOP stepping STEP\n"
 		"             channels at a time using DEVICE and CONFIG pre-set\n"
+		"average N    set number of hardware samples to average for one\n"
+		"             datapoint\n"
 		"status       print out hardware status\n"
 		"version      print out firmware version\n\n"
 
@@ -236,6 +243,18 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	printf("ok\n");
 }
 
+static void command_average(int n_average)
+{
+	if(has_started) {
+		printf("error: stop current sweep first\n");
+		return;
+	}
+
+	current_sweep_config.n_average = n_average;
+
+	printf("ok\n");
+}
+
 static void command_version(void)
 {
 	printf("%s\n", VERSION);
@@ -259,6 +278,7 @@ static void command_status(void)
 static void dispatch(const char* cmd)
 {
 	int start, stop, step, dev_id, config_id;
+	int n_average;
 
 	if (!strcmp(cmd, "help")) {
 		command_help();
@@ -274,6 +294,9 @@ static void dispatch(const char* cmd)
 				&start, &step, &stop,
 				&dev_id, &config_id) == 5) {
 		command_select(start, step, stop, dev_id, config_id);
+	} else if (sscanf(cmd, "average %d",
+				&n_average) == 1) {
+		command_average(n_average);
 	} else if (!strcmp(cmd, "version")) {
 		command_version();
 	} else {
