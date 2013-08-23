@@ -155,7 +155,7 @@ static void setup_stm32f1_peripherals(void)
 }
 
 
-uint8_t tda18219_read_reg(uint8_t reg)
+int tda18219_read_reg(uint8_t reg, uint8_t* value)
 {
 	uint32_t __attribute__((unused)) reg32;
 
@@ -201,11 +201,12 @@ uint8_t tda18219_read_reg(uint8_t reg)
 
 	while (!(I2C_SR1(I2C1) & I2C_SR1_RxNE));
 
-	uint8_t value = I2C_DR(I2C1);
-	return value;
+	*value = I2C_DR(I2C1);
+
+	return 0;
 }
 
-void tda18219_write_reg(uint8_t reg, uint8_t value)
+int tda18219_write_reg(uint8_t reg, uint8_t value)
 {
 	uint32_t __attribute__((unused)) reg32;
 
@@ -233,11 +234,15 @@ void tda18219_write_reg(uint8_t reg, uint8_t value)
 	while (!(I2C_SR1(I2C1) & (I2C_SR1_BTF | I2C_SR1_TxE)));
 
 	i2c_send_stop(I2C1);
+
+	return 0;
 }
 
-void tda18219_wait_irq(void)
+int tda18219_wait_irq(void)
 {
 	while(!gpio_get(GPIOA, TDA_PIN_IRQ));
+
+	return 0;
 }
 
 
@@ -344,7 +349,8 @@ int dev_tda18219_run(void* priv __attribute__((unused)), const struct spectrum_s
 			tda18219_set_frequency(dev_priv->standard,
 					freq);
 
-			int rssi_dbuv = tda18219_get_input_power();
+			uint8_t rssi_dbuv;
+			tda18219_get_input_power_sync(&rssi_dbuv);
 
 			int rssi_dbm_100;
 			if(rssi_dbuv < 40) {
