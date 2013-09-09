@@ -479,6 +479,8 @@ def iter_tests():
 			yield name, testfunc
 
 def main():
+	default_log_path = datetime.datetime.now().strftime("log_%d%m%Y")
+
 	parser = optparse.OptionParser()
 	parser.add_option("-d", "--vesna-device", dest="vesna_device", metavar="DEVICE",
 			help="Use VESNA spectrum sensor attached to DEVICE.", default="/dev/ttyUSB0")
@@ -486,7 +488,7 @@ def main():
 			help="Use signal generator attached to DEVICE.", default="/dev/usbtmc3")
 	parser.add_option("-i", "--id", dest="name", metavar="ID",
 			help="Use ID as identification for device under test.")
-	parser.add_option("-o", "--log", dest="log_path", metavar="PATH", default="log",
+	parser.add_option("-o", "--log", dest="log_path", metavar="PATH", default=default_log_path,
 			help="Write measurement logs under PATH.")
 	parser.add_option("-n", "--replay", dest="replay", action="store_true",
 			help="Replay measurement from logs.")
