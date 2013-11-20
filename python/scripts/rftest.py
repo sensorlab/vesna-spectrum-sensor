@@ -479,7 +479,7 @@ def iter_tests():
 			yield name, testfunc
 
 def main():
-	default_log_path = datetime.datetime.now().strftime("log_%d%m%Y")
+	default_log_path = datetime.datetime.now().strftime("log_%Y%m%d")
 
 	parser = optparse.OptionParser()
 	parser.add_option("-d", "--vesna-device", dest="vesna_device", metavar="DEVICE",
