@@ -242,13 +242,17 @@ def test_settle_time(dut, gen):
 	
 	log("Start settle time test")
 
-	N = 1000
+	if hasattr(dut.spectrumsensor, "run"):
+		N = 1000
 
-	nruns = 3
-	ch_num = dut.config.num
-	ch_list = [ int(ch_num*(i+0.5)/nruns) for i in xrange(nruns) ]
+		nruns = 3
+		ch_num = dut.config.num
+		ch_list = [ int(ch_num*(i+0.5)/nruns) for i in xrange(nruns) ]
 
-	p_dbm_list = [ -90, -50, -10 ]
+		p_dbm_list = [ -90, -50, -10 ]
+	else:
+		log("  Skipping test - cannot be done remotely")
+		p_dbm_list = []
 
 	for p_dbm in p_dbm_list:
 		log("  Pin = %d dBm" % (p_dbm,))
