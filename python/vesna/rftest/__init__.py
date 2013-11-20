@@ -6,7 +6,7 @@ class DeviceUnderTest:
 		self.device_id = device_id
 		self.config_id = config_id
 		self._replay = replay
-		self._log_path = log_path
+		self.log_path = log_path
 
 		self._extra = 150
 
@@ -60,15 +60,15 @@ class DeviceUnderTest:
 		return [0.0] * n
 
 	def _measure_ch_save(self, name, measurements):
-		if self._log_path:
-			path = ("%s/%s_%s.log" % (self._log_path, self.name, name)).replace("-", "m")
+		if self.log_path:
+			path = ("%s/%s_%s.log" % (self.log_path, self.name, name)).replace("-", "m")
 			f = open(path, "w")
 			f.write("# P [dBm]\n")
 			f.write("\n".join(map(str, measurements)))
 			f.close()
 
 	def _measure_ch_replay(self, name):
-		path = ("%s/%s_%s.log" % (self._log_path, self.name, name)).replace("-", "m")
+		path = ("%s/%s_%s.log" % (self.log_path, self.name, name)).replace("-", "m")
 		f = open(path)
 
 		return map(float, filter(lambda x:not x.startswith("#"), f))
