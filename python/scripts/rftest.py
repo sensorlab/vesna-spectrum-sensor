@@ -51,24 +51,42 @@ class SignalGenerator(usbtmc):
 		self.write("outp off\n")
 
 class DeviceUnderTest:
-	def __init__(self, device, name, device_id=0, config_id=0, replay=False, log_path=None):
+	def __init__(self, args, name, device_id=0, config_id=0, replay=False, log_path=None):
 		self.name = name
-		self.replay = replay
-		self.log_path = log_path
+		self.device_id = device_id
+		self.config_id = config_id
+		self._replay = replay
+		self._log_path = log_path
 
-		self.extra = 150
+		self._extra = 150
 
-		self.spectrumsensor = SpectrumSensor(device)
+		options = self._optparse(args)
+		self.setup(options)
 
-		self.config_list = self.spectrumsensor.get_config_list()
-		if not self.config_list.configs:
-			raise Exception("Device returned no configurations. "
-					"It is still scanning or not responding.")
+	def _optparse(self, args):
 
-		self.config = self.config_list.get_config(device_id, config_id)
+		usage= "usage: %%prog -R%s -O,[--option=value,...]" % (self.__class__,)
+
+		parser = optparse.OptionParser(usage=usage)
+		self.add_options(parser)
+
+
+		args = args.strip(',').split(',')
+		(options, args) = parser.parse_args(args)
+
+		return options
+
+	def add_options(self, parser):
+		pass
+
+	def setup(self, options):
+		pass
+
+	def is_replay(self):
+		return self._replay
 
 	def measure_ch(self, ch, n, name):
-		if self.replay:
+		if self._replay:
 			return self._measure_ch_replay(name)
 		else:
 			return self._measure_ch_real(ch, n, name)
@@ -76,20 +94,14 @@ class DeviceUnderTest:
 	def _measure_ch_real(self, ch, n, name):
 		assert ch < self.config.num
 
-		sweep_config = SweepConfig(self.config, ch, ch+1, 1)
-
-		measurements = []
-
-		def cb(sweep_config, sweep):
-			assert len(sweep.data) == 1
-			measurements.append(sweep.data[0])
-			return len(measurements) < (n + self.extra)
-
-		self.spectrumsensor.run(sweep_config, cb)
-		measurements = measurements[self.extra:]
+		measurements = self.measure_ch_impl(ch, n + self._extra)
+		measurements = measurements[self._extra:]
 
 		self._measure_ch_save(name, measurements)
 		return measurements
+
+	def measure_ch_impl(self, ch, n):
+		return [0.0] * n
 
 	def _measure_ch_save(self, name, measurements):
 		if self.log_path:
@@ -104,6 +116,36 @@ class DeviceUnderTest:
 		f = open(path)
 
 		return map(float, filter(lambda x:not x.startswith("#"), f))
+
+class LocalDeviceUnderTest(DeviceUnderTest):
+	def add_options(self, parser):
+		parser.add_option("-d", "--device", dest="device", metavar="DEVICE",
+				help="Use VESNA spectrum sensor attached to serial DEVICE.",
+				default="/dev/ttyUSB0")
+
+	def setup(self, options):
+		self.spectrumsensor = SpectrumSensor(options.device)
+
+		self.config_list = self.spectrumsensor.get_config_list()
+		if not self.config_list.configs:
+			raise Exception("Device returned no configurations. "
+					"It is still scanning or not responding.")
+
+		self.config = self.config_list.get_config(self.device_id, self.config_id)
+
+	def measure_ch_impl(self, ch, n):
+		sweep_config = SweepConfig(self.config, ch, ch+1, 1)
+
+		measurements = []
+
+		def cb(sweep_config, sweep):
+			assert len(sweep.data) == 1
+			measurements.append(sweep.data[0])
+			return len(measurements) < n
+
+		self.spectrumsensor.run(sweep_config, cb)
+
+		return measurements
 
 def chop(p_dbm_list, pout_dbm_list, min_dbm, max_dbm):
 	p_dbm_list2 = []
@@ -300,7 +342,7 @@ def test_settle_time(dut, gen):
 					return True
 
 			name = "settle_time_%ddbm_%dhz" % (p_dbm, f_hz)
-			if dut.replay:
+			if dut.is_replay():
 				measurements = dut._measure_ch_replay(name)
 			else:
 				dut.spectrumsensor.run(sweep_config, cb)
@@ -426,7 +468,7 @@ def test_ident(dut, gen):
 
 	log("Start identification")
 	log("  Device under test: %s" % (dut.name,))
-	if dut.replay:
+	if dut.is_replay():
 		log("  *** REPLAY ***")
 
 	log("    Firmware version:")
@@ -458,9 +500,14 @@ def run_tests(options):
 
 	device_id, config_id = map(int, options.vesna_config.split(","))
 
-	dut = DeviceUnderTest(options.vesna_device, options.name,
+	dut_opts = options.dut_opts
+	if options.vesna_device is not None:
+		dut_opts = "--device=%s,%s" % (options.vesna_device, dut_opts)
+
+	dut = LocalDeviceUnderTest(dut_opts, options.name,
 			replay=options.replay, log_path=options.log_path,
 			device_id=device_id, config_id=config_id)
+
 	gen = SignalGenerator(options.usbtmc_device)
 
 	run_all = not any(getattr(options, name) for name, testfunc in iter_tests())
@@ -483,7 +530,7 @@ def main():
 
 	parser = optparse.OptionParser()
 	parser.add_option("-d", "--vesna-device", dest="vesna_device", metavar="DEVICE",
-			help="Use VESNA spectrum sensor attached to DEVICE.", default="/dev/ttyUSB0")
+			help="Use VESNA spectrum sensor attached to DEVICE.")
 	parser.add_option("-g", "--usbtmc-device", dest="usbtmc_device", metavar="DEVICE",
 			help="Use signal generator attached to DEVICE.", default="/dev/usbtmc3")
 	parser.add_option("-i", "--id", dest="name", metavar="ID",
@@ -494,6 +541,9 @@ def main():
 			help="Replay measurement from logs.")
 	parser.add_option("--vesna-config", dest="vesna_config", metavar="CONFIG",
 			help="Manually choose a specific device configuration", default="0,0")
+	parser.add_option("-O", "--remote-option", dest="dut_opts", metavar="OPTIONS", default="",
+			help="Any additional options needed for the remote access object. Separate "
+			"multiple options with a comma. Use -O,--help with -R to list available options.")
 
 	group = optparse.OptionGroup(parser, "Tests", description="Choose only specific tests to run "
 			"(default is to run all tests)")
