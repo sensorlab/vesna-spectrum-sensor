@@ -33,8 +33,8 @@ setup(name='vesna-spectrumsensor',
       author='Tomaz Solc',
       author_email='tomaz.solc@tablix.org',
 
-      packages = [ 'vesna' ],
-      provides = [ 'vesna' ],
+      packages = [ 'vesna', 'vesna.rftest' ],
+      provides = [ 'vesna', 'vesna.rftest' ],
 
       cmdclass = { 'test': TestCommand }
 )
