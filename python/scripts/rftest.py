@@ -67,6 +67,12 @@ class LocalDeviceUnderTest(DeviceUnderTest):
 
 		self.config = self.config_list.get_config(self.device_id, self.config_id)
 
+	def get_fw_version(self):
+		return self.spectrumsensor.get_fw_version()
+
+	def get_status(self):
+		return self.spectrumsensor.get_status(self.config)
+
 	def measure_ch_impl(self, ch, n):
 		sweep_config = SweepConfig(self.config, ch, ch+1, 1)
 
@@ -406,10 +412,10 @@ def test_ident(dut, gen):
 		log("  *** REPLAY ***")
 
 	log("    Firmware version:")
-	log("      %s" % (dut.spectrumsensor.get_fw_version()))
+	log("      %s" % (dut.get_fw_version()))
 
 	log("    Device status:")
-	resp = dut.spectrumsensor.get_status(dut.config)
+	resp = dut.get_status()
 	for line in resp:
 		log("      %s" % (line.strip(),))
 

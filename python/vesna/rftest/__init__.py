@@ -35,6 +35,12 @@ class DeviceUnderTest:
 	def is_replay(self):
 		return self._replay
 
+	def get_fw_version(self):
+		return ""
+
+	def get_status(self):
+		return [""]
+
 	def measure_ch(self, ch, n, name):
 		if self._replay:
 			return self._measure_ch_replay(name)
