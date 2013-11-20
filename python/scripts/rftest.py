@@ -496,17 +496,31 @@ def test_ident(dut, gen):
 	log("  Signal generator: %s" % (gen.get_name(),))
 	log("End identification")
 
-def run_tests(options):
+def load_dut(options):
 
 	device_id, config_id = map(int, options.vesna_config.split(","))
 
 	dut_opts = options.dut_opts
-	if options.vesna_device is not None:
-		dut_opts = "--device=%s,%s" % (options.vesna_device, dut_opts)
+	if options.dut_name is None:
+		if options.vesna_device is not None:
+			dut_opts = "--device=%s,%s" % (options.vesna_device, dut_opts)
 
-	dut = LocalDeviceUnderTest(dut_opts, options.name,
+		dut_class = LocalDeviceUnderTest
+	else:
+		f = options.dut_name.split('.')
+		dut_module_name = '.'.join(f[:-1])
+		dut_name = '.'.join(f[-1:])
+
+		__import__(dut_module_name, globals(), locals(), [], -1)
+		dut_class = getattr(sys.modules[dut_module_name], dut_name)
+
+	return dut_class(dut_opts, options.name,
 			replay=options.replay, log_path=options.log_path,
 			device_id=device_id, config_id=config_id)
+
+def run_tests(options):
+
+	dut = load_dut(options)
 
 	gen = SignalGenerator(options.usbtmc_device)
 
@@ -541,6 +555,8 @@ def main():
 			help="Replay measurement from logs.")
 	parser.add_option("--vesna-config", dest="vesna_config", metavar="CONFIG",
 			help="Manually choose a specific device configuration", default="0,0")
+	parser.add_option("-R", "--remote", dest="dut_name", metavar="OBJECT",
+			help="Remotely access Device Under Test using OBJECT.")
 	parser.add_option("-O", "--remote-option", dest="dut_opts", metavar="OPTIONS", default="",
 			help="Any additional options needed for the remote access object. Separate "
 			"multiple options with a comma. Use -O,--help with -R to list available options.")
