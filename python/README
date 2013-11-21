@@ -43,6 +43,6 @@ The minimal application using this module looks like the following:
 
 Please refer to docstring documentation for details.
 
-Installation also includes a rftest.py script that performs a series of
-automated hardware tests using a USBTMC attached RF signal generator.
-Run "rftest.py --help" to get a list of available options.
+The package also installs vesna_rftest script that performs a series of
+automated hardware tests using a USBTMC attached RF signal generator. Run
+"vesna_rftest --help" to get a list of available options.
