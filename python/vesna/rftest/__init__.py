@@ -1,4 +1,41 @@
 import optparse
+import os
+
+class usbtmc:
+	def __init__(self, device):
+		self.device = device
+		self.f = os.open(device, os.O_RDWR)
+
+	def write(self, command):
+		os.write(self.f, command);
+
+	def read(self, length=4000):
+		return os.read(self.f, length)
+
+	def query(self, command, length=300):
+		self.write(command)
+		return self.read(length)
+
+	def get_name(self):
+		return self.query("*IDN?")
+
+	def send_reset(self):
+		self.write("*RST")
+
+	def close(self):
+		os.close(self.f)
+
+class SignalGenerator(usbtmc):
+	def rf_on(self, freq_hz, power_dbm):
+
+		power_dbm = max(-145, power_dbm)
+
+		self.write("freq %d Hz\n" % (freq_hz,))
+		self.write("pow %d dBm\n" % (power_dbm,))
+		self.write("outp on\n")
+
+	def rf_off(self):
+		self.write("outp off\n")
 
 class DeviceUnderTest:
 	def __init__(self, args, name, device_id=0, config_id=0, replay=False, log_path=None):
