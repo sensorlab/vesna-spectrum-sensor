@@ -261,14 +261,14 @@ def test_settle_time(dut, gen):
 			t = get_settle_time(measurements[1*step:], on_settled)
 
 			log("      settled up in %d samples" % (t,))
-			if t >= dut.extra:
+			if t >= dut._extra:
 				log("        WARNING: settle time too long for other tests!")
 
 			off_settled = measurements[-step/4:]
 			t = get_settle_time(measurements[2*step:], off_settled)
 
 			log("      settled down in %d samples" % (t,))
-			if t >= dut.extra:
+			if t >= dut._extra:
 				log("        WARNING: settle time too long for other tests!")
 
 	log("End settle time test")
