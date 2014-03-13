@@ -283,6 +283,7 @@ static void dispatch(const char* cmd)
 int main(void)
 {
 	setup();
+	printf("boot\n");
 
 #ifdef TUNER_TDA18219
 	dev_tda18219_register();
