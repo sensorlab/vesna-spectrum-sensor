@@ -36,7 +36,7 @@ setup(name='vesna-spectrumsensor',
       packages = [ 'vesna', 'vesna.rftest' ],
       provides = [ 'vesna', 'vesna.rftest' ],
 
-      scripts = [ 'scripts/vesna_rftest' ],
+      scripts = [ 'scripts/vesna_rftest', 'scripts/vesna_rftest_plot'],
 
       cmdclass = { 'test': TestCommand }
 
