@@ -21,8 +21,10 @@
 #define HAVE_DEVICE_H
 
 #include "buffer.h"
+#include "calibration.h"
 
 struct vss_task;
+struct vss_device_config;
 
 /** @brief Callback for starting a spectrum sensing device.
  *
@@ -42,6 +44,20 @@ typedef int (*vss_device_run_t)(void* priv, struct vss_task* task);
  * @return VSS_OK on success or an error code otherwise. */
 typedef int (*vss_device_status_t)(void* priv, char* buffer, size_t len);
 
+/** @brief Callback for obtaining default calibration table.
+ *
+ * A default calibration table for the specified device configutation is
+ * returned.
+ *
+ * @sa calibration_set_data
+ *
+ * @param priv Pointer to the implementation specific data structure.
+ * @param device_config Device configuration that will be used.
+ * @return Pointer to calibration table on success or NULL in case of an error.
+ */
+typedef const struct calibration_point* (*vss_device_get_calibration_t)(
+		void* priv, const struct vss_device_config* device_config);
+
 /** @brief A spectrum sensing device.
  *
  * This structure corresponds to a physical device (energy detection receiver).
@@ -58,6 +74,9 @@ struct vss_device {
 
 	/** @brief Callback for obtaining device status. */
 	vss_device_status_t status;
+
+	/** @brief Callback for obtaining default calibration table. */
+	vss_device_get_calibration_t get_calibration;
 
 	/** @brief Opaque pointer to an implementation specific data structure. */
 	void* priv;
@@ -129,6 +148,9 @@ extern const struct vss_device_config* vss_device_config_list[];
 
 int vss_device_run(const struct vss_device* device, struct vss_task* task);
 int vss_device_status(const struct vss_device* device, char* buffer, size_t len);
+const struct calibration_point* vss_device_get_calibration(
+		const struct vss_device* device,
+		const struct vss_device_config* device_config);
 
 int vss_device_config_add(const struct vss_device_config* device_config);
 const struct vss_device_config* vss_device_config_get(int device_id, int config_id);

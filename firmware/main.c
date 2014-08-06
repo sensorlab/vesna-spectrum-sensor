@@ -243,6 +243,15 @@ static void command_select(int start, int step, int stop, int dev_id, int config
 	current_sweep_config.channel_step = step;
 	current_sweep_config.channel_stop = stop;
 
+	const struct calibration_point* calibration_data =
+		vss_device_get_calibration(device_config->device, device_config);
+
+	if(calibration_data != NULL) {
+		calibration_set_data(calibration_data);
+	} else {
+		calibration_set_data(calibration_empty_data);
+	}
+
 	printf("ok\n");
 }
 

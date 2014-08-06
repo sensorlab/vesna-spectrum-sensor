@@ -44,6 +44,25 @@ int vss_device_status(const struct vss_device* device, char* buffer, size_t len)
 	return device->status(device->priv, buffer, len);
 }
 
+/** @brief Obtain the default calibration table.
+ *
+ * @sa vss_device_get_calibration_t
+ *
+ * @param device Pointer to the device to query.
+ * @param device_config Device configuration that will be used.
+ * @return Pointer to calibration table on success or NULL in case of an error.
+ */
+const struct calibration_point* vss_device_get_calibration(
+		const struct vss_device* device,
+		const struct vss_device_config* device_config)
+{
+	if(device->get_calibration != NULL) {
+		return device->get_calibration(device->priv, device_config);
+	} else {
+		return NULL;
+	}
+}
+
 /** @brief Register a new hardware configuration to the system.
  *
  * @param device_config Pointer to the hardware configuration to register.

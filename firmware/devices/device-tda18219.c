@@ -149,8 +149,6 @@ int dev_tda18219_turn_on(struct vss_task* task)
 
 	current_task = task;
 
-	calibration_set_data(priv->calibration);
-
 	return VSS_OK;
 }
 
@@ -303,13 +301,23 @@ static int dev_tda18219_status(void* priv __attribute__((unused)), char* buffer,
 	return VSS_OK;
 }
 
+static const struct calibration_point* dev_tda18219_get_calibration(
+		void* priv __attribute__((unused)),
+		const struct vss_device_config* device_config)
+{
+	const struct dev_tda18219_priv* cpriv = device_config->priv;
+
+	return cpriv->calibration;
+}
+
 static const struct vss_device dev_tda18219 = {
 	.name = "tda18219hn",
 
-	.status		= dev_tda18219_status,
-	.run		= dev_tda18219_run,
+	.status			= dev_tda18219_status,
+	.run			= dev_tda18219_run,
+	.get_calibration	= dev_tda18219_get_calibration,
 
-	.priv		= NULL
+	.priv			= NULL
 };
 
 static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = {
