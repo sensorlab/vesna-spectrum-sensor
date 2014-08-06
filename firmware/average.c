@@ -17,6 +17,8 @@
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
 #include "average.h"
 
+#include <math.h>
+
 power_t vss_average(power_t* buffer, size_t len)
 {
 	int acc = 0;
@@ -27,4 +29,27 @@ power_t vss_average(power_t* buffer, size_t len)
 	}
 
 	return acc / (int) len;
+}
+
+power_t vss_signal_power(uint16_t* buffer, size_t len)
+{
+	int acc = 0;
+	size_t n;
+	for(n = 0; n < len; n++) {
+		acc += buffer[n];
+	}
+
+	double mean = ((double) acc) / len;
+
+	double pacc = 0.;
+	for(n = 0; n < len; n++) {
+		double m = buffer[n] - mean;
+		pacc += m*m;
+	}
+
+	if(pacc == 0.) {
+		return INT16_MIN;
+	} else {
+		return 100.*(10.*log10(pacc / len) - 90.31);
+	}
 }

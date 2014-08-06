@@ -58,22 +58,7 @@ static int get_input_power_bband(int* rssi_dbm_100, unsigned int n_average)
 	int r = vss_ad8307_get_input_samples(samples, n_average);
 	if(r) return r;
 
-	int acc = 0;
-	unsigned int n;
-	for(n = 0; n < n_average; n++) {
-		acc += samples[n];
-	}
-
-	int mean = acc / n_average;
-
-	acc = 0;
-	for(n = 0; n < n_average; n++) {
-		int m = ((int) acc) - mean;
-		acc += m*m;
-	}
-
-	int d = 10.*log10(acc / n_average);
-	*rssi_dbm_100 = d;
+	*rssi_dbm_100 = vss_signal_power(samples, n_average);
 
 	return VSS_OK;
 }

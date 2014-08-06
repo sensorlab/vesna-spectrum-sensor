@@ -70,3 +70,64 @@ void test_average_overflow(void)
 
 	TEST_ASSERT_EQUAL(-9000, avg);
 }
+
+void test_signal_power_zeros(void)
+{
+	int size = 100;
+	uint16_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = 0;
+	}
+
+	power_t power = vss_signal_power(buffer, size);
+
+	TEST_ASSERT_EQUAL(INT16_MIN, power);
+}
+
+void test_signal_power_constant(void)
+{
+	int size = 100;
+	uint16_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = 10;
+	}
+
+	power_t power = vss_signal_power(buffer, size);
+
+	TEST_ASSERT_EQUAL(INT16_MIN, power);
+}
+
+void test_signal_power_min(void)
+{
+	int size = 100;
+	uint16_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = n%2;
+	}
+
+	power_t power = vss_signal_power(buffer, size);
+
+	TEST_ASSERT_EQUAL(-9633, power);
+}
+
+
+void test_signal_power_max(void)
+{
+	int size = 100;
+	uint16_t buffer[size];
+	int n;
+
+	for(n = 0; n < size; n++) {
+		buffer[n] = (n%2) * UINT16_MAX;
+	}
+
+	power_t power = vss_signal_power(buffer, size);
+
+	TEST_ASSERT_EQUAL(0, power);
+}

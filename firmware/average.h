@@ -24,5 +24,6 @@
 #include "buffer.h"
 
 power_t vss_average(power_t* buffer, size_t len);
+power_t vss_signal_power(uint16_t* buffer, size_t len);
 
 #endif

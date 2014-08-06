@@ -2,7 +2,7 @@ UNITY ?= ../../../Unity
 
 INCLUDES += -I$(UNITY)/src -I.. -I../platform
 
-CFLAGS += -g -Wall $(INCLUDES)
+CFLAGS += -g -Wall $(INCLUDES) -lm
 
 UNITY_OBJ = $(UNITY)/src/unity.o
 
