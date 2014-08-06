@@ -27,10 +27,6 @@ static const struct calibration_point calibration_data[] = {
 	{ INT_MIN, INT_MIN }
 };
 
-static const struct calibration_point calibration_empty[] = {
-	{ INT_MIN, INT_MIN }
-};
-
 void setUp(void)
 {
 }
@@ -41,36 +37,43 @@ void tearDown(void)
 
 void test_empty(void)
 {
-	TEST_ASSERT_EQUAL(0, get_calibration(calibration_empty, 10));
+	calibration_set_data(calibration_empty_data);
+	TEST_ASSERT_EQUAL(0, get_calibration(10));
 }
 
 void test_below_bounds(void)
 {
-	TEST_ASSERT_EQUAL(0, get_calibration(calibration_data, -10));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(0, get_calibration(-10));
 }
 
 void test_first_point(void)
 {
-	TEST_ASSERT_EQUAL(100, get_calibration(calibration_data, 0));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(100, get_calibration(0));
 }
 
 void test_middle_point(void)
 {
-	TEST_ASSERT_EQUAL(200, get_calibration(calibration_data, 100));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(200, get_calibration(100));
 }
 
 void test_interpolation(void)
 {
-	TEST_ASSERT_EQUAL(142, get_calibration(calibration_data, 42));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(142, get_calibration(42));
 }
 
 
 void test_last_point(void)
 {
-	TEST_ASSERT_EQUAL(400, get_calibration(calibration_data, 200));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(400, get_calibration(200));
 }
 
 void test_above_bounds(void)
 {
-	TEST_ASSERT_EQUAL(0, get_calibration(calibration_data, 201));
+	calibration_set_data(calibration_data);
+	TEST_ASSERT_EQUAL(0, get_calibration(201));
 }

@@ -28,6 +28,9 @@ struct calibration_point {
 	int y;
 };
 
-int get_calibration(const struct calibration_point* calibration_data, int x);
+extern const struct calibration_point const calibration_empty_data[];
+
+void calibration_set_data(const struct calibration_point* calibration_data);
+int get_calibration(int x);
 
 #endif

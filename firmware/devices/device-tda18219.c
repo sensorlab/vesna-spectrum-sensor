@@ -149,6 +149,8 @@ int dev_tda18219_turn_on(struct vss_task* task)
 
 	current_task = task;
 
+	calibration_set_data(priv->calibration);
+
 	return VSS_OK;
 }
 
@@ -213,7 +215,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			}
 
 			// extra offset determined by measurement
-			int calibration = get_calibration(priv->calibration, freq / 1000);
+			int calibration = get_calibration(freq / 1000);
 
 			rssi_dbm_100 -= calibration;
 

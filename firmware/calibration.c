@@ -19,6 +19,17 @@
 
 #include "calibration.h"
 
+const struct calibration_point const calibration_empty_data[] = {
+	{ INT_MIN, INT_MIN }
+};
+
+static const struct calibration_point* calibration_cur_data = calibration_empty_data;
+
+void calibration_set_data(const struct calibration_point* calibration_data)
+{
+	calibration_cur_data = calibration_data;
+}
+
 /** @brief Obtain a calibration point, interpolating if necessary.
  *
  * Array of calibration points must be terminated with a point that has x and y
@@ -31,13 +42,15 @@
  * @param calibration_data pointer to an array of calibration points.
  * @param x independent variable of calibration function.
  * @return value of the calibration function for x. */
-int get_calibration(const struct calibration_point* calibration_data, int x)
+int get_calibration(int x)
 {
 	struct calibration_point prev = { INT_MIN, INT_MIN };
 	struct calibration_point next;
 
-	while(calibration_data->x != INT_MIN || calibration_data->y != INT_MIN) {
-		next = *calibration_data;
+	const struct calibration_point* data = calibration_cur_data;
+
+	while(data->x != INT_MIN || data->y != INT_MIN) {
+		next = *data;
 
 		if(next.x == x) {
 			return next.y;
@@ -52,7 +65,7 @@ int get_calibration(const struct calibration_point* calibration_data, int x)
 			prev = next;
 		}
 
-		calibration_data++;
+		data++;
 	}
 
 	return 0;
