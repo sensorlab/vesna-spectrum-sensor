@@ -48,6 +48,7 @@ static struct vss_task* current_task = NULL;
 struct dev_tda18219_priv {
 	const struct tda18219_standard* standard;
 	const struct calibration_point* calibration;
+	int adc_source;
 };
 
 static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
@@ -143,7 +144,7 @@ int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 	r = tda18219_set_standard(priv->standard);
 	if(r) return VSS_ERROR;
 
-	r = vss_ad8307_power_on();
+	r = vss_ad8307_power_on(priv->adc_source);
 	if(r) return r;
 
 	return VSS_OK;
@@ -412,7 +413,8 @@ static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = 
 
 static struct dev_tda18219_priv dev_tda18219_dvbt_1700khz_priv = {
 	.standard		= &tda18219_standard_dvbt_1700khz,
-	.calibration		= dev_tda18219_dvbt_1700khz_calibration
+	.calibration		= dev_tda18219_dvbt_1700khz_calibration,
+	.adc_source		= AD8307_SRC_DET
 };
 
 static const struct vss_device_config dev_tda18219_dvbt_1700khz = {
@@ -478,7 +480,8 @@ static const struct calibration_point dev_tda18219_dvbt_8000khz_calibration[] = 
 
 static struct dev_tda18219_priv dev_tda18219_dvbt_8000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
-	.calibration		= dev_tda18219_dvbt_8000khz_calibration
+	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
+	.adc_source		= AD8307_SRC_DET
 };
 
 static const struct vss_device_config dev_tda18219_dvbt_8000khz = {

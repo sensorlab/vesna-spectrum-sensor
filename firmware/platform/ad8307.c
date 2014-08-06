@@ -39,9 +39,21 @@ int vss_ad8307_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, AD8307_PIN_ENB);
 #endif
 
-	/* ADC pin for AD8307 output */
+	/* ADC pins for AD8307 output */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_ANALOG, AD8307_PIN_OUT);
+			GPIO_CNF_INPUT_ANALOG, AD8307_PIN_DET);
+
+#ifdef AD8307_PIN_BBAND
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_ANALOG, AD8307_PIN_BBAND);
+#endif
+
+	return VSS_OK;
+}
+
+static int vss_ad8307_adc_setup(uint8_t conv_time, uint32_t adcpre, uint16_t pin)
+{
+	rcc_set_adcpre(adcpre);
 
 	/* Make sure the ADC doesn't run during config. */
 	adc_off(ADC1);
@@ -59,8 +71,7 @@ int vss_ad8307_init(void)
 	adc_set_continous_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
-	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_1DOT5CYC);
-	//adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_set_conversion_time_on_all_channels(ADC1, conv_time);
 	adc_enable_dma(ADC1);
 
 	adc_on(ADC1);
@@ -75,9 +86,9 @@ int vss_ad8307_init(void)
 
 	uint8_t channel_array[16];
 	/* Select the channel we want to convert. */
-	if(AD8307_PIN_OUT == GPIO0) {
+	if(pin == GPIO0) {
 		channel_array[0] = 0;
-	} else if(AD8307_PIN_OUT == GPIO2) {
+	} else if(pin == GPIO2) {
 		channel_array[0] = 2;
 	} else {
 		return VSS_ERROR;
@@ -87,19 +98,40 @@ int vss_ad8307_init(void)
 	return VSS_OK;
 }
 
-int vss_ad8307_power_on(void)
+int vss_ad8307_power_on(int src)
 {
 #ifdef AD8307_PIN_ENB
 	gpio_set(GPIOA, AD8307_PIN_ENB);
 #endif
+
+	switch(src) {
+#ifdef AD8307_PIN_BBAND
+		case AD8307_SRC_BBAND:
+			vss_ad8307_adc_setup(ADC_SMPR_SMP_1DOT5CYC,
+					RCC_CFGR_ADCPRE_PCLK2_DIV4,
+					AD8307_PIN_BBAND);
+			break;
+#endif
+		case AD8307_SRC_DET:
+			vss_ad8307_adc_setup(ADC_SMPR_SMP_28DOT5CYC,
+					RCC_CFGR_ADCPRE_PCLK2_DIV8,
+					AD8307_PIN_DET);
+			break;
+		default:
+			return VSS_ERROR;
+	}
+
 	return VSS_OK;
 }
 
 int vss_ad8307_power_off(void)
 {
+	adc_off(ADC1);
+
 #ifdef AD8307_PIN_ENB
 	gpio_clear(GPIOA, AD8307_PIN_ENB);
 #endif
+
 	return VSS_OK;
 }
 
