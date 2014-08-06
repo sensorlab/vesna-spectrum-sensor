@@ -26,6 +26,10 @@ class usbtmc:
 		os.close(self.f)
 
 class SignalGenerator(usbtmc):
+	def __init__(self, device):
+		usbtmc.__init__(self, device)
+		self.write("system:preset\n")
+
 	def rf_on(self, freq_hz, power_dbm):
 
 		power_dbm = max(-145, power_dbm)
