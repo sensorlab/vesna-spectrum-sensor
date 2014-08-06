@@ -35,6 +35,11 @@
 #	define TDA_PIN_ENB	GPIO0
 #endif
 
+#ifdef MODEL_SNE_ESHTER
+#	define TDA_PIN_IRQ	GPIO7
+#	define TDA_PIN_IF_AGC	GPIO4
+#endif
+
 int vss_tda18219_init(void);
 void vss_tda18219_irq_ack(void);
 

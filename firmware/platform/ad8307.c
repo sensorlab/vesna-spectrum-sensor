@@ -30,8 +30,10 @@ int vss_ad8307_init(void)
 			RCC_APB2ENR_ADC1EN);
 
 	/* GPIO pin for AD8307 ENB */
+#ifdef AD8307_PIN_ENB
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, AD8307_PIN_ENB);
+#endif
 
 	/* ADC pin for AD8307 output */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
@@ -74,13 +76,17 @@ int vss_ad8307_init(void)
 
 int vss_ad8307_power_on(void)
 {
+#ifdef AD8307_PIN_ENB
 	gpio_set(GPIOA, AD8307_PIN_ENB);
+#endif
 	return VSS_OK;
 }
 
 int vss_ad8307_power_off(void)
 {
+#ifdef AD8307_PIN_ENB
 	gpio_clear(GPIOA, AD8307_PIN_ENB);
+#endif
 	return VSS_OK;
 }
 

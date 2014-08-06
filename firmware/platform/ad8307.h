@@ -28,6 +28,10 @@
 #	define AD8307_PIN_OUT	GPIO2
 #endif
 
+#ifdef MODEL_SNE_ESHTER
+#	define AD8307_PIN_OUT	GPIO0
+#endif
+
 int vss_ad8307_init(void);
 int vss_ad8307_power_on(void);
 int vss_ad8307_power_off(void);
