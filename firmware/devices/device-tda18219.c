@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <assert.h>
 #include <limits.h>
 #include <tda18219/tda18219.h>
@@ -51,7 +52,33 @@ struct dev_tda18219_priv {
 	int adc_source;
 };
 
-static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
+static int get_input_power_bband(int* rssi_dbm_100, unsigned int n_average)
+{
+	uint16_t samples[n_average];
+	int r = vss_ad8307_get_input_samples(samples, n_average);
+	if(r) return r;
+
+	int acc = 0;
+	unsigned int n;
+	for(n = 0; n < n_average; n++) {
+		acc += samples[n];
+	}
+
+	int mean = acc / n_average;
+
+	acc = 0;
+	for(n = 0; n < n_average; n++) {
+		int m = ((int) acc) - mean;
+		acc += m*m;
+	}
+
+	int d = 10.*log10(acc / n_average);
+	*rssi_dbm_100 = d;
+
+	return VSS_OK;
+}
+
+static int get_input_power_det(int* rssi_dbm_100, unsigned int n_average)
 {
 	uint8_t rssi_dbuv;
 
@@ -108,6 +135,19 @@ static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
 	}
 
 	return VSS_OK;
+}
+
+static int get_input_power(int* rssi_dbm_100, unsigned int n_average,
+		int adc_source)
+{
+	switch(adc_source) {
+		case AD8307_SRC_DET:
+			return get_input_power_det(rssi_dbm_100, n_average);
+		case AD8307_SRC_BBAND:
+			return get_input_power_bband(rssi_dbm_100, n_average);
+		default:
+			assert(0);
+	}
 }
 
 static int vss_device_tda18219_init(void)
@@ -217,7 +257,9 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 
 		case READ_MEASUREMENT:
 
-			r = get_input_power(&rssi_dbm_100, vss_task_get_n_average(task));
+			r = get_input_power(&rssi_dbm_100,
+					vss_task_get_n_average(task),
+					priv->adc_source);
 			if(r) {
 				vss_task_set_error(task,
 						"get_input_power() returned an error");
@@ -500,6 +542,28 @@ static const struct vss_device_config dev_tda18219_dvbt_8000khz = {
 	.priv			= &dev_tda18219_dvbt_8000khz_priv
 };
 
+static struct dev_tda18219_priv dev_tda18219_dvbt_1000khz_priv = {
+	.standard		= &tda18219_standard_dvbt_8000khz,
+	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
+	.adc_source		= AD8307_SRC_BBAND
+};
+
+static const struct vss_device_config dev_tda18219_dvbt_1000khz = {
+	.name			= "DVB-T 1.0 MHz",
+
+	.device			= &dev_tda18219,
+
+	// UHF: 470 MHz to 862 MHz
+	.channel_base_hz	= 470000000,
+	.channel_spacing_hz	= 1000,
+	.channel_bw_hz		= 1000000,
+	.channel_num		= 392000,
+
+	.channel_time_ms	= 50,
+
+	.priv			= &dev_tda18219_dvbt_1000khz_priv
+};
+
 int vss_device_tda18219_register(void)
 {
 	int r;
@@ -509,6 +573,7 @@ int vss_device_tda18219_register(void)
 
 	vss_device_config_add(&dev_tda18219_dvbt_1700khz);
 	vss_device_config_add(&dev_tda18219_dvbt_8000khz);
+	vss_device_config_add(&dev_tda18219_dvbt_1000khz);
 
 	return VSS_OK;
 }

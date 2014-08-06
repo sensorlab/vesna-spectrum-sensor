@@ -9,7 +9,7 @@ OBJCOPY		= $(PREFIX)-objcopy
 CFLAGS		+= -Os -g -Wall -Wextra -I$(TOOLCHAIN_DIR)/include -Iplatform -Idevices -I.\
 		   -fno-common -mcpu=cortex-m3 -mthumb -msoft-float -MD -DSTM32F1
 LDSCRIPT	?= vesna.ld
-LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
+LDFLAGS		+= -Wl,--start-group -lc -lm -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
