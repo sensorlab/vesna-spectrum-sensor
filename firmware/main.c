@@ -106,6 +106,16 @@ static void setup(void)
 	setup_usart();
 }
 
+static void led_on(void)
+{
+	gpio_set(GPIOB, GPIO2);
+}
+
+static void led_off(void)
+{
+	gpio_clear(GPIOB, GPIO2);
+}
+
 void usart1_isr(void)
 {
 	/* Check if we were called because of RXNE. */
@@ -134,9 +144,11 @@ int _write(int file, char *ptr, int len)
 	int i;
 
 	if (file == 1) {
+		led_on();
 		for (i = 0; i < len; i++) {
 			usart_send_blocking(USART1, ptr[i]);
 		}
+		led_off();
 		return i;
 	} else {
 		errno = EIO;
