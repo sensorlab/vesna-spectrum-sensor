@@ -21,9 +21,12 @@ class LocalDeviceUnderTest(DeviceUnderTest):
 		parser.add_option("-d", "--device", dest="device", metavar="DEVICE",
 				help="Use VESNA spectrum sensor attached to serial DEVICE.",
 				default="/dev/ttyUSB0")
+		parser.add_option("--no-calibration", dest="calibration", action="store_false",
+				help="Don't use calibration tables.",
+				default=True)
 
 	def setup(self, options):
-		self.spectrumsensor = SpectrumSensor(options.device)
+		self.spectrumsensor = SpectrumSensor(options.device, calibration=options.calibration)
 
 		self.config_list = self.spectrumsensor.get_config_list()
 		if not self.config_list.configs:

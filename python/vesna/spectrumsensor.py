@@ -211,12 +211,13 @@ class ConfigList:
 class SpectrumSensor:
 	"""Top-level abstraction of the attached spectrum sensing hardware."""
 
-	def __init__(self, device):
+	def __init__(self, device, calibration=True):
 		"""Create a new spectrum sensor object.
 
 		device -- path to the character device for the RS232 port with the spectrum sensor.
 		"""
 		self.comm = serial.Serial(device, 115200, timeout=.5)
+		self.calibration = calibration
 
 		self.comm.write("report-off\n")
 		self._wait_for_ok()
@@ -228,6 +229,11 @@ class SpectrumSensor:
 				break
 			elif r.startswith("error:"):
 				raise SpectrumSensorException(r.strip())
+
+	def set_calibration(self, state):
+		"""Turn calibration on or off.
+		"""
+		self.calibration = state
 	
 	def get_config_list(self):
 		"""Query and return the list of supported device configurations."""
@@ -300,6 +306,10 @@ class SpectrumSensor:
 				sweep_config.config.device.id, sweep_config.config.id))
 
 		self._wait_for_ok()
+
+		if not self.calibration:
+			self.comm.write("calib-off\n")
+			self._wait_for_ok()
 
 	def _set_average(self, n_average):
 		self.comm.write("average %d\n" % (n_average,))
