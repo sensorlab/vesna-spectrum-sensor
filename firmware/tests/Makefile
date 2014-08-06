@@ -1,6 +1,6 @@
 UNITY ?= ../../../Unity
 
-INCLUDES += -I$(UNITY)/src -I..
+INCLUDES += -I$(UNITY)/src -I.. -I../platform
 
 CFLAGS += -g -Wall $(INCLUDES)
 
@@ -10,7 +10,8 @@ TESTS =	test_buffer_run \
 	test_device_run \
 	test_task_run \
 	test_calibration_run \
-	test_average_run
+	test_average_run \
+	test_eeprom_run
 
 DEPS =	$(TESTS:test_%_run=%.d) \
 	$(TESTS:test_%_run=test_%.d) \
@@ -21,6 +22,8 @@ all: test
 test: $(TESTS)
 
 test_task_runner: test_task_runner.o test_task.o task.o buffer.o device.o $(UNITY_OBJ)
+
+test_eeprom_runner: test_eeprom_runner.o test_eeprom.o eeprom.o $(UNITY_OBJ)
 
 test_%_runner: test_%_runner.o test_%.o %.o $(UNITY_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^

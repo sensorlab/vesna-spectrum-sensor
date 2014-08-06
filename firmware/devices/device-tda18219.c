@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -30,6 +32,7 @@
 #include "tda18219.h"
 #include "vss.h"
 #include "calibration.h"
+#include "eeprom.h"
 
 #include "device-tda18219.h"
 
@@ -273,8 +276,9 @@ static int dev_tda18219_status(void* priv __attribute__((unused)), char* buffer,
 	if(wlen >= len) return VSS_TOO_MANY;
 
 	int n;
+	size_t r;
 	for(n = 0; n < 12; n++) {
-		size_t r = snprintf(&buffer[wlen], len - wlen,
+		r = snprintf(&buffer[wlen], len - wlen,
 				"RF cal %02d   : %d%s\n",
 				n, status.calibration_ncaps[n],
 				status.calibration_error[n] ? " (error)" : "");
@@ -282,6 +286,18 @@ static int dev_tda18219_status(void* priv __attribute__((unused)), char* buffer,
 
 		wlen += r;
 	}
+
+#ifdef MODEL_SNE_ESHTER
+	uint64_t lo, hi;
+	int e = vss_eeprom_uid(&lo, &hi);
+	if(e) return e;
+
+	r = snprintf(&buffer[wlen], len - wlen,
+			"\nBoard UID   : %016llx%016llx\n", hi, lo);
+	if(r >= len - wlen) return VSS_TOO_MANY;
+
+	wlen += r;
+#endif
 
 	return VSS_OK;
 }
