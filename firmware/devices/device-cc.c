@@ -17,6 +17,8 @@
 /* Authors:	Ales Verbic
  * 		Zoltan Padrah
  * 		Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 

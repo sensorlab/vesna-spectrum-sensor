@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -31,6 +33,7 @@
 #include "device-tda18219.h"
 
 #include "task.h"
+#include "version.h"
 
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32

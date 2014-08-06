@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/adc.h>
 #include <libopencm3/stm32/f1/gpio.h>

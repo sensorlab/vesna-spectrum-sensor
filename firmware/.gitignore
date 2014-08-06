@@ -1,1 +1,4 @@
 doc
+config.h
+version.h
+Makefile.conf

@@ -1,0 +1,66 @@
+#!/bin/sh
+
+MODEL=$1
+CONFIG_H="config.h"
+
+case "$MODEL" in
+
+	sne-crewtv)
+		LIBS="-ltda18219"
+
+		OBJS="platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+
+		DEFS="TUNER_TDA18219 MODEL_SNE_CREWTV"
+		;;
+
+	sne-ismtv-uhf)
+		LIBS="-ltda18219"
+		OBJS="platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+		DEFS="TUNER_TDA18219 MODEL_SNE_ISMTV_UHF"
+		;;
+
+	sne-ismtv-868)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNE_ISMTV_868"
+		;;
+
+	sne-ismtv-2400)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNE_ISMTV_2400"
+		;;
+
+	snr-trx-868)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNR_TRX_868"
+		;;
+
+	snr-trx-2400)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNR_TRX_2400"
+		;;
+
+	dummy)
+		OBJS="devices/device-dummy.o"
+		DEFS="TUNER_NULL"
+		;;
+
+	"")
+		cat <<END
+USAGE: $0 model
+END
+		exit 1
+		;;
+	*)
+		echo "Unknown model $MODEL"
+		exit 1
+esac
+
+cat > Makefile.conf <<END
+LIBS += $LIBS
+OBJS += $OBJS
+END
+
+rm -f "$CONFIG_H"
+for DEF in $DEFS; do
+	echo "#define $DEF 1" >> "$CONFIG_H"
+done
