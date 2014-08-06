@@ -160,6 +160,8 @@ static void command_help(void)
 		"status       print out hardware status\n"
 		"version      print out firmware version\n\n"
 
+		"calib-off    turn off calibration\n\n"
+
 		"sweep data has the following format:\n"
 		"             TS timestamp DS power ... DE\n"
 		"where timestamp is time in seconds since sweep start and power is\n"
@@ -287,6 +289,12 @@ static void command_status(void)
 	}
 }
 
+static void command_calib_off(void)
+{
+	calibration_set_data(calibration_empty_data);
+	printf("ok\n");
+}
+
 static void dispatch(const char* cmd)
 {
 	int start, stop, step, dev_id, config_id;
@@ -311,6 +319,8 @@ static void dispatch(const char* cmd)
 		command_average(n_average);
 	} else if (!strcmp(cmd, "version")) {
 		command_version();
+	} else if (!strcmp(cmd, "calib-off")) {
+		command_calib_off();
 	} else {
 		printf("error: unknown command: %s\n", cmd);
 	}
