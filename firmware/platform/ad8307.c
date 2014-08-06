@@ -62,6 +62,8 @@ int vss_ad8307_init(void)
 		channel_array[0] = 0;
 	} else if(AD8307_PIN_OUT == GPIO2) {
 		channel_array[0] = 2;
+	} else {
+		return VSS_ERROR;
 	}
 	adc_set_regular_sequence(ADC1, 1, channel_array);
 
