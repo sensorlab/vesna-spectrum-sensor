@@ -15,26 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
-#ifndef HAVE_AD8307_H
-#define HAVE_AD8307_H
+#ifndef HAVE_RCC_H
+#define HAVE_RCC_H
 
-#ifdef MODEL_SNE_CREWTV
-#	define AD8307_PIN_ENB	GPIO6
-#	define AD8307_PIN_OUT	GPIO0
-#endif
-
-#ifdef MODEL_SNE_ISMTV_UHF
-#	define AD8307_PIN_ENB	GPIO0
-#	define AD8307_PIN_OUT	GPIO2
-#endif
-
-#ifdef MODEL_SNE_ESHTER
-#	define AD8307_PIN_OUT	GPIO0
-#endif
-
-int vss_ad8307_init(void);
-int vss_ad8307_power_on(void);
-int vss_ad8307_power_off(void);
-int vss_ad8307_get_input_samples(uint16_t* buffer, unsigned nsamples);
+void rcc_clock_setup_in_hsi_out_56mhz(void);
 
 #endif

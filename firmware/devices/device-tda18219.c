@@ -60,7 +60,7 @@ static int get_input_power(int* rssi_dbm_100, unsigned int n_average)
 	if(rssi_dbuv < 40) {
 		// internal power detector in TDA18219 doesn't go below 40 dBuV
 
-		unsigned samples[n_average];
+		uint16_t samples[n_average];
 		r = vss_ad8307_get_input_samples(samples, n_average);
 		if(r) return r;
 
@@ -134,28 +134,23 @@ static int vss_device_tda18219_init(void)
 	return VSS_OK;
 }
 
-int dev_tda18219_turn_on(struct vss_task* task)
+int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 {
 	int r;
 	r = tda18219_power_on();
 	if(r) return VSS_ERROR;
 
-	const struct dev_tda18219_priv* priv = task->sweep_config->device_config->priv;
 	r = tda18219_set_standard(priv->standard);
 	if(r) return VSS_ERROR;
 
 	r = vss_ad8307_power_on();
 	if(r) return r;
 
-	current_task = task;
-
 	return VSS_OK;
 }
 
 int dev_tda18219_turn_off(void)
 {
-	current_task = NULL;
-
 	int r;
 	r = vss_ad8307_power_off();
 	if(r) return r;
@@ -164,6 +159,23 @@ int dev_tda18219_turn_off(void)
 	if(r) return VSS_ERROR;
 
 	return VSS_OK;
+}
+
+static int dev_tda18219_start(struct vss_task* task) 
+{
+	int r = dev_tda18219_turn_on(task->sweep_config->device_config->priv);
+	if(r) return r;
+
+	current_task = task;
+
+	return VSS_OK;
+}
+
+static int dev_tda18219_stop(void)
+{
+	current_task = NULL;
+
+	return dev_tda18219_turn_off();
 }
 
 enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
@@ -187,7 +199,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			if(r) {
 				vss_task_set_error(task,
 						"tda18219_set_frequency() returned an error");
-				dev_tda18219_turn_off();
+				dev_tda18219_stop();
 				return OFF;
 			}
 			return RUN_MEASUREMENT;
@@ -197,7 +209,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			if(r) {
 				vss_task_set_error(task,
 						"tda18219_get_input_power_prepare() returned an error");
-				dev_tda18219_turn_off();
+				dev_tda18219_stop();
 				return OFF;
 			}
 			return READ_MEASUREMENT;
@@ -208,7 +220,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			if(r) {
 				vss_task_set_error(task,
 						"get_input_power() returned an error");
-				dev_tda18219_turn_off();
+				dev_tda18219_stop();
 				return OFF;
 			}
 
@@ -220,7 +232,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
 				return dev_tda18219_state(task, SET_FREQUENCY);
 			} else {
-				dev_tda18219_turn_off();
+				dev_tda18219_stop();
 				return OFF;
 			}
 
@@ -240,7 +252,7 @@ int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_task* task)
 		return VSS_TOO_MANY;
 	}
 
-	int r = dev_tda18219_turn_on(task);
+	int r = dev_tda18219_start(task);
 	if(r) return r;
 
 	vss_rtc_reset();
@@ -310,12 +322,45 @@ static const struct calibration_point* dev_tda18219_get_calibration(
 	return cpriv->calibration;
 }
 
+static int dev_tda18219_baseband(void* priv __attribute__((unused)),
+		const struct vss_sweep_config* sweep_config, power_t* buffer, size_t len)
+{
+	const struct vss_device_config* device_config = sweep_config->device_config;
+	const struct dev_tda18219_priv* config_priv = device_config->priv;
+
+	int ch = sweep_config->channel_start;
+	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
+
+	int r;
+
+	r = dev_tda18219_turn_on(config_priv);
+	if(r) return r;
+
+	r = tda18219_set_frequency_sync(config_priv->standard, freq);
+	if(r) {
+		dev_tda18219_turn_off();
+		return VSS_ERROR;
+	}
+
+	r = vss_ad8307_get_input_samples((uint16_t*) buffer, len);
+	if(r) {
+		dev_tda18219_turn_off();
+		return VSS_ERROR;
+	}
+
+	r = dev_tda18219_turn_off();
+	if(r) return r;
+
+	return VSS_OK;
+}
+
 static const struct vss_device dev_tda18219 = {
 	.name = "tda18219hn",
 
 	.status			= dev_tda18219_status,
 	.run			= dev_tda18219_run,
 	.get_calibration	= dev_tda18219_get_calibration,
+	.baseband		= dev_tda18219_baseband,
 
 	.priv			= NULL
 };

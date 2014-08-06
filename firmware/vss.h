@@ -33,6 +33,8 @@
 #define VSS_STOP	-2
 /** @brief Not enough memory or too many iteration requested. */
 #define VSS_TOO_MANY	-3
+/** @brief Function not supported by hardware. */
+#define VSS_NOT_SUPPORTED -4
 
 /** @} */
 

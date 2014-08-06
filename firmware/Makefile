@@ -13,7 +13,7 @@ LDFLAGS		+= -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group \
 		   -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib/stm32/f1 \
 		   -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections \
 		   -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-OBJS		+= average.o main.o device.o buffer.o task.o calibration.o platform/timer.o platform/rtc.o
+OBJS		+= average.o main.o device.o buffer.o task.o calibration.o platform/timer.o platform/rtc.o platform/rcc.o
 LIBS		+= -lopencm3_stm32f1
 
 OPENOCD		?= openocd

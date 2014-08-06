@@ -18,6 +18,7 @@
 #include "config.h"
 
 #include <libopencm3/stm32/f1/adc.h>
+#include <libopencm3/stm32/f1/dma.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 
@@ -28,6 +29,9 @@ int vss_ad8307_init(void)
 {
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, 
 			RCC_APB2ENR_ADC1EN);
+
+	rcc_peripheral_enable_clock(&RCC_AHBENR,
+			RCC_AHBENR_DMA1EN);
 
 	/* GPIO pin for AD8307 ENB */
 #ifdef AD8307_PIN_ENB
@@ -42,13 +46,22 @@ int vss_ad8307_init(void)
 	/* Make sure the ADC doesn't run during config. */
 	adc_off(ADC1);
 
+	dma_channel_reset(DMA1, DMA_CHANNEL1);
+	dma_set_peripheral_address(DMA1, DMA_CHANNEL1, (u32) &ADC1_DR);
+	dma_set_priority(DMA1, DMA_CHANNEL1, DMA_CCR_PL_VERY_HIGH);
+	dma_set_peripheral_size(DMA1, DMA_CHANNEL1, DMA_CCR_PSIZE_16BIT);
+	dma_set_memory_size(DMA1, DMA_CHANNEL1, DMA_CCR_MSIZE_16BIT);
+	dma_enable_memory_increment_mode(DMA1, DMA_CHANNEL1);
+	dma_set_read_from_peripheral(DMA1, DMA_CHANNEL1);
+
 	/* We configure everything for one single conversion. */
-	adc_disable_scan_mode(ADC1);
-	adc_set_single_conversion_mode(ADC1);
-	adc_enable_discontinous_mode_regular(ADC1);
+	adc_enable_scan_mode(ADC1);
+	adc_set_continous_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
-	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_1DOT5CYC);
+	//adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_enable_dma(ADC1);
 
 	adc_on(ADC1);
 
@@ -90,14 +103,18 @@ int vss_ad8307_power_off(void)
 	return VSS_OK;
 }
 
-int vss_ad8307_get_input_samples(unsigned* buffer, unsigned nsamples)
+int vss_ad8307_get_input_samples(uint16_t* buffer, unsigned nsamples)
 {
-	unsigned n;
-	for(n = 0; n < nsamples; n++) {
-		adc_on(ADC1);
-		while (!(ADC_SR(ADC1) & ADC_SR_EOC));
-		buffer[n] = ADC_DR(ADC1);
-	}
+	dma_set_memory_address(DMA1, DMA_CHANNEL1, (u32) buffer);
+	dma_set_number_of_data(DMA1, DMA_CHANNEL1, nsamples);
+	dma_enable_channel(DMA1, DMA_CHANNEL1);
+
+	adc_on(ADC1);
+
+	while(!(DMA_ISR(DMA1) & DMA_ISR_TCIF(DMA_CHANNEL1))) {}
+	DMA_IFCR(DMA1) = DMA_IFCR_CTCIF(DMA_CHANNEL1);
+
+	dma_disable_channel(DMA1, DMA_CHANNEL1);
 
 	return VSS_OK;
 }

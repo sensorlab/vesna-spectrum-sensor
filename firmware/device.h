@@ -23,6 +23,7 @@
 #include "buffer.h"
 #include "calibration.h"
 
+struct vss_sweep_config;
 struct vss_task;
 struct vss_device_config;
 
@@ -58,6 +59,22 @@ typedef int (*vss_device_status_t)(void* priv, char* buffer, size_t len);
 typedef const struct calibration_point* (*vss_device_get_calibration_t)(
 		void* priv, const struct vss_device_config* device_config);
 
+/** @brief Callback for obtaining baseband samples.
+ *
+ * Obtain a continuous string of baseband samples from the device. Device
+ * is tuned to the first channel in the frequency sweep config.
+ *
+ * Sampling rate and ADC range are device specific.
+ *
+ * @param priv Pointer to the implementation specific data structure.
+ * @param sweep_config Pointer to the sweep config to use for tuning the device.
+ * @param buffer Pointer to caller-allocated buffer where the samples will be
+ * stored.
+ * @param len Size of the buffer in samples.
+ * @return VSS_OK on success or an error code otherwise. */
+typedef int (*vss_device_baseband_t)(void* priv, const struct vss_sweep_config* sweep_config,
+		power_t* buffer, size_t len);
+
 /** @brief A spectrum sensing device.
  *
  * This structure corresponds to a physical device (energy detection receiver).
@@ -77,6 +94,11 @@ struct vss_device {
 
 	/** @brief Callback for obtaining default calibration table. */
 	vss_device_get_calibration_t get_calibration;
+
+	/** @brief Callback for obtaining baseband samples.
+	 *
+	 * Set to NULL if device doesn't support baseband sampling. */
+	vss_device_baseband_t baseband;
 
 	/** @brief Opaque pointer to an implementation specific data structure. */
 	void* priv;
@@ -151,6 +173,8 @@ int vss_device_status(const struct vss_device* device, char* buffer, size_t len)
 const struct calibration_point* vss_device_get_calibration(
 		const struct vss_device* device,
 		const struct vss_device_config* device_config);
+int vss_device_baseband(const struct vss_device* device, const struct vss_sweep_config* sweep_config,
+		power_t* buffer, size_t len);
 
 int vss_device_config_add(const struct vss_device_config* device_config);
 const struct vss_device_config* vss_device_config_get(int device_id, int config_id);

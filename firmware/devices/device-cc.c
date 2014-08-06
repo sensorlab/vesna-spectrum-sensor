@@ -195,6 +195,7 @@ static const struct vss_device device_cc1101 = {
 
 	.run			= dev_cc_run,
 	.status			= dev_cc1101_status,
+	.baseband		= NULL,
 
 	.priv 			= NULL
 };
