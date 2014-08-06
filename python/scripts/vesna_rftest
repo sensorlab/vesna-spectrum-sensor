@@ -113,7 +113,13 @@ def test_power_ramp(dut, gen):
 		p_dbm_start = int(round(nf_mean/10)*10-30)
 		p_dbm_step = 5
 
-		p_dbm_list = range(p_dbm_start, p_dbm_step, p_dbm_step)
+		if p_dbm_start < -85:
+			p_dbm_list =	range(p_dbm_start, -85, p_dbm_step) + \
+					range(-85, -75, p_dbm_step/5) + \
+					range(-75, p_dbm_step, p_dbm_step)
+		else:
+			p_dbm_list = range(p_dbm_start, p_dbm_step, p_dbm_step)
+
 		pout_dbm_list = []
 		for p_dbm in p_dbm_list:
 			log("    Pin = %d dBm" % (p_dbm))
