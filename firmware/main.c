@@ -312,17 +312,21 @@ int main(void)
 	setup();
 	printf("boot\n");
 
+	int r = VSS_OK;
 #ifdef TUNER_TDA18219
-	vss_device_tda18219_register();
+	r = vss_device_tda18219_register();
 #endif
 
 #ifdef TUNER_CC
-	vss_device_cc_register();
+	r = vss_device_cc_register();
 #endif
 
 #ifdef TUNER_NULL
-	vss_device_dummy_register();
+	r = vss_device_dummy_register();
 #endif
+	if(r != VSS_OK) {
+		printf("error: registering device: %d\n", r);
+	}
 
 	while(1) {
 		if (usart_buffer_attn) {
