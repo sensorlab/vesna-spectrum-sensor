@@ -8,20 +8,20 @@ case "$MODEL" in
 	sne-crewtv)
 		LIBS="-ltda18219"
 
-		OBJS="platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
 
 		DEFS="TUNER_TDA18219 MODEL_SNE_CREWTV"
 		;;
 
 	sne-ismtv-uhf)
 		LIBS="-ltda18219"
-		OBJS="platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
 		DEFS="TUNER_TDA18219 MODEL_SNE_ISMTV_UHF"
 		;;
 
 	sne-eshter)
 		LIBS="-ltda18219"
-		OBJS="platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
 		DEFS="TUNER_TDA18219 MODEL_SNE_ESHTER"
 		;;
 
