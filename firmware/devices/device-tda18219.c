@@ -214,7 +214,6 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 
 			// extra offset determined by measurement
 			int calibration = get_calibration(priv->calibration, freq / 1000);
-			assert(calibration != INT_MIN);
 
 			rssi_dbm_100 -= calibration;
 

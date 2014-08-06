@@ -27,6 +27,10 @@ static const struct calibration_point calibration_data[] = {
 	{ INT_MIN, INT_MIN }
 };
 
+static const struct calibration_point calibration_empty[] = {
+	{ INT_MIN, INT_MIN }
+};
+
 void setUp(void)
 {
 }
@@ -35,9 +39,14 @@ void tearDown(void)
 {
 }
 
+void test_empty(void)
+{
+	TEST_ASSERT_EQUAL(0, get_calibration(calibration_empty, 10));
+}
+
 void test_below_bounds(void)
 {
-	TEST_ASSERT_EQUAL(INT_MIN, get_calibration(calibration_data, -10));
+	TEST_ASSERT_EQUAL(0, get_calibration(calibration_data, -10));
 }
 
 void test_first_point(void)
@@ -63,5 +72,5 @@ void test_last_point(void)
 
 void test_above_bounds(void)
 {
-	TEST_ASSERT_EQUAL(INT_MIN, get_calibration(calibration_data, 201));
+	TEST_ASSERT_EQUAL(0, get_calibration(calibration_data, 201));
 }

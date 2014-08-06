@@ -24,6 +24,8 @@
  * Array of calibration points must be terminated with a point that has x and y
  * set to INT_MIN.
  *
+ * Returns 0 for points that are out of bounds of the array.
+ *
  * @sa calibration_point
  *
  * @param calibration_data pointer to an array of calibration points.
@@ -41,7 +43,7 @@ int get_calibration(const struct calibration_point* calibration_data, int x)
 			return next.y;
 		} else if(next.x > x) {
 			if(prev.x == INT_MIN && prev.y == INT_MIN) {
-				return INT_MIN;
+				return 0;
 			} else {
 				return prev.y + ((int) (x - prev.x)) * (next.y - prev.y) /
 						((int) (next.x - prev.x));
@@ -53,5 +55,5 @@ int get_calibration(const struct calibration_point* calibration_data, int x)
 		calibration_data++;
 	}
 
-	return INT_MIN;
+	return 0;
 }
