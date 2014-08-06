@@ -310,6 +310,7 @@ static void dispatch(const char* cmd)
 int main(void)
 {
 	setup();
+	printf("boot\n");
 
 #ifdef TUNER_TDA18219
 	vss_device_tda18219_register();
