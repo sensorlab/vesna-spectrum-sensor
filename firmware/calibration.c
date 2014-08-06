@@ -25,6 +25,14 @@ const struct calibration_point const calibration_empty_data[] = {
 
 static const struct calibration_point* calibration_cur_data = calibration_empty_data;
 
+/** @brief Set the current calibration table.
+ *
+ * Array of calibration points must be terminated with a point that has x and y
+ * set to INT_MIN.
+ *
+ * @sa calibration_point
+ *
+ * @param calibration_data pointer to an array of calibration points. */
 void calibration_set_data(const struct calibration_point* calibration_data)
 {
 	calibration_cur_data = calibration_data;
@@ -32,14 +40,10 @@ void calibration_set_data(const struct calibration_point* calibration_data)
 
 /** @brief Obtain a calibration point, interpolating if necessary.
  *
- * Array of calibration points must be terminated with a point that has x and y
- * set to INT_MIN.
- *
  * Returns 0 for points that are out of bounds of the array.
  *
- * @sa calibration_point
+ * @sa calibration_set_data
  *
- * @param calibration_data pointer to an array of calibration points.
  * @param x independent variable of calibration function.
  * @return value of the calibration function for x. */
 int get_calibration(int x)
