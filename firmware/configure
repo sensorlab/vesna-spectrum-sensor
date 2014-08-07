@@ -21,7 +21,7 @@ case "$MODEL" in
 
 	sne-eshter)
 		LIBS="-ltda18219"
-		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o eeprom.o"
+		OBJS="platform/ltc1560.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o eeprom.o"
 		DEFS="TUNER_TDA18219 MODEL_SNE_ESHTER"
 		;;
 

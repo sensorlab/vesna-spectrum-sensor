@@ -27,13 +27,14 @@
 
 #include "ad8307.h"
 #include "average.h"
+#include "calibration.h"
 #include "device.h"
+#include "eeprom.h"
+#include "ltc1560.h"
 #include "rtc.h"
 #include "task.h"
 #include "tda18219.h"
 #include "vss.h"
-#include "calibration.h"
-#include "eeprom.h"
 
 #include "device-tda18219.h"
 
@@ -50,6 +51,7 @@ struct dev_tda18219_priv {
 	const struct tda18219_standard* standard;
 	const struct calibration_point* calibration;
 	int adc_source;
+	int bwsel;
 };
 
 static int get_input_power_bband(int* rssi_dbm_100, unsigned int n_average)
@@ -148,6 +150,9 @@ static int vss_device_tda18219_init(void)
 	r = vss_ad8307_init();
 	if(r) return r;
 
+	r = vss_ltc1560_init();
+	if(r) return r;
+
 	r = tda18219_power_on();
 	if(r) return VSS_ERROR;
 
@@ -170,6 +175,9 @@ int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 	if(r) return VSS_ERROR;
 
 	r = vss_ad8307_power_on(priv->adc_source);
+	if(r) return r;
+
+	r = vss_ltc1560_bwsel(priv->bwsel);
 	if(r) return r;
 
 	return VSS_OK;
@@ -445,7 +453,8 @@ static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = 
 static struct dev_tda18219_priv dev_tda18219_dvbt_1700khz_priv = {
 	.standard		= &tda18219_standard_dvbt_1700khz,
 	.calibration		= dev_tda18219_dvbt_1700khz_calibration,
-	.adc_source		= AD8307_SRC_DET
+	.adc_source		= AD8307_SRC_DET,
+	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
 static const struct vss_device_config dev_tda18219_dvbt_1700khz = {
@@ -512,7 +521,8 @@ static const struct calibration_point dev_tda18219_dvbt_8000khz_calibration[] = 
 static struct dev_tda18219_priv dev_tda18219_dvbt_8000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= AD8307_SRC_DET
+	.adc_source		= AD8307_SRC_DET,
+	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
 static const struct vss_device_config dev_tda18219_dvbt_8000khz = {
@@ -534,7 +544,8 @@ static const struct vss_device_config dev_tda18219_dvbt_8000khz = {
 static struct dev_tda18219_priv dev_tda18219_dvbt_1000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= AD8307_SRC_BBAND
+	.adc_source		= AD8307_SRC_BBAND,
+	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
 static const struct vss_device_config dev_tda18219_dvbt_1000khz = {
@@ -553,6 +564,29 @@ static const struct vss_device_config dev_tda18219_dvbt_1000khz = {
 	.priv			= &dev_tda18219_dvbt_1000khz_priv
 };
 
+static struct dev_tda18219_priv dev_tda18219_dvbt_500khz_priv = {
+	.standard		= &tda18219_standard_dvbt_8000khz,
+	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
+	.adc_source		= AD8307_SRC_BBAND,
+	.bwsel			= LTC1560_BWSEL_500KHZ
+};
+
+static const struct vss_device_config dev_tda18219_dvbt_500khz = {
+	.name			= "DVB-T 0.5 MHz",
+
+	.device			= &dev_tda18219,
+
+	// UHF: 470 MHz to 862 MHz
+	.channel_base_hz	= 470000000,
+	.channel_spacing_hz	= 1000,
+	.channel_bw_hz		= 500000,
+	.channel_num		= 392000,
+
+	.channel_time_ms	= 50,
+
+	.priv			= &dev_tda18219_dvbt_500khz_priv
+};
+
 int vss_device_tda18219_register(void)
 {
 	int r;
@@ -563,6 +597,7 @@ int vss_device_tda18219_register(void)
 	vss_device_config_add(&dev_tda18219_dvbt_1700khz);
 	vss_device_config_add(&dev_tda18219_dvbt_8000khz);
 	vss_device_config_add(&dev_tda18219_dvbt_1000khz);
+	vss_device_config_add(&dev_tda18219_dvbt_500khz);
 
 	return VSS_OK;
 }
