@@ -216,6 +216,10 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 	unsigned int ch = vss_task_get_channel(task);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
+	if(priv->adc_source == AD8307_SRC_BBAND) {
+		freq -= (8000000 - device_config->channel_bw_hz)/2;
+	}
+
 	int rssi_dbm_100;
 	int r;
 
