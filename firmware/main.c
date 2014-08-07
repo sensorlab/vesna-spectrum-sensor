@@ -36,7 +36,7 @@
 #include "version.h"
 #include "rcc.h"
 
-#define BASEBAND_SAMPLE_NUM		1024
+#define BASEBAND_SAMPLE_NUM		10240
 #define USART_BUFFER_SIZE		128
 #define DATA_BUFFER_SIZE		32
 
