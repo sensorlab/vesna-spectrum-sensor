@@ -62,11 +62,13 @@ END
 esac
 
 cat > Makefile.conf <<END
+# command line: $0 $@
 LIBS += $LIBS
 OBJS += $OBJS
 END
 
 rm -f "$CONFIG_H"
+echo "/* command line: $0 $@ */" >> "$CONFIG_H"
 for DEF in $DEFS; do
 	echo "#define $DEF 1" >> "$CONFIG_H"
 done
