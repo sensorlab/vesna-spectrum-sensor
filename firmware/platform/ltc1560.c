@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/rcc.h>
 
@@ -23,18 +25,22 @@
 
 int vss_ltc1560_init(void)
 {
+#ifdef LTC1560_BWSEL_PIN
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, LTC1560_BWSEL_PIN);
+#endif
 	return VSS_OK;
 }
 
 int vss_ltc1560_bwsel(int state)
 {
+#ifdef LTC1560_BWSEL_PIN
 	if(state) {
 		gpio_set(GPIOA, LTC1560_BWSEL_PIN);
 	} else {
 		gpio_clear(GPIOA, LTC1560_BWSEL_PIN);
 	}
+#endif
 
 	return VSS_OK;
 }
