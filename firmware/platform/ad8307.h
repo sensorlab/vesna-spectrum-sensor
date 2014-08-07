@@ -20,25 +20,14 @@
 
 #ifdef MODEL_SNE_CREWTV
 #	define AD8307_PIN_ENB	GPIO6
-#	define AD8307_PIN_DET	GPIO0
 #endif
 
 #ifdef MODEL_SNE_ISMTV_UHF
 #	define AD8307_PIN_ENB	GPIO0
-#	define AD8307_PIN_DET	GPIO2
 #endif
-
-#ifdef MODEL_SNE_ESHTER
-#	define AD8307_PIN_DET	GPIO0
-#	define AD8307_PIN_BBAND GPIO2
-#endif
-
-#define AD8307_SRC_DET		0
-#define AD8307_SRC_BBAND	1
 
 int vss_ad8307_init(void);
-int vss_ad8307_power_on(int src);
+int vss_ad8307_power_on(void);
 int vss_ad8307_power_off(void);
-int vss_ad8307_get_input_samples(uint16_t* buffer, unsigned nsamples);
 
 #endif

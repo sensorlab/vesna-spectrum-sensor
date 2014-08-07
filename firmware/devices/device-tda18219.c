@@ -26,6 +26,7 @@
 #include <tda18219/tda18219regs.h>
 
 #include "ad8307.h"
+#include "adc.h"
 #include "average.h"
 #include "calibration.h"
 #include "device.h"
@@ -57,7 +58,7 @@ struct dev_tda18219_priv {
 static int get_input_power_bband(int* rssi_dbm_100, unsigned int n_average)
 {
 	uint16_t samples[n_average];
-	int r = vss_ad8307_get_input_samples(samples, n_average);
+	int r = vss_adc_get_input_samples(samples, n_average);
 	if(r) return r;
 
 	*rssi_dbm_100 = vss_signal_power(samples, n_average);
@@ -76,7 +77,7 @@ static int get_input_power_det(int* rssi_dbm_100, unsigned int n_average)
 		// internal power detector in TDA18219 doesn't go below 40 dBuV
 
 		uint16_t samples[n_average];
-		r = vss_ad8307_get_input_samples(samples, n_average);
+		r = vss_adc_get_input_samples(samples, n_average);
 		if(r) return r;
 
 		/* STM32F1 has a 12 bit AD converter. Low reference is 0 V, high is 3.3 V
@@ -128,9 +129,9 @@ static int get_input_power(int* rssi_dbm_100, unsigned int n_average,
 		int adc_source)
 {
 	switch(adc_source) {
-		case AD8307_SRC_DET:
+		case ADC_SRC_DET:
 			return get_input_power_det(rssi_dbm_100, n_average);
-		case AD8307_SRC_BBAND:
+		case ADC_SRC_BBAND:
 			return get_input_power_bband(rssi_dbm_100, n_average);
 		default:
 			assert(0);
@@ -148,6 +149,9 @@ static int vss_device_tda18219_init(void)
 	if(r) return r;
 
 	r = vss_ad8307_init();
+	if(r) return r;
+
+	r = vss_adc_init();
 	if(r) return r;
 
 	r = vss_ltc1560_init();
@@ -174,7 +178,10 @@ int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 	r = tda18219_set_standard(priv->standard);
 	if(r) return VSS_ERROR;
 
-	r = vss_ad8307_power_on(priv->adc_source);
+	r = vss_ad8307_power_on();
+	if(r) return r;
+
+	r = vss_adc_power_on(priv->adc_source);
 	if(r) return r;
 
 	r = vss_ltc1560_bwsel(priv->bwsel);
@@ -187,6 +194,9 @@ int dev_tda18219_turn_off(void)
 {
 	int r;
 	r = vss_ad8307_power_off();
+	if(r) return r;
+
+	r = vss_adc_power_off();
 	if(r) return r;
 
 	r = tda18219_power_standby();
@@ -224,7 +234,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 	unsigned int ch = vss_task_get_channel(task);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
-	if(priv->adc_source == AD8307_SRC_BBAND) {
+	if(priv->adc_source == ADC_SRC_BBAND) {
 		freq -= (8000000 - device_config->channel_bw_hz)/2;
 	}
 
@@ -382,7 +392,7 @@ static int dev_tda18219_baseband(void* priv __attribute__((unused)),
 		return VSS_ERROR;
 	}
 
-	r = vss_ad8307_get_input_samples((uint16_t*) buffer, len);
+	r = vss_adc_get_input_samples((uint16_t*) buffer, len);
 	if(r) {
 		dev_tda18219_turn_off();
 		return VSS_ERROR;
@@ -453,7 +463,7 @@ static const struct calibration_point dev_tda18219_dvbt_1700khz_calibration[] = 
 static struct dev_tda18219_priv dev_tda18219_dvbt_1700khz_priv = {
 	.standard		= &tda18219_standard_dvbt_1700khz,
 	.calibration		= dev_tda18219_dvbt_1700khz_calibration,
-	.adc_source		= AD8307_SRC_DET,
+	.adc_source		= ADC_SRC_DET,
 	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
@@ -521,7 +531,7 @@ static const struct calibration_point dev_tda18219_dvbt_8000khz_calibration[] = 
 static struct dev_tda18219_priv dev_tda18219_dvbt_8000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= AD8307_SRC_DET,
+	.adc_source		= ADC_SRC_DET,
 	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
@@ -544,7 +554,7 @@ static const struct vss_device_config dev_tda18219_dvbt_8000khz = {
 static struct dev_tda18219_priv dev_tda18219_dvbt_1000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= AD8307_SRC_BBAND,
+	.adc_source		= ADC_SRC_BBAND,
 	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 
@@ -567,7 +577,7 @@ static const struct vss_device_config dev_tda18219_dvbt_1000khz = {
 static struct dev_tda18219_priv dev_tda18219_dvbt_500khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= AD8307_SRC_BBAND,
+	.adc_source		= ADC_SRC_BBAND,
 	.bwsel			= LTC1560_BWSEL_500KHZ
 };
 

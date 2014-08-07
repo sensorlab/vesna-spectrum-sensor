@@ -3,25 +3,29 @@
 MODEL=$1
 CONFIG_H="config.h"
 
+TDA18219_OBJS="platform/ltc1560.o platform/adc.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+
 case "$MODEL" in
 
 	sne-crewtv)
 		LIBS="-ltda18219"
 
-		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+		OBJS="$TDA18219_OBJS"
 
 		DEFS="TUNER_TDA18219 MODEL_SNE_CREWTV"
 		;;
 
 	sne-ismtv-uhf)
 		LIBS="-ltda18219"
-		OBJS="platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+
+		OBJS="$TDA18219_OBJS"
+
 		DEFS="TUNER_TDA18219 MODEL_SNE_ISMTV_UHF"
 		;;
 
 	sne-eshter)
 		LIBS="-ltda18219"
-		OBJS="platform/ltc1560.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o eeprom.o"
+		OBJS="$TDA18219_OBJS eeprom.o"
 		DEFS="TUNER_TDA18219 MODEL_SNE_ESHTER"
 		;;
 

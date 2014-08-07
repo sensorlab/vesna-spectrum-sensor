@@ -1,4 +1,4 @@
-/* Copyright (C) 2013 SensorLab, Jozef Stefan Institute
+/* Copyright (C) 2014 SensorLab, Jozef Stefan Institute
  * http://sensorlab.ijs.si
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,38 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
-#include "config.h"
+#ifndef HAVE_VSS_ADC_H
+#define HAVE_VSS_ADC_H
 
-#include <libopencm3/stm32/f1/gpio.h>
+#include <stdint.h>
 
-#include "ad8307.h"
-#include "vss.h"
-
-int vss_ad8307_init(void)
-{
-	/* GPIO pin for AD8307 ENB */
-#ifdef AD8307_PIN_ENB
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, AD8307_PIN_ENB);
+#ifdef MODEL_SNE_CREWTV
+#	define ADC_DET_PIN	GPIO0
 #endif
 
-	return VSS_OK;
-}
-
-int vss_ad8307_power_on(void)
-{
-#ifdef AD8307_PIN_ENB
-	gpio_set(GPIOA, AD8307_PIN_ENB);
+#ifdef MODEL_SNE_ISMTV_UHF
+#	define ADC_DET_PIN	GPIO2
 #endif
 
-	return VSS_OK;
-}
-
-int vss_ad8307_power_off(void)
-{
-#ifdef AD8307_PIN_ENB
-	gpio_clear(GPIOA, AD8307_PIN_ENB);
+#ifdef MODEL_SNE_ESHTER
+#	define ADC_DET_PIN	GPIO0
+#	define ADC_BBAND_PIN	GPIO2
 #endif
 
-	return VSS_OK;
-}
+#define ADC_SRC_DET		0
+#define ADC_SRC_BBAND	1
+
+int vss_adc_init(void);
+int vss_adc_power_on(int src);
+int vss_adc_power_off(void);
+int vss_adc_get_input_samples(uint16_t* buffer, unsigned nsamples);
+
+#endif
