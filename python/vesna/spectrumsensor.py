@@ -216,7 +216,7 @@ class SpectrumSensor:
 
 		device -- path to the character device for the RS232 port with the spectrum sensor.
 		"""
-		self.comm = serial.Serial(device, 115200, timeout=.5)
+		self.comm = serial.Serial(device, 576000, timeout=.5)
 		self.calibration = calibration
 
 		self.comm.write("report-off\n")

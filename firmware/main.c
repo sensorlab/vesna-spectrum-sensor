@@ -72,7 +72,7 @@ static void setup_usart(void)
 		      GPIO_CNF_INPUT_FLOAT, GPIO10);
 
 	/* Setup USART parameters. */
-	usart_set_baudrate(USART1, 115200);
+	usart_set_baudrate(USART1, 576000);
 	usart_set_databits(USART1, 8);
 	usart_set_stopbits(USART1, USART_STOPBITS_1);
 	usart_set_parity(USART1, USART_PARITY_NONE);
