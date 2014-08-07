@@ -30,8 +30,8 @@
  * buffer while the task is running, or in case the buffer is large enough,
  * synchronously after the task has finished.
  */
-#ifndef HAVE_RUN_H
-#define HAVE_RUN_H
+#ifndef HAVE_TASK_H
+#define HAVE_TASK_H
 
 #include "vss.h"
 #include "device.h"
