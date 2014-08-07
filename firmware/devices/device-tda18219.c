@@ -380,6 +380,9 @@ static int dev_tda18219_baseband(void* priv __attribute__((unused)),
 
 	int ch = sweep_config->channel_start;
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
+	if(config_priv->adc_source == ADC_SRC_BBAND) {
+		freq -= (8000000 - device_config->channel_bw_hz)/2;
+	}
 
 	int r;
 
