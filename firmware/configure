@@ -3,7 +3,7 @@
 MODEL=$1
 CONFIG_H="config.h"
 
-TDA18219_OBJS="platform/ltc1560.o platform/adc.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o"
+TDA18219_OBJS="platform/ltc1560.o platform/adc.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o platform/dac.o"
 
 case "$MODEL" in
 

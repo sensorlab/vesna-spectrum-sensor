@@ -29,6 +29,7 @@
 #include "adc.h"
 #include "average.h"
 #include "calibration.h"
+#include "dac.h"
 #include "device.h"
 #include "eeprom.h"
 #include "ltc1560.h"
@@ -158,6 +159,9 @@ static int vss_device_tda18219_init(void)
 	r = vss_adc_init();
 	if(r) return r;
 
+	r = vss_dac_init();
+	if(r) return r;
+
 	r = vss_ltc1560_init();
 	if(r) return r;
 
@@ -176,6 +180,9 @@ static int vss_device_tda18219_init(void)
 int dev_tda18219_turn_on(const struct dev_tda18219_priv* priv)
 {
 	int r;
+	r = vss_dac_set_bbgain(70);
+	if(r) return r;
+
 	r = tda18219_power_on();
 	if(r) return VSS_ERROR;
 
