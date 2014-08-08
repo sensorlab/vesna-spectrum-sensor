@@ -169,5 +169,16 @@ int vss_adc_get_input_samples(uint16_t* buffer, unsigned nsamples)
 
 	dma_disable_channel(DMA1, DMA_CHANNEL1);
 
+	if(dma_size == 2) {
+		unsigned n;
+		uint16_t* p = buffer;
+		for(n = 0; n < ntransfers; n++) {
+			uint16_t a = *p;
+			*p = *(p+1);
+			*(p+1) = a;
+			p += 2;
+		}
+	}
+
 	return VSS_OK;
 }
