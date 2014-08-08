@@ -154,6 +154,10 @@ int vss_adc_power_off(void)
 
 int vss_adc_get_input_samples(uint16_t* buffer, unsigned nsamples)
 {
+	if(nsamples % dma_size != 0) {
+		return VSS_NOT_SUPPORTED;
+	}
+
 	unsigned ntransfers = nsamples/dma_size;
 
 	dma_set_memory_address(DMA1, DMA_CHANNEL1, (u32) buffer);
