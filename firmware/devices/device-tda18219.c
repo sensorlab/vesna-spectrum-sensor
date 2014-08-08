@@ -132,6 +132,7 @@ static int get_input_power(int* rssi_dbm_100, unsigned int n_average,
 		case ADC_SRC_DET:
 			return get_input_power_det(rssi_dbm_100, n_average);
 		case ADC_SRC_BBAND:
+		case ADC_SRC_BBAND_DUAL:
 			return get_input_power_bband(rssi_dbm_100, n_average);
 		default:
 			assert(0);
@@ -234,7 +235,8 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 	unsigned int ch = vss_task_get_channel(task);
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
 
-	if(priv->adc_source == ADC_SRC_BBAND) {
+	if(priv->adc_source == ADC_SRC_BBAND ||
+			priv->adc_source == ADC_SRC_BBAND_DUAL) {
 		freq -= (8000000 - device_config->channel_bw_hz)/2;
 	}
 
@@ -380,7 +382,8 @@ static int dev_tda18219_baseband(void* priv __attribute__((unused)),
 
 	int ch = sweep_config->channel_start;
 	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
-	if(config_priv->adc_source == ADC_SRC_BBAND) {
+	if(config_priv->adc_source == ADC_SRC_BBAND ||
+			config_priv->adc_source == ADC_SRC_BBAND_DUAL) {
 		freq -= (8000000 - device_config->channel_bw_hz)/2;
 	}
 
@@ -557,7 +560,7 @@ static const struct vss_device_config dev_tda18219_dvbt_8000khz = {
 static struct dev_tda18219_priv dev_tda18219_dvbt_1000khz_priv = {
 	.standard		= &tda18219_standard_dvbt_8000khz,
 	.calibration		= dev_tda18219_dvbt_8000khz_calibration,
-	.adc_source		= ADC_SRC_BBAND,
+	.adc_source		= ADC_SRC_BBAND_DUAL,
 	.bwsel			= LTC1560_BWSEL_1000KHZ
 };
 

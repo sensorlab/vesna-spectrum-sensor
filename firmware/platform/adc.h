@@ -34,7 +34,8 @@
 #endif
 
 #define ADC_SRC_DET		0
-#define ADC_SRC_BBAND	1
+#define ADC_SRC_BBAND		1
+#define ADC_SRC_BBAND_DUAL	2
 
 int vss_adc_init(void);
 int vss_adc_power_on(int src);
