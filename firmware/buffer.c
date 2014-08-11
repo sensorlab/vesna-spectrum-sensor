@@ -24,13 +24,20 @@
  * @param data Pointer to the allocated storage array.
  * @param data_len Length of the allocated storage array.
  */
-void vss_buffer_init_size(struct vss_buffer* buffer, power_t* data, size_t data_len)
+void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
+		power_t* data, size_t data_len)
 {
+	buffer->block_size = block_size;
+
 	buffer->start = data;
 	buffer->end = data + data_len;
 
+	buffer->read = data;
 	buffer->released = data;
 	buffer->write = data;
+
+	buffer->n_read = 0;
+	buffer->n_write = 0;
 }
 
 /** @brief Get number of measurements currently stored in the buffer.
@@ -46,6 +53,47 @@ size_t vss_buffer_size(const struct vss_buffer* buffer)
 	} else {
 		return (buffer->end - buffer->released) + (write - buffer->start);
 	}
+}
+
+size_t vss_buffer_size2(const struct vss_buffer* buffer)
+{
+	return buffer->n_write - buffer->n_read;
+}
+
+void vss_buffer_read(struct vss_buffer* buffer, const power_t** data)
+{
+	if(buffer->n_write > buffer->n_read) {
+		*data = buffer->read;
+	} else {
+		*data = NULL;
+	}
+}
+
+void vss_buffer_release(struct vss_buffer* buffer, power_t* data)
+{
+	buffer->read = data + buffer->block_size;
+	if(buffer->read >= buffer->end) {
+		buffer->read = buffer->start;
+	}
+	buffer->n_read++;
+}
+
+void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data)
+{
+	if(buffer->read != buffer->write || buffer->n_write == buffer->n_read) {
+		*data = buffer->write;
+	} else {
+		*data = NULL;
+	}
+}
+
+void vss_buffer_write2(struct vss_buffer* buffer, power_t* data)
+{
+	buffer->write = data + buffer->block_size;
+	if(buffer->write >= buffer->end) {
+		buffer->write = buffer->start;
+	}
+	buffer->n_write++;
 }
 
 /** @brief Read a block of measurements from the buffer.
