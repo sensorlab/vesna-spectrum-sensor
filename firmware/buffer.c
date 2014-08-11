@@ -33,34 +33,33 @@ void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
 	buffer->end = data + data_len;
 
 	buffer->read = data;
-	buffer->released = data;
 	buffer->write = data;
 
 	buffer->n_read = 0;
 	buffer->n_write = 0;
 }
 
-/** @brief Get number of measurements currently stored in the buffer.
+/** @brief Get number of blocks currently stored in the buffer.
  *
  * @param buffer Pointer to the circular buffer.
- * @return Number of measurements currently stored in the buffer.
+ * @return Number of blocks currently stored in the buffer.
  */
 size_t vss_buffer_size(const struct vss_buffer* buffer)
-{
-	power_t *write = buffer->write;
-	if(buffer->released <= write) {
-		return write - buffer->released;
-	} else {
-		return (buffer->end - buffer->released) + (write - buffer->start);
-	}
-}
-
-size_t vss_buffer_size2(const struct vss_buffer* buffer)
 {
 	return buffer->n_write - buffer->n_read;
 }
 
-void vss_buffer_read(struct vss_buffer* buffer, const power_t** data)
+/** @brief Read a block from the buffer.
+ *
+ * If buffer is currently empty, data is set to NULL.
+ *
+ * After the caller is done with measurements pointed to by @a data, it should
+ * call vss_buffer_release().
+ *
+ * @param buffer Pointer to the circular buffer.
+ * @param data Pointer to a block for reading.
+ */
+void vss_buffer_read(struct vss_buffer* buffer, power_t** data)
 {
 	if(buffer->n_write > buffer->n_read) {
 		*data = buffer->read;
@@ -69,6 +68,13 @@ void vss_buffer_read(struct vss_buffer* buffer, const power_t** data)
 	}
 }
 
+/** @brief Release a block of measurements after reading.
+ *
+ * Should be called once after each call to vss_buffer_read().
+ *
+ * @param buffer Pointer to the circular buffer.
+ * @param data Pointer to the block obtained from vss_buffer_read().
+ */
 void vss_buffer_release(struct vss_buffer* buffer, power_t* data)
 {
 	buffer->read = data + buffer->block_size;
@@ -78,6 +84,13 @@ void vss_buffer_release(struct vss_buffer* buffer, power_t* data)
 	buffer->n_read++;
 }
 
+/** @brief Reserve a block for writing to the circular buffer.
+ *
+ * If buffer is full, data is set to NULL.
+ *
+ * @param buffer Pointer to the circular buffer.
+ * @param data Pointer to the block for writing.
+ */
 void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data)
 {
 	if(buffer->read != buffer->write || buffer->n_write == buffer->n_read) {
@@ -87,71 +100,16 @@ void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data)
 	}
 }
 
-void vss_buffer_write2(struct vss_buffer* buffer, power_t* data)
+/** @brief Write a reserved block to the circular buffer.
+ *
+ * @param buffer Pointer to the circular buffer.
+ * @param data Pointer to the block obtained from vss_buffer_read().
+ */
+void vss_buffer_write(struct vss_buffer* buffer, power_t* data)
 {
 	buffer->write = data + buffer->block_size;
 	if(buffer->write >= buffer->end) {
 		buffer->write = buffer->start;
 	}
 	buffer->n_write++;
-}
-
-/** @brief Read a block of measurements from the buffer.
- *
- * If buffer is currently empty, function will return a block of length 0.
- *
- * After the caller is done with measurements pointed to by @a data, it should
- * call vss_buffer_release_block().
- *
- * @param buffer Pointer to the circular buffer.
- * @param data Pointer to a block of measurements for reading.
- * @param data_len Number of measurements read.
- */
-void vss_buffer_read_block(struct vss_buffer* buffer, const power_t** data, size_t* data_len)
-{
-	*data = buffer->released;
-	power_t *write = buffer->write;
-
-	if(buffer->released <= write) {
-		*data_len = write - buffer->released;
-		buffer->read = write;
-	} else {
-		*data_len = buffer->end - buffer->released;
-		buffer->read = buffer->start;
-	}
-}
-
-/** @brief Release a block of measurements after reading.
- *
- * Should be called once after each call to vss_buffer_read_block().
- *
- * @param buffer Pointer to the circular buffer.
- */
-void vss_buffer_release_block(struct vss_buffer* buffer)
-{
-	buffer->released = buffer->read;
-}
-
-/** @brief Write a single measurement to the circular buffer.
- *
- * @param buffer Pointer to the circular buffer.
- * @param data Measurement to write to the buffer.
- * @return VSS_ERROR if buffer is full or VSS_OK otherwise.
- */
-int vss_buffer_write(struct vss_buffer* buffer, power_t data)
-{
-	power_t* write = buffer->write;
-
-	write++;
-	if(write == buffer->end) {
-		write = buffer->start;
-	}
-
-	if(write == buffer->released) {
-		return VSS_ERROR;
-	} else {
-		*(buffer->write) = data;
-		buffer->write = write;
-		return VSS_OK;
-	}
 }
