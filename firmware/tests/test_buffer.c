@@ -202,3 +202,23 @@ void test_dont_overwrite_values_just_read(void)
 	vss_buffer_reserve(&buffer, &wptr);
 	TEST_ASSERT_TRUE(wptr != NULL);
 }
+
+void test_odd_sized_buffer(void)
+{
+	memset(buffer_data, 0, buffer_data_len*sizeof(*buffer_data));
+	vss_buffer_init_size(&buffer, 30, buffer_data, 70);
+
+	int n = 0;
+	while(1) {
+		power_t* wptr;
+		vss_buffer_reserve(&buffer, &wptr);
+		if(wptr == NULL) break;
+
+		memset(wptr, 0x01, 30*sizeof(*wptr));
+		vss_buffer_write(&buffer, wptr);
+		n++;
+	}
+
+	TEST_ASSERT_EQUAL(2, n);
+	TEST_ASSERT_EQUAL(0, buffer_data[70]);
+}

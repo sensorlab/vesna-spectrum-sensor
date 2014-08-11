@@ -30,7 +30,7 @@ void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
 	buffer->block_size = block_size;
 
 	buffer->start = data;
-	buffer->end = data + data_len;
+	buffer->end = data + data_len - (data_len % block_size);
 
 	buffer->read = data;
 	buffer->write = data;
