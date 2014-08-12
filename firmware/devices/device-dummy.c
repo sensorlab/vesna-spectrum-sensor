@@ -96,7 +96,12 @@ static void do_sample(void)
 
 	unsigned n;
 	for(n = 0; n < current_task->sweep_config->n_average; n++) {
-		priv->get_baseband(&data[n]);
+		r = priv->get_baseband(&data[n]);
+		if(r) {
+			vss_task_set_error(current_task, "test error");
+			current_task = NULL;
+			return;
+		}
 	}
 
 	r = vss_task_write_block(current_task);
