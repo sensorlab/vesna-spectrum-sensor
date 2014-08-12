@@ -80,6 +80,8 @@ struct vss_task {
 	const char* volatile error_msg;
 
 	enum vss_task_type type;
+
+	unsigned int sample_num;
 };
 
 /** @brief Result of a buffer read operation. */
@@ -89,6 +91,8 @@ struct vss_task_read_result {
 
 	/** @brief Current channel being read from the buffer. */
 	unsigned int read_channel;
+
+	unsigned int read_cnt;
 };
 
 /** @brief Initialize a device task with statically allocated storage.

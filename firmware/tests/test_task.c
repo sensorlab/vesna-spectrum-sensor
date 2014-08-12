@@ -45,6 +45,15 @@ static const struct vss_sweep_config sweep_config = {
 	.n_average = 10
 };
 
+static const struct vss_sweep_config sample_config = {
+	.device_config = &device_config,
+
+	.channel_start = 0,
+	.channel_stop = 0,
+	.channel_step = 0,
+	.n_average = 10
+};
+
 void setUp(void)
 {
 }
@@ -91,7 +100,7 @@ void test_single_run(void)
 
 void test_single_run_block(void)
 {
-	vss_task_init(&run, &sweep_config, 5, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 5, buffer_data);
 	vss_task_start(&run);
 
 	int cnt = 0;
@@ -167,6 +176,38 @@ void test_read(void)
 		if(channel != -1) {
 			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
 			TEST_ASSERT_EQUAL(v, power);
+			cnt++;
+		}
+	}
+
+	TEST_ASSERT_EQUAL(10, cnt);
+}
+
+void test_read_sample(void)
+{
+	vss_task_init(&run, VSS_TASK_SAMPLE, &sample_config, -1, buffer_data);
+	vss_task_start(&run);
+
+	int cnt;
+	for(cnt = 0; cnt < 2; cnt++) {
+		power_t *wptr;
+		vss_task_reserve_block(&run, &wptr, 0xdeadbeef);
+		memset(wptr, 0x01, sweep_config.n_average*sizeof(*wptr));
+		vss_task_write_block(&run);
+	}
+
+	struct vss_task_read_result ctx;
+	vss_task_read(&run, &ctx);
+
+	int channel;
+	uint32_t timestamp;
+	power_t power;
+
+	cnt = 0;
+	while(vss_task_read_parse(&run, &ctx, &timestamp, &channel, &power) == VSS_OK) {
+		if(channel != -1) {
+			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
+			TEST_ASSERT_EQUAL(0x0101, power);
 			cnt++;
 		}
 	}
