@@ -79,8 +79,8 @@ size_t vss_buffer_size(const struct vss_buffer* buffer);
 size_t vss_buffer_size2(const struct vss_buffer* buffer);
 
 void vss_buffer_read(struct vss_buffer* buffer, void** data);
-void vss_buffer_release(struct vss_buffer* buffer, void* data);
+void vss_buffer_release(struct vss_buffer* buffer);
 void vss_buffer_reserve(struct vss_buffer* buffer, void** data);
-void vss_buffer_write(struct vss_buffer* buffer, void* data);
+void vss_buffer_write(struct vss_buffer* buffer);
 
 #endif

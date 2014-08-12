@@ -73,11 +73,10 @@ void vss_buffer_read(struct vss_buffer* buffer, void** data)
  * Should be called once after each call to vss_buffer_read().
  *
  * @param buffer Pointer to the circular buffer.
- * @param data Pointer to the block obtained from vss_buffer_read().
  */
-void vss_buffer_release(struct vss_buffer* buffer, void* data)
+void vss_buffer_release(struct vss_buffer* buffer)
 {
-	buffer->read = data + buffer->block_size;
+	buffer->read += buffer->block_size;
 	if(buffer->read >= buffer->end) {
 		buffer->read = buffer->start;
 	}
@@ -103,11 +102,10 @@ void vss_buffer_reserve(struct vss_buffer* buffer, void** data)
 /** @brief Write a reserved block to the circular buffer.
  *
  * @param buffer Pointer to the circular buffer.
- * @param data Pointer to the block obtained from vss_buffer_read().
  */
-void vss_buffer_write(struct vss_buffer* buffer, void* data)
+void vss_buffer_write(struct vss_buffer* buffer)
 {
-	buffer->write = data + buffer->block_size;
+	buffer->write += buffer->block_size;
 	if(buffer->write >= buffer->end) {
 		buffer->write = buffer->start;
 	}
