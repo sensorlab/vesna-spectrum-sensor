@@ -39,7 +39,8 @@ typedef int (*vss_device_run_t)(void* priv, struct vss_task* task);
  * @param priv Pointer to the implementation specific data structure.
  * @param buffer Pointer to caller-allocated buffer where the result will be
  * written.
- * @param len Size of the buffer in bytes. */
+ * @param len Size of the buffer in bytes.
+ * @return VSS_OK on success or an error code otherwise. */
 typedef int (*vss_device_status_t)(void* priv, char* buffer, size_t len);
 
 /** @brief Callback for obtaining baseband samples.

@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -32,10 +34,11 @@
 
 #include "task.h"
 #include "rcc.h"
+#include "version.h"
 
 #define BASEBAND_SAMPLE_NUM		1024
 #define USART_BUFFER_SIZE		128
-#define DATA_BUFFER_SIZE		32
+#define DATA_BUFFER_SIZE		20480
 
 static char usart_buffer[USART_BUFFER_SIZE];
 static int usart_buffer_len = 0;
@@ -201,12 +204,22 @@ static void command_report_on(void)
 {
 	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
-	} if (has_started) {
+	} else if (has_started) {
 		printf("error: stop current sweep first\n");
 	} else {
-		vss_task_init(&current_task, &current_sweep_config, -1, data_buffer);
+		int r;
+		r = vss_task_init(&current_task, &current_sweep_config, -1,
+				data_buffer);
+		if(r) {
+			if(r == VSS_TOO_MANY) {
+				printf("error: not enough memory for sweep\n");
+			} else {
+				printf("error: vss_task_init returned %d\n", r);
+			}
+			return;
+		}
 
-		int r = vss_task_start(&current_task);
+		r = vss_task_start(&current_task);
 		if(r) {
 			printf("error: vss_task_start returned %d\n", r);
 		}
@@ -338,18 +351,23 @@ static void dispatch(const char* cmd)
 int main(void)
 {
 	setup();
+	printf("boot\n");
 
+	int r = VSS_OK;
 #ifdef TUNER_TDA18219
-	vss_device_tda18219_register();
+	r = vss_device_tda18219_register();
 #endif
 
 #ifdef TUNER_CC
-	vss_device_cc_register();
+	r = vss_device_cc_register();
 #endif
 
 #ifdef TUNER_NULL
-	vss_device_dummy_register();
+	r = vss_device_dummy_register();
 #endif
+	if(r != VSS_OK) {
+		printf("error: registering device: %d\n", r);
+	}
 
 	while(1) {
 		if (usart_buffer_attn) {

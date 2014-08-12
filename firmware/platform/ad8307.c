@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <libopencm3/stm32/f1/adc.h>
 #include <libopencm3/stm32/f1/dma.h>
 #include <libopencm3/stm32/f1/gpio.h>
@@ -75,6 +77,8 @@ int vss_ad8307_init(void)
 		channel_array[0] = 0;
 	} else if(AD8307_PIN_OUT == GPIO2) {
 		channel_array[0] = 2;
+	} else {
+		return VSS_ERROR;
 	}
 	adc_set_regular_sequence(ADC1, 1, channel_array);
 
