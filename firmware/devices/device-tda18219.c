@@ -418,6 +418,8 @@ static const struct vss_device dev_tda18219 = {
 	.get_calibration	= dev_tda18219_get_calibration,
 	.baseband		= dev_tda18219_baseband,
 
+	.supports_task_baseband	= 0,
+
 	.priv			= NULL
 };
 

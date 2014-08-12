@@ -27,9 +27,26 @@ const struct vss_device_config* vss_device_config_list[VSS_MAX_DEVICE_CONFIG];
  * @param task Pointer to the device task to start.
  * @return VSS_OK on success or an error code otherwise.
  */
-int vss_device_run(const struct vss_device* device, struct vss_task* task)
+int vss_device_run_sweep(const struct vss_device* device, struct vss_task* task)
 {
 	return device->run(device->priv, task);
+}
+
+int vss_device_run_sample(const struct vss_device* device, struct vss_task* task)
+{
+	if(device->supports_task_baseband) {
+		return device->run(device->priv, task);
+	} else {
+		return VSS_NOT_SUPPORTED;
+	}
+}
+
+int vss_device_resume(const struct vss_device* device, struct vss_task* task)
+{
+	if(device->resume == NULL) {
+		return VSS_NOT_SUPPORTED;
+	}
+	return device->resume(device->priv, task);
 }
 
 /** @brief Obtain a spectrum sensing device status.
@@ -60,26 +77,6 @@ const struct calibration_point* vss_device_get_calibration(
 		return device->get_calibration(device->priv, device_config);
 	} else {
 		return NULL;
-	}
-}
-
-/** @brief Obtain a continuous string of baseband samples.
- *
- * Not all devices support this function. Sampling rate and ADC range are device specific.
- *
- * @param device Pointer to the device to use.
- * @param sweep_config Pointer to the sweep config to use for tuning the device.
- * @param buffer Pointer to caller-allocated buffer where the samples will be
- * stored.
- * @param len Size of the buffer in samples.
- * @return VSS_OK on success or an error code otherwise. */
-int vss_device_baseband(const struct vss_device* device, const struct vss_sweep_config* sweep_config,
-		power_t* buffer, size_t len)
-{
-	if(device->baseband == NULL) {
-		return VSS_NOT_SUPPORTED;
-	} else {
-		return device->baseband(device->priv, sweep_config, buffer, len);
 	}
 }
 

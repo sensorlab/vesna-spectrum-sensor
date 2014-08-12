@@ -60,7 +60,7 @@ static int dev_dummy_status(void* priv __attribute__((unused)), char* buffer, si
 	return VSS_OK;
 }
 
-static void do_stuff(void)
+static void do_sweep(void)
 {
 	power_t result;
 
@@ -81,13 +81,59 @@ static void do_stuff(void)
 	}
 }
 
+static void do_sample(void)
+{
+	power_t* data;
+
+	const struct dev_dummy_config_priv* priv = current_task->sweep_config->device_config->priv;
+
+	int r;
+	r = vss_task_reserve_block(current_task, &data, vss_rtc_read());
+	if(r == VSS_SUSPEND) {
+		return;
+	}
+
+	unsigned n;
+	for(n = 0; n < current_task->sweep_config->n_average; n++) {
+		r = priv->get_baseband(&data[n]);
+		if(r) {
+			vss_task_set_error(current_task, "test error");
+			current_task = NULL;
+			return;
+		}
+	}
+
+	r = vss_task_write_block(current_task);
+	if(r) {
+		current_task = NULL;
+		return;
+	}
+
+	vss_timer_schedule(CHANNEL_TIME_MS);
+}
+
 void tim4_isr(void)
 {
 	vss_timer_ack();
-	do_stuff();	
+	switch (current_task->type) {
+		case VSS_TASK_SWEEP:
+			do_sweep();
+			break;
+		case VSS_TASK_SAMPLE:
+			do_sample();
+			break;
+	}
 }
 
-static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* task)
+static int dev_dummy_resume(void* priv __attribute__((unused)),
+				struct vss_task* task __attribute__((unused)))
+{
+	vss_timer_schedule(CHANNEL_TIME_MS);
+
+	return VSS_OK;
+}
+
+static int dev_dummy_run(void* priv, struct vss_task* task)
 {
 	if(current_task != NULL) {
 		return VSS_TOO_MANY;
@@ -97,30 +143,17 @@ static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* ta
 
 	current_task = task;
 
-	vss_timer_schedule(CHANNEL_TIME_MS);
-
-	return VSS_OK;
-}
-
-static int dev_dummy_baseband(void* priv __attribute__((unused)),
-		const struct vss_sweep_config* sweep_config, power_t* buffer, size_t len)
-{
-	const struct dev_dummy_config_priv* config_priv = sweep_config->device_config->priv;
-
-	size_t n;
-	for(n = 0; n < len; n++) {
-		config_priv->get_baseband(&buffer[n]);
-	}
-
-	return VSS_OK;
+	return dev_dummy_resume(priv, task);
 }
 
 static const struct vss_device device_dummy = {
 	.name = "dummy device",
 
 	.run			= dev_dummy_run,
+	.resume			= dev_dummy_resume,
 	.status			= dev_dummy_status,
-	.baseband		= dev_dummy_baseband,
+
+	.supports_task_baseband	= 1,
 
 	.priv 			= NULL
 };

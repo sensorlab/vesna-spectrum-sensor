@@ -15,17 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include <string.h>
+
 #include "unity.h"
 #include "buffer.h"
+#include "vss.h"
 
 #define buffer_data_len 1024
+#define block_size 128
+
+#define nblocks (buffer_data_len/block_size)
 
 static struct vss_buffer buffer;
-static power_t buffer_data[buffer_data_len];
+static char buffer_data[buffer_data_len];
 
 void setUp(void)
 {
-	vss_buffer_init(&buffer, buffer_data);
+	vss_buffer_init(&buffer, block_size, buffer_data);
 }
 
 void tearDown(void)
@@ -38,77 +44,83 @@ void test_new_is_empty(void)
 	TEST_ASSERT_EQUAL(0, r);
 }
 
+void test_too_large(void)
+{
+	int r = vss_buffer_init_size(&buffer, 100, buffer_data, 10);
+	TEST_ASSERT_EQUAL(VSS_TOO_MANY, r);
+}
+
 void test_empty_read(void)
 {
-	const power_t *ptr;
-	size_t len;
+	char *ptr;
 
-	vss_buffer_read_block(&buffer, &ptr, &len);
+	vss_buffer_read(&buffer, (void**) &ptr);
 
-	TEST_ASSERT_EQUAL(0, len);
+	TEST_ASSERT_EQUAL(NULL, ptr);
 }
 
 void test_read_write(void)
 {
-	const power_t v = 0x70fe;
+	char *wptr;
 
-	int r = vss_buffer_write(&buffer, v);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
+	memset(wptr, 0x42, block_size);
+	vss_buffer_write(&buffer);
+	char *rptr;
+	vss_buffer_read(&buffer, (void **) &rptr);
 
-	TEST_ASSERT_EQUAL(0, r);
-
-	const power_t* ptr;
-	size_t len;
-
-	vss_buffer_read_block(&buffer, &ptr, &len);
-
-	TEST_ASSERT_EQUAL(1, len);
-	TEST_ASSERT_EQUAL(v, ptr[0]);
+	int n;
+	for(n = 0; n < block_size; n++) {
+		TEST_ASSERT_EQUAL(0x42, rptr[n]);
+	}
 }
 
 void test_write_full(void)
 {
-	const power_t v = 0x70fe;
+	char *wptr;
 
 	size_t n;
-	for(n = 0; n < buffer_data_len - 1; n++) {
-		int r = vss_buffer_write(&buffer, v);
-		TEST_ASSERT_EQUAL(0, r);
+	for(n = 0; n < nblocks; n++) {
+		vss_buffer_reserve(&buffer, (void**) &wptr);
+		TEST_ASSERT_TRUE(wptr != NULL);
+		vss_buffer_write(&buffer);
 	}
 
-	int r = vss_buffer_write(&buffer, v);
-	TEST_ASSERT_EQUAL(-1, r);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
+	TEST_ASSERT_EQUAL(NULL, wptr);
 
 	size_t s = vss_buffer_size(&buffer);
-	TEST_ASSERT_EQUAL(buffer_data_len - 1, s);
+	TEST_ASSERT_EQUAL(nblocks, s);
 }
 
-void prepare_wrap_around(void)
+void read_write_half(void)
 {
 	size_t n;
 
-	for(n = 0; n < buffer_data_len/2; n++) {
-		vss_buffer_write(&buffer, 0);
+	for(n = 0; n < nblocks/2; n++) {
+		char *wptr;
+		vss_buffer_reserve(&buffer, (void**) &wptr);
+		vss_buffer_write(&buffer);
 
-		const power_t* ptr;
-		size_t len;
-		vss_buffer_read_block(&buffer, &ptr, &len);
-		vss_buffer_release_block(&buffer);
+		char* rptr;
+		vss_buffer_read(&buffer, (void **) &rptr);
+		vss_buffer_release(&buffer);
 	}
 }
 
 void test_write_half(void)
 {
-	prepare_wrap_around();
+	read_write_half();
 
 	size_t s = vss_buffer_size(&buffer);
 	TEST_ASSERT_EQUAL(0, s);
 
-	prepare_wrap_around();
+	read_write_half();
 
 	s = vss_buffer_size(&buffer);
 	TEST_ASSERT_EQUAL(0, s);
 
-	prepare_wrap_around();
+	read_write_half();
 
 	s = vss_buffer_size(&buffer);
 	TEST_ASSERT_EQUAL(0, s);
@@ -116,75 +128,104 @@ void test_write_half(void)
 
 void test_write_full_wrap_around(void)
 {
-	prepare_wrap_around();
+	read_write_half();
 
-	const power_t v = 0x70fe;
-
+	char *wptr;
 	size_t n;
-	for(n = 0; n < buffer_data_len - 1; n++) {
-		int r = vss_buffer_write(&buffer, v);
-		TEST_ASSERT_EQUAL(0, r);
+	for(n = 0; n < nblocks; n++) {
+		vss_buffer_reserve(&buffer, (void **) &wptr);
+		TEST_ASSERT_TRUE(wptr != NULL);
+		vss_buffer_write(&buffer);
 	}
 
-	int r = vss_buffer_write(&buffer, v);
-	TEST_ASSERT_EQUAL(-1, r);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
+	TEST_ASSERT_EQUAL(NULL, wptr);
 
 	size_t s = vss_buffer_size(&buffer);
-	TEST_ASSERT_EQUAL(buffer_data_len - 1, s);
+	TEST_ASSERT_EQUAL(nblocks, s);
 }
 
 void test_read_wrap_around(void)
 {
-	prepare_wrap_around();
-
-	const power_t v = 0x70fe;
+	read_write_half();
 
 	size_t n;
-	for(n = 0; n < buffer_data_len - 1; n++) {
-		vss_buffer_write(&buffer, v);
+	for(n = 0; n < nblocks; n++) {
+		char *wptr;
+		vss_buffer_reserve(&buffer, (void **) &wptr);
+		TEST_ASSERT_TRUE(wptr != NULL);
+		memset(wptr, 0x42, block_size);
+		vss_buffer_write(&buffer);
 	}
 
-	const power_t* data;
-	size_t len;
+	char* rptr;
 
 	size_t sum = 0;
-	do {
-		vss_buffer_read_block(&buffer, &data, &len);
-		for(n = 0; n < len; n++) {
-			TEST_ASSERT_EQUAL(v, data[n]);
-		}
-		vss_buffer_release_block(&buffer);
+	while(1) {
+		vss_buffer_read(&buffer, (void **) &rptr);
+		if(rptr == NULL) break;
 
-		sum += len;
-	} while(len != 0);
+		for(n = 0; n < block_size; n++) {
+			TEST_ASSERT_EQUAL(0x42, rptr[n]);
+		}
+		vss_buffer_release(&buffer);
+
+		sum++;
+	}
 	
-	TEST_ASSERT_EQUAL(buffer_data_len - 1, sum);
+	TEST_ASSERT_EQUAL(nblocks, sum);
 }
 
 void test_dont_overwrite_values_just_read(void)
 {
-	const power_t v1 = 0x70fe;
-	const power_t v2 = 0xbeef;
+	char* wptr;
 
 	size_t n;
-	for(n = 0; n < 100; n++) {
-		vss_buffer_write(&buffer, v1);
+	for(n = 0; n < nblocks/2; n++) {
+		vss_buffer_reserve(&buffer, (void **) &wptr);
+		memset(wptr, 0x01, block_size);
+		vss_buffer_write(&buffer);
 	}
 
-	const power_t* data;
-	size_t len;
+	char* rptr;
 
-	vss_buffer_read_block(&buffer, &data, &len);
+	vss_buffer_read(&buffer, (void **) &rptr);
 
-	while(!vss_buffer_write(&buffer, v2));
+	while(1) {
+		char* wptr;
+		vss_buffer_reserve(&buffer, (void **) &wptr);
+		if(wptr == NULL) break;
 
-	for(n = 0; n < len; n++) {
-		TEST_ASSERT_EQUAL(v1, data[n]);
+		memset(wptr, 0x02, block_size);
+		vss_buffer_write(&buffer);
 	}
 
-	vss_buffer_release_block(&buffer);
+	for(n = 0; n < block_size; n++) {
+		TEST_ASSERT_EQUAL_HEX(0x01, rptr[n]);
+	}
 
-	int r = vss_buffer_write(&buffer, v2);
-	
-	TEST_ASSERT_EQUAL(0, r);
+	vss_buffer_release(&buffer);
+
+	vss_buffer_reserve(&buffer, (void **) &wptr);
+	TEST_ASSERT_TRUE(wptr != NULL);
+}
+
+void test_odd_sized_buffer(void)
+{
+	memset(buffer_data, 0, buffer_data_len);
+	vss_buffer_init_size(&buffer, 30, buffer_data, 70);
+
+	int n = 0;
+	while(1) {
+		char* wptr;
+		vss_buffer_reserve(&buffer, (void**) &wptr);
+		if(wptr == NULL) break;
+
+		memset(wptr, 0x01, 30);
+		vss_buffer_write(&buffer);
+		n++;
+	}
+
+	TEST_ASSERT_EQUAL(2, n);
+	TEST_ASSERT_EQUAL(0, buffer_data[70]);
 }
