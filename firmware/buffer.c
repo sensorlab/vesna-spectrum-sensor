@@ -25,7 +25,7 @@
  * @param data_len Length of the allocated storage array.
  */
 void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
-		power_t* data, size_t data_len)
+		void* data, size_t data_len)
 {
 	buffer->block_size = block_size;
 
@@ -59,7 +59,7 @@ size_t vss_buffer_size(const struct vss_buffer* buffer)
  * @param buffer Pointer to the circular buffer.
  * @param data Pointer to a block for reading.
  */
-void vss_buffer_read(struct vss_buffer* buffer, power_t** data)
+void vss_buffer_read(struct vss_buffer* buffer, void** data)
 {
 	if(buffer->n_write > buffer->n_read) {
 		*data = buffer->read;
@@ -75,7 +75,7 @@ void vss_buffer_read(struct vss_buffer* buffer, power_t** data)
  * @param buffer Pointer to the circular buffer.
  * @param data Pointer to the block obtained from vss_buffer_read().
  */
-void vss_buffer_release(struct vss_buffer* buffer, power_t* data)
+void vss_buffer_release(struct vss_buffer* buffer, void* data)
 {
 	buffer->read = data + buffer->block_size;
 	if(buffer->read >= buffer->end) {
@@ -91,7 +91,7 @@ void vss_buffer_release(struct vss_buffer* buffer, power_t* data)
  * @param buffer Pointer to the circular buffer.
  * @param data Pointer to the block for writing.
  */
-void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data)
+void vss_buffer_reserve(struct vss_buffer* buffer, void** data)
 {
 	if(buffer->read != buffer->write || buffer->n_write == buffer->n_read) {
 		*data = buffer->write;
@@ -105,7 +105,7 @@ void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data)
  * @param buffer Pointer to the circular buffer.
  * @param data Pointer to the block obtained from vss_buffer_read().
  */
-void vss_buffer_write(struct vss_buffer* buffer, power_t* data)
+void vss_buffer_write(struct vss_buffer* buffer, void* data)
 {
 	buffer->write = data + buffer->block_size;
 	if(buffer->write >= buffer->end) {

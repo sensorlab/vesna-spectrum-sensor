@@ -40,14 +40,14 @@ struct vss_buffer {
 	size_t block_size;
 
 	/** @brief Pointer to the first element of allocated buffer. */
-	power_t* start;
+	void* start;
 	/** @brief Pointer to the one after the last element in the allocated buffer. */
-	power_t* end;
+	void* end;
 
 	/** @brief Pointer to the one after the furthest position already read. */
-	power_t* read;
+	void* read;
 	/** @brief Pointer to the last written position. */
-	power_t* volatile write;
+	void* volatile write;
 
 	/** @brief Total number of blocks read from the buffer. */
 	int n_read;
@@ -71,16 +71,16 @@ struct vss_buffer {
  * @param data Array to use as buffer storage.
  */
 #define vss_buffer_init(buffer, block_size, data) \
-	vss_buffer_init_size(buffer, block_size, data, sizeof(data)/sizeof(*data))
+	vss_buffer_init_size(buffer, block_size, data, sizeof(data))
 
 void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
-		power_t* data, size_t data_len);
+		void* data, size_t data_len);
 size_t vss_buffer_size(const struct vss_buffer* buffer);
 size_t vss_buffer_size2(const struct vss_buffer* buffer);
 
-void vss_buffer_read(struct vss_buffer* buffer, power_t** data);
-void vss_buffer_release(struct vss_buffer* buffer, power_t* data);
-void vss_buffer_reserve(struct vss_buffer* buffer, power_t** data);
-void vss_buffer_write(struct vss_buffer* buffer, power_t* data);
+void vss_buffer_read(struct vss_buffer* buffer, void** data);
+void vss_buffer_release(struct vss_buffer* buffer, void* data);
+void vss_buffer_reserve(struct vss_buffer* buffer, void** data);
+void vss_buffer_write(struct vss_buffer* buffer, void* data);
 
 #endif
