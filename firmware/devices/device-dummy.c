@@ -128,9 +128,12 @@ void tim4_isr(void)
 static int dev_dummy_resume(void* priv __attribute__((unused)),
 				struct vss_task* task __attribute__((unused)))
 {
-	vss_timer_schedule(CHANNEL_TIME_MS);
-
-	return VSS_OK;
+	if(current_task != NULL) {
+		vss_timer_schedule(CHANNEL_TIME_MS);
+		return VSS_OK;
+	} else {
+		return VSS_ERROR;
+	}
 }
 
 static int dev_dummy_run(void* priv, struct vss_task* task)

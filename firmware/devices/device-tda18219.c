@@ -41,9 +41,12 @@
 
 enum state_t {
 	OFF,
+	SET_FREQUENCY,
 	RUN_MEASUREMENT,
 	READ_MEASUREMENT,
-	SET_FREQUENCY };
+	SET_FREQUENCY_ONCE,
+	BASEBAND_SAMPLE,
+};
 
 static enum state_t current_state = OFF;
 static struct vss_task* current_task = NULL;
@@ -241,6 +244,7 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 	}
 
 	int rssi_dbm_100;
+	power_t* data;
 	int r;
 
 	switch(state) {
@@ -281,12 +285,52 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 
 			rssi_dbm_100 -= calibration;
 
-			if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+			r = vss_task_insert(task, rssi_dbm_100, vss_rtc_read());
+
+			if(r == VSS_OK) {
 				return dev_tda18219_state(task, SET_FREQUENCY);
+			} else if(r == VSS_SUSPEND) {
+				return READ_MEASUREMENT;
 			} else {
 				dev_tda18219_stop();
 				return OFF;
 			}
+
+		case SET_FREQUENCY_ONCE:
+			r = tda18219_set_frequency(priv->standard, freq);
+			if(r) {
+				vss_task_set_error(task,
+						"tda18219_set_frequency() returned an error");
+				dev_tda18219_stop();
+				return OFF;
+			}
+			return BASEBAND_SAMPLE;
+
+		case BASEBAND_SAMPLE:
+
+			task->state = VSS_DEVICE_RUN_SUSPENDED;
+
+			r = vss_task_reserve_block(task, &data, vss_rtc_read());
+			if(r == VSS_SUSPEND) {
+				return BASEBAND_SAMPLE;
+			}
+
+			r = vss_adc_get_input_samples((uint16_t*) data,
+					current_task->sweep_config->n_average);
+			if(r) {
+				vss_task_set_error(task,
+						"vss_adc_get_input_samples returned an error");
+				dev_tda18219_stop();
+				return OFF;
+			}
+
+			r = vss_task_write_block(task);
+			if(r) {
+				dev_tda18219_stop();
+				return OFF;
+			}
+
+			return BASEBAND_SAMPLE;
 
 		default:
 			return OFF;
@@ -296,6 +340,12 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 void vss_device_tda18219_isr(void)
 {
 	current_state = dev_tda18219_state(current_task, current_state);
+}
+
+int dev_tda18219_resume(void* priv __attribute__((unused)), struct vss_task* task)
+{
+	current_state = dev_tda18219_state(task, current_state);
+	return VSS_OK;
 }
 
 int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_task* task)
@@ -309,7 +359,12 @@ int dev_tda18219_run(void* priv __attribute__((unused)), struct vss_task* task)
 
 	vss_rtc_reset();
 
-	current_state = dev_tda18219_state(task, SET_FREQUENCY);
+	if(task->type == VSS_TASK_SWEEP) {
+		current_state = dev_tda18219_state(task, SET_FREQUENCY);
+	} else {
+		current_state = dev_tda18219_state(task, SET_FREQUENCY_ONCE);
+	}
+
 	return VSS_OK;
 }
 
@@ -374,51 +429,16 @@ static const struct calibration_point* dev_tda18219_get_calibration(
 	return cpriv->calibration;
 }
 
-static int dev_tda18219_baseband(void* priv __attribute__((unused)),
-		const struct vss_sweep_config* sweep_config, power_t* buffer, size_t len)
-{
-	const struct vss_device_config* device_config = sweep_config->device_config;
-	const struct dev_tda18219_priv* config_priv = device_config->priv;
-
-	int ch = sweep_config->channel_start;
-	int freq = device_config->channel_base_hz + device_config->channel_spacing_hz * ch;
-	if(config_priv->adc_source == ADC_SRC_BBAND ||
-			config_priv->adc_source == ADC_SRC_BBAND_DUAL) {
-		freq -= (8000000 - device_config->channel_bw_hz)/2;
-	}
-
-	int r;
-
-	r = dev_tda18219_turn_on(config_priv);
-	if(r) return r;
-
-	r = tda18219_set_frequency_sync(config_priv->standard, freq);
-	if(r) {
-		dev_tda18219_turn_off();
-		return VSS_ERROR;
-	}
-
-	r = vss_adc_get_input_samples((uint16_t*) buffer, len);
-	if(r) {
-		dev_tda18219_turn_off();
-		return VSS_ERROR;
-	}
-
-	r = dev_tda18219_turn_off();
-	if(r) return r;
-
-	return VSS_OK;
-}
-
 static const struct vss_device dev_tda18219 = {
 	.name = "tda18219hn",
 
 	.status			= dev_tda18219_status,
 	.run			= dev_tda18219_run,
+	.resume			= dev_tda18219_resume,
 	.get_calibration	= dev_tda18219_get_calibration,
 	.baseband		= dev_tda18219_baseband,
 
-	.supports_task_baseband	= 0,
+	.supports_task_baseband	= 1,
 
 	.priv			= NULL
 };
