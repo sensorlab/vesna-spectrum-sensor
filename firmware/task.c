@@ -21,9 +21,6 @@
 
 /** @brief Initialize a device task.
  *
- * Note: circular buffer needs to be initialized separately. Use the
- * vss_task_init() macro which does that automatically.
- *
  * @param task Pointer to the task to initialize.
  * @param sweep_config Pointer to the spectrum sweep configuration to use.
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for
