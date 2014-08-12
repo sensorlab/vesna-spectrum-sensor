@@ -73,6 +73,8 @@ struct vss_device {
 	/** @brief Callback for starting a spectrum sensing task. */
 	vss_device_run_t run;
 
+	vss_device_run_t resume;
+
 	/** @brief Callback for obtaining device status. */
 	vss_device_status_t status;
 
@@ -153,6 +155,7 @@ extern const struct vss_device_config* vss_device_config_list[];
 
 int vss_device_run_sweep(const struct vss_device* device, struct vss_task* task);
 int vss_device_run_sample(const struct vss_device* device, struct vss_task* task);
+int vss_device_resume(const struct vss_device* device, struct vss_task* task);
 int vss_device_status(const struct vss_device* device, char* buffer, size_t len);
 int vss_device_baseband(const struct vss_device* device, const struct vss_sweep_config* sweep_config,
 		power_t* buffer, size_t len);

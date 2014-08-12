@@ -41,6 +41,14 @@ int vss_device_run_sample(const struct vss_device* device, struct vss_task* task
 	}
 }
 
+int vss_device_resume(const struct vss_device* device, struct vss_task* task)
+{
+	if(device->resume == NULL) {
+		return VSS_NOT_SUPPORTED;
+	}
+	return device->resume(device->priv, task);
+}
+
 /** @brief Obtain a spectrum sensing device status.
  *
  * @param device Pointer to the device to query.

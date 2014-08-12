@@ -447,6 +447,10 @@ int main(void)
 				printf("error: %s\n", msg);
 			} else {
 				printf("ok\n");
+				if(current_task.overflows > 0) {
+					printf("%d overflows\n",
+							current_task.overflows);
+				}
 			}
 			has_started = 0;
 		}

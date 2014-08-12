@@ -89,8 +89,7 @@ static void do_sample(void)
 
 	int r;
 	r = vss_task_reserve_block(current_task, &data, vss_rtc_read());
-	if(r) {
-		current_task = NULL;
+	if(r == VSS_SUSPEND) {
 		return;
 	}
 
@@ -126,7 +125,15 @@ void tim4_isr(void)
 	}
 }
 
-static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* task)
+static int dev_dummy_resume(void* priv __attribute__((unused)),
+				struct vss_task* task __attribute__((unused)))
+{
+	vss_timer_schedule(CHANNEL_TIME_MS);
+
+	return VSS_OK;
+}
+
+static int dev_dummy_run(void* priv, struct vss_task* task)
 {
 	if(current_task != NULL) {
 		return VSS_TOO_MANY;
@@ -136,9 +143,7 @@ static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* ta
 
 	current_task = task;
 
-	vss_timer_schedule(CHANNEL_TIME_MS);
-
-	return VSS_OK;
+	return dev_dummy_resume(priv, task);
 }
 
 static int dev_dummy_baseband(void* priv __attribute__((unused)),
@@ -158,6 +163,7 @@ static const struct vss_device device_dummy = {
 	.name = "dummy device",
 
 	.run			= dev_dummy_run,
+	.resume			= dev_dummy_resume,
 	.status			= dev_dummy_status,
 	.baseband		= dev_dummy_baseband,
 

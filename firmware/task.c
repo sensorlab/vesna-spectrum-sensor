@@ -60,6 +60,8 @@ int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 	task->write_channel = sweep_config->channel_start;
 	task->error_msg = NULL;
 
+	task->overflows = 0;
+
 	return VSS_OK;
 }
 
@@ -97,8 +99,9 @@ static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
 {
 	vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
 	if(task->write_ptr == NULL) {
-		vss_task_set_error(task, "buffer overflow");
-		return VSS_ERROR;
+		task->overflows++;
+		task->state = VSS_DEVICE_RUN_SUSPENDED;
+		return VSS_SUSPEND;
 	}
 	vss_task_insert_timestamp(task, timestamp);
 	return VSS_OK;
@@ -282,6 +285,12 @@ int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 
 	if(ctx->read_cnt == task->sample_num) {
 		vss_buffer_release(&task->buffer);
+		if(task->state == VSS_DEVICE_RUN_SUSPENDED) {
+			vss_device_resume(
+				task->sweep_config->device_config->device,
+				task);
+			task->state = VSS_DEVICE_RUN_RUNNING;
+		}
 		return VSS_STOP;
 	}
 

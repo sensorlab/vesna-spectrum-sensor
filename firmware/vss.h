@@ -35,6 +35,7 @@
 #define VSS_TOO_MANY	-3
 /** @brief Function not supported by hardware. */
 #define VSS_NOT_SUPPORTED -4
+#define VSS_SUSPEND	-5
 
 /** @} */
 

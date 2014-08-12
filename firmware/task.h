@@ -45,6 +45,7 @@ enum vss_task_state {
 	VSS_DEVICE_RUN_NEW,
 	/** @brief Task currently running on a device. */
 	VSS_DEVICE_RUN_RUNNING,
+	VSS_DEVICE_RUN_SUSPENDED,
 	/** @brief Task that is no longer running. */
 	VSS_DEVICE_RUN_FINISHED
 };
@@ -82,6 +83,8 @@ struct vss_task {
 	enum vss_task_type type;
 
 	unsigned int sample_num;
+
+	unsigned int overflows;
 };
 
 /** @brief Result of a buffer read operation. */

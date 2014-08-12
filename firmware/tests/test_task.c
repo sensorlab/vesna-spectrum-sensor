@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include <string.h>
+
 #include "unity.h"
 #include "task.h"
 
@@ -28,8 +30,17 @@ int run_f(void* priv, struct vss_task* run)
 	return VSS_OK;
 }
 
+static int resume_called = 0;
+
+int resume_f(void* priv, struct vss_task* run)
+{
+	resume_called++;
+	return VSS_OK;
+}
+
 static const struct vss_device device = {
-	.run = run_f
+	.run = run_f,
+	.resume = resume_f
 };
 
 static const struct vss_device_config device_config = {
@@ -280,6 +291,21 @@ void test_overflow(void)
 		vss_task_insert(&run, v, 0xdeadbeef);
 	}
 
-	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_task_get_state(&run));
-	TEST_ASSERT_TRUE(vss_task_get_error(&run));
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_SUSPENDED, vss_task_get_state(&run));
+	TEST_ASSERT_FALSE(vss_task_get_error(&run));
+
+	struct vss_task_read_result ctx;
+	vss_task_read(&run, &ctx);
+
+	int channel;
+	uint32_t timestamp;
+	power_t power;
+
+	while(!vss_task_read_parse(&run, &ctx, &timestamp, &channel, &power));
+
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_task_get_state(&run));
+	TEST_ASSERT_EQUAL(1, resume_called);
+
+	n = vss_task_insert(&run, v, 0xdeadbeef);
+	TEST_ASSERT_EQUAL(VSS_OK, n);
 }
