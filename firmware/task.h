@@ -71,6 +71,10 @@ struct vss_task {
 	/** @brief Current channel being read from the buffer. */
 	unsigned int read_channel;
 
+	power_t* read_ptr;
+
+	power_t* write_ptr;
+
 	/** @brief State of the buffer reader. */
 	int read_state;
 
@@ -106,17 +110,15 @@ struct vss_task_read_result {
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for infinite).
  * @param data Array to use as buffer storage.
  */
-#define vss_task_init(device_run, sweep_config, sweep_num, data) {\
-	vss_buffer_init(&(device_run)->buffer, data); \
-	vss_task_init_(device_run, sweep_config, sweep_num); \
-}
+#define vss_task_init(device_run, sweep_config, sweep_num, data) \
+	vss_task_init_size(device_run, sweep_config, sweep_num, data, sizeof(data))
 
 /** @name User interface */
 
 /** @{ */
 
-void vss_task_init_(struct vss_task* device_run, const struct vss_sweep_config* sweep_config,
-		int sweep_num);
+void vss_task_init_size(struct vss_task* device_run, const struct vss_sweep_config* sweep_config,
+		int sweep_num, power_t *data, size_t data_len);
 
 int vss_task_start(struct vss_task* task);
 int vss_task_stop(struct vss_task* task);

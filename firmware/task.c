@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#include <assert.h>
+
 #include "task.h"
 
 /** @brief Initialize a device task.
@@ -27,11 +29,16 @@
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for
  * infinite).
  */
-void vss_task_init_(struct vss_task* task, const struct vss_sweep_config* sweep_config,
-		int sweep_num)
+void vss_task_init_size(struct vss_task* task, const struct vss_sweep_config* sweep_config,
+		int sweep_num, power_t *data, size_t data_len)
 {
 	task->sweep_config = sweep_config;
 	task->sweep_num = sweep_num;
+
+	unsigned channel_num = vss_sweep_config_channel_num(sweep_config);
+
+	vss_buffer_init_size(&task->buffer, sizeof(*data) * (channel_num+2),
+			data, data_len);
 
 	task->state = VSS_DEVICE_RUN_NEW;
 	task->write_channel = sweep_config->channel_start;
@@ -41,26 +48,11 @@ void vss_task_init_(struct vss_task* task, const struct vss_sweep_config* sweep_
 	task->read_channel = sweep_config->channel_start;
 }
 
-static int vss_task_write(struct vss_task* task, power_t data)
+static void vss_task_insert_timestamp(struct vss_task* task, uint32_t timestamp)
 {
-	if(vss_buffer_write(&task->buffer, data)) {
-		vss_task_set_error(task, "buffer overflow");
-		return VSS_ERROR;
-	} else {
-		return VSS_OK;
-	}
-}
-
-static int vss_task_insert_timestamp(struct vss_task* task, uint32_t timestamp)
-{
-	if(vss_task_write(task, (timestamp >>  0) & 0x0000ffff)) {
-		return VSS_ERROR;
-	}
-	if(vss_task_write(task, (timestamp >> 16) & 0x0000ffff)) {
-		return VSS_ERROR;
-	}
-
-	return VSS_OK;
+	task->write_ptr[0] = (timestamp >>  0) & 0x0000ffff;
+	task->write_ptr[1] = (timestamp >> 16) & 0x0000ffff;
+	task->write_ptr += 2;
 }
 
 /** @brief Get current channel to measure.
@@ -98,17 +90,23 @@ unsigned int vss_task_get_n_average(struct vss_task* task)
 int vss_task_insert(struct vss_task* task, power_t data, uint32_t timestamp)
 {
 	if(task->write_channel == task->sweep_config->channel_start) {
-		if(vss_task_insert_timestamp(task, timestamp)) {
-			return VSS_STOP;
+		vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
+		if(task->write_ptr == NULL) {
+			vss_task_set_error(task, "buffer overflow");
+			return VSS_ERROR;
 		}
+		vss_task_insert_timestamp(task, timestamp);
 	}
 
-	if(vss_task_write(task, data)) {
-		return VSS_STOP;
-	}
+	assert((void*) task->write_ptr <
+			task->buffer.write + task->buffer.block_size);
+
+	*task->write_ptr = data;
+	task->write_ptr++;
 
 	task->write_channel += task->sweep_config->channel_step;
 	if(task->write_channel >= task->sweep_config->channel_stop) {
+		vss_buffer_write(&task->buffer);
 		if(task->sweep_num > 1 || task->sweep_num < 0) {
 			task->sweep_num--;
 			task->write_channel = task->sweep_config->channel_start;
@@ -199,8 +197,8 @@ enum vss_task_state vss_task_get_state(struct vss_task* task)
  */
 void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
 {
-	ctx->p = 0;
-	vss_buffer_read_block(&task->buffer, &ctx->data, &ctx->len);
+	vss_buffer_read(&task->buffer, (void**) &task->read_ptr);
+	task->read_channel = task->sweep_config->channel_start;
 }
 
 /** @brief Parse the values from the task's circular buffer.
@@ -215,37 +213,29 @@ void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
 int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 		uint32_t* timestamp, int* channel, power_t* power)
 {
-	if(ctx->p >= ctx->len) {
-		vss_buffer_release_block(&task->buffer);
+	if(task->read_ptr == NULL) {
 		return VSS_STOP;
 	}
 
-	switch(task->read_state) {
-		case 0:
-			*timestamp = (uint16_t) ctx->data[ctx->p];
-			*channel = -1;
-
-			task->read_state = 1;
-			break;
-		case 1:
-			*timestamp |= ctx->data[ctx->p] << 16;
-			*channel = -1;
-
-			task->read_state = 2;
-			break;
-
-		case 2:
-			*power = ctx->data[ctx->p];
-			*channel = task->read_channel;
-
-			task->read_channel += task->sweep_config->channel_step;
-			if(task->read_channel >= task->sweep_config->channel_stop) {
-				task->read_channel = task->sweep_config->channel_start;
-				task->read_state = 0;
-			}
-			break;
+	if(task->read_channel == task->sweep_config->channel_start) {
+		*timestamp = (uint16_t) task->read_ptr[0] | \
+			     (task->read_ptr[1] << 16);
+		task->read_ptr += 2;
 	}
 
-	ctx->p++;
+	if(task->read_channel >= task->sweep_config->channel_stop) {
+		vss_buffer_release(&task->buffer);
+		return VSS_STOP;
+	}
+
+	assert((void*)task->read_ptr <
+			task->buffer.read + task->buffer.block_size);
+
+	*power = *task->read_ptr;
+	*channel = task->read_channel;
+
+	task->read_ptr++;
+	task->read_channel += task->sweep_config->channel_step;
+
 	return VSS_OK;
 }
