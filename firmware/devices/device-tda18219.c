@@ -436,7 +436,6 @@ static const struct vss_device dev_tda18219 = {
 	.run			= dev_tda18219_run,
 	.resume			= dev_tda18219_resume,
 	.get_calibration	= dev_tda18219_get_calibration,
-	.baseband		= dev_tda18219_baseband,
 
 	.supports_task_baseband	= 1,
 
