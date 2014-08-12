@@ -49,6 +49,10 @@ enum vss_task_state {
 	VSS_DEVICE_RUN_FINISHED
 };
 
+enum vss_task_type {
+	VSS_TASK_SWEEP
+};
+
 /** @brief Spectrum sensing task. */
 struct vss_task {
 	/** @brief Circular buffer for storing the measurements. */
@@ -73,6 +77,8 @@ struct vss_task {
 
 	/** @brief Error message for the task. */
 	const char* volatile error_msg;
+
+	enum vss_task_type type;
 };
 
 /** @brief Result of a buffer read operation. */
@@ -100,14 +106,14 @@ struct vss_task_read_result {
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for infinite).
  * @param data Array to use as buffer storage.
  */
-#define vss_task_init(device_run, sweep_config, sweep_num, data) \
-	vss_task_init_size(device_run, sweep_config, sweep_num, data, sizeof(data))
+#define vss_task_init(device_run, type, sweep_config, sweep_num, data) \
+	vss_task_init_size(device_run, type, sweep_config, sweep_num, data, sizeof(data))
 
 /** @name User interface */
 
 /** @{ */
 
-int vss_task_init_size(struct vss_task* device_run,
+int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 		const struct vss_sweep_config* sweep_config,
 		int sweep_num, power_t *data, size_t data_len);
 

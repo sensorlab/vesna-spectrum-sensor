@@ -208,8 +208,8 @@ static void command_report_on(void)
 		printf("error: stop current sweep first\n");
 	} else {
 		int r;
-		r = vss_task_init(&current_task, &current_sweep_config, -1,
-				data_buffer);
+		r = vss_task_init(&current_task, VSS_TASK_SWEEP,
+				&current_sweep_config, -1, data_buffer);
 		if(r) {
 			if(r == VSS_TOO_MANY) {
 				printf("error: not enough memory for sweep\n");

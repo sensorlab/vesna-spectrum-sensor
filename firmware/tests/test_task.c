@@ -55,13 +55,13 @@ void tearDown(void)
 
 void test_init(void)
 {
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_NEW, vss_task_get_state(&run));
 }
 
 void test_start(void)
 {
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_task_get_state(&run));
 }
@@ -70,7 +70,7 @@ void test_single_run(void)
 {
 	const power_t v = 0x70fe;
 
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 
 	int cnt = 0;
@@ -93,7 +93,7 @@ void test_infinite_run(void)
 {
 	const power_t v = 0x70fe;
 
-	vss_task_init(&run, &sweep_config, -1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, -1, buffer_data);
 	vss_task_start(&run);
 
 	int cnt, r;
@@ -118,7 +118,7 @@ void test_read(void)
 {
 	const power_t v = 0x70fe;
 
-	vss_task_init(&run, &sweep_config, -1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, -1, buffer_data);
 	vss_task_start(&run);
 
 	int cnt;
@@ -147,7 +147,7 @@ void test_read(void)
 
 void test_get_channel(void)
 {
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 
 	int channel = vss_task_get_channel(&run);
@@ -161,7 +161,7 @@ void test_get_channel(void)
 
 void test_get_average(void)
 {
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 
 	int n_average = vss_task_get_n_average(&run);
@@ -172,7 +172,7 @@ void test_set_error(void)
 {
 	const char* msg = "Test error message";
 
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 
 	vss_task_set_error(&run, msg);
@@ -184,7 +184,7 @@ void test_get_error(void)
 {
 	const char* msg = "Test error message";
 
-	vss_task_init(&run, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
 	vss_task_start(&run);
 
 	const char* msg2 = vss_task_get_error(&run);
@@ -201,7 +201,7 @@ void test_overflow(void)
 {
 	const power_t v = 0x70fe;
 
-	vss_task_init(&run, &sweep_config, -1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, -1, buffer_data);
 	vss_task_start(&run);
 
 	int n;
