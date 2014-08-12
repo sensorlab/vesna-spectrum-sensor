@@ -197,6 +197,8 @@ static const struct vss_device device_cc1101 = {
 	.status			= dev_cc1101_status,
 	.baseband		= NULL,
 
+	.supports_task_baseband	= 0,
+
 	.priv 			= NULL
 };
 
@@ -877,6 +879,8 @@ static const struct vss_device device_cc2500 = {
 
 	.run			= dev_cc_run,
 	.status			= dev_cc2500_status,
+
+	.supports_task_baseband	= 0,
 
 	.priv 			= NULL
 };

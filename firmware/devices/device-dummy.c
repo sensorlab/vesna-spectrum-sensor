@@ -122,6 +122,8 @@ static const struct vss_device device_dummy = {
 	.status			= dev_dummy_status,
 	.baseband		= dev_dummy_baseband,
 
+	.supports_task_baseband	= 0,
+
 	.priv 			= NULL
 };
 

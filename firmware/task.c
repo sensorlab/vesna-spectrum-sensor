@@ -198,7 +198,18 @@ int vss_task_start(struct vss_task* task)
 
 	const struct vss_device* device = task->sweep_config->device_config->device;
 
-	int r = vss_device_run(device, task);
+	int r;
+	switch(task->type) {
+		case VSS_TASK_SWEEP:
+			r = vss_device_run_sweep(device, task);
+			break;
+		case VSS_TASK_SAMPLE:
+			r = vss_device_run_sample(device, task);
+			break;
+		default:
+			assert(0);
+	}
+
 	if(r != VSS_OK) {
 		task->state = VSS_DEVICE_RUN_FINISHED;
 	}

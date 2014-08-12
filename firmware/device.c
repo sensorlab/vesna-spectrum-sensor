@@ -27,9 +27,18 @@ const struct vss_device_config* vss_device_config_list[VSS_MAX_DEVICE_CONFIG];
  * @param task Pointer to the device task to start.
  * @return VSS_OK on success or an error code otherwise.
  */
-int vss_device_run(const struct vss_device* device, struct vss_task* task)
+int vss_device_run_sweep(const struct vss_device* device, struct vss_task* task)
 {
 	return device->run(device->priv, task);
+}
+
+int vss_device_run_sample(const struct vss_device* device, struct vss_task* task)
+{
+	if(device->supports_task_baseband) {
+		return device->run(device->priv, task);
+	} else {
+		return VSS_NOT_SUPPORTED;
+	}
 }
 
 /** @brief Obtain a spectrum sensing device status.

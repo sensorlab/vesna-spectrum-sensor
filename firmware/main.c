@@ -151,22 +151,34 @@ static void command_help(void)
 	printf( "VESNA spectrum sensing application\n\n"
 
 		"help         print this help message\n"
-		"list         list available devices and pre-set configuations\n"
-		"report-on    start spectrum sweep\n"
-		"report-off   stop spectrum sweep\n"
+		"version      print out firmware version\n\n"
+
+		"status       print out hardware status\n"
+		"list         list available devices and pre-set configuations\n\n"
+
+		"samples N    set number of samples\n"
+		"select channel CH config DEVICE,CONFIG\n"
+		"             sample channel CH using DEVICE and CONFIG pre-set\n"
+		"sample-on    start sampling channel\n"
+		"sample-off   stop sampling channel\n\n"
+
 		"select channel START:STEP:STOP config DEVICE,CONFIG\n"
 		"             sweep channels from START to STOP stepping STEP\n"
 		"             channels at a time using DEVICE and CONFIG pre-set\n"
-		"baseband     obtain a continuous string of baseband samples\n"
+		"report-on    start spectrum sweep\n"
+		"report-off   stop spectrum sweep\n"
 		"average N    set number of hardware samples to average for one\n"
-		"             datapoint\n"
-		"status       print out hardware status\n"
-		"version      print out firmware version\n\n"
+		"             datapoint\n\n"
 
 		"sweep data has the following format:\n"
 		"             TS timestamp DS power ... DE\n"
 		"where timestamp is time in seconds since sweep start and power is\n"
-		"received signal power for corresponding channel in dBm\n");
+		"received signal power for corresponding channel in dBm\n\n"
+
+		"sample data has the following format:\n"
+		"             TS timestamp DS sample ... DE\n"
+		"where timestamp is time in seconds since sweep start and sample is\n"
+		"signal sample in DAC digits\n");
 }
 
 static void command_list(void)
@@ -185,6 +197,9 @@ static void command_list(void)
 			dev_id++;
 
 			printf("device %d: %s\n", dev_id, device->name);
+			if(device->supports_task_baseband) {
+				printf("  device supports channel sampling\n");
+			}
 
 			config_id = 0;
 		}
@@ -200,7 +215,7 @@ static void command_list(void)
 	}
 }
 
-static void command_report_on(void)
+static void command_task_on(enum vss_task_type type)
 {
 	if (current_sweep_config.device_config == NULL) {
 		printf("error: set channel config first\n");
@@ -208,7 +223,7 @@ static void command_report_on(void)
 		printf("error: stop current sweep first\n");
 	} else {
 		int r;
-		r = vss_task_init(&current_task, VSS_TASK_SWEEP,
+		r = vss_task_init(&current_task, type,
 				&current_sweep_config, -1, data_buffer);
 		if(r) {
 			if(r == VSS_TOO_MANY) {
@@ -228,7 +243,17 @@ static void command_report_on(void)
 	}
 }
 
-static void command_report_off(void)
+static void command_sweep_on(void)
+{
+	command_task_on(VSS_TASK_SWEEP);
+}
+
+static void command_sample_on(void)
+{
+	command_task_on(VSS_TASK_SAMPLE);
+}
+
+static void command_task_off(void)
 {
 	if(!has_started) {
 		printf("ok\n");
@@ -326,10 +351,13 @@ static void dispatch(const char* cmd)
 		command_help();
 	} else if (!strcmp(cmd, "list")) {
 		command_list();
-	} else if (!strcmp(cmd, "report-on")) {
-		command_report_on();
-	} else if (!strcmp(cmd, "report-off")) {
-		command_report_off();
+	} else if (!strcmp(cmd, "sweep-on") || !strcmp(cmd, "report-on")) {
+		command_sweep_on();
+	} else if (!strcmp(cmd, "sample-on")) {
+		command_sample_on();
+	} else if (!strcmp(cmd, "sweep-off") || !strcmp(cmd, "sample-off") ||
+						!strcmp(cmd, "report-off")) {
+		command_task_off();
 	} else if (!strcmp(cmd, "baseband")) {
 		command_baseband();
 	} else if (!strcmp(cmd, "status")) {
@@ -338,7 +366,14 @@ static void dispatch(const char* cmd)
 				&start, &step, &stop,
 				&dev_id, &config_id) == 5) {
 		command_select(start, step, stop, dev_id, config_id);
+	} else if (sscanf(cmd, "select channel %d config %d,%d",
+				&start,
+				&dev_id, &config_id) == 3) {
+		command_select(start, 1, start+1, dev_id, config_id);
 	} else if (sscanf(cmd, "average %d",
+				&n_average) == 1) {
+		command_average(n_average);
+	} else if (sscanf(cmd, "samples %d",
 				&n_average) == 1) {
 		command_average(n_average);
 	} else if (!strcmp(cmd, "version")) {
@@ -386,21 +421,24 @@ int main(void)
 		uint32_t timestamp;
 		power_t power;
 
+		int n = 0;
 		while(vss_task_read_parse(&current_task, &ctx,
 								&timestamp, &channel, &power) == VSS_OK) {
-			if(channel >= 0) {
-				if((unsigned) channel == current_task.sweep_config->channel_start) {
-					printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
-				}
-
-				printf(" %d.%02d", power/100, abs(power%100));
-
-				if(channel + current_task.sweep_config->channel_step
-						>= current_task.sweep_config->channel_stop) {
-					printf(" DE\n");
-				}
-
+			if(n == 0) {
+				printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
 			}
+
+			if(current_task.type == VSS_TASK_SWEEP) {
+				printf(" %d.%02d", power/100, abs(power%100));
+			} else {
+				printf(" %d", power);
+			}
+
+			n++;
+		}
+
+		if(n > 0) {
+			printf(" DE\n");
 		}
 
 		if(has_finished && has_started) {
