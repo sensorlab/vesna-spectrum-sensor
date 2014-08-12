@@ -48,8 +48,7 @@ int vss_task_init_size(struct vss_task* task, const struct vss_sweep_config* swe
 	task->write_channel = sweep_config->channel_start;
 	task->error_msg = NULL;
 
-	task->read_state = 0;
-	task->read_channel = sweep_config->channel_start;
+	return VSS_OK;
 }
 
 static void vss_task_insert_timestamp(struct vss_task* task, uint32_t timestamp)
@@ -201,8 +200,8 @@ enum vss_task_state vss_task_get_state(struct vss_task* task)
  */
 void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
 {
-	vss_buffer_read(&task->buffer, (void**) &task->read_ptr);
-	task->read_channel = task->sweep_config->channel_start;
+	vss_buffer_read(&task->buffer, (void**) &ctx->read_ptr);
+	ctx->read_channel = task->sweep_config->channel_start;
 }
 
 /** @brief Parse the values from the task's circular buffer.
@@ -217,29 +216,29 @@ void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
 int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 		uint32_t* timestamp, int* channel, power_t* power)
 {
-	if(task->read_ptr == NULL) {
+	if(ctx->read_ptr == NULL) {
 		return VSS_STOP;
 	}
 
-	if(task->read_channel == task->sweep_config->channel_start) {
-		*timestamp = (uint16_t) task->read_ptr[0] | \
-			     (task->read_ptr[1] << 16);
-		task->read_ptr += 2;
+	if(ctx->read_channel == task->sweep_config->channel_start) {
+		*timestamp = (uint16_t) ctx->read_ptr[0] | \
+			     (ctx->read_ptr[1] << 16);
+		ctx->read_ptr += 2;
 	}
 
-	if(task->read_channel >= task->sweep_config->channel_stop) {
+	if(ctx->read_channel >= task->sweep_config->channel_stop) {
 		vss_buffer_release(&task->buffer);
 		return VSS_STOP;
 	}
 
-	assert((void*)task->read_ptr <
+	assert((void*)ctx->read_ptr <
 			task->buffer.read + task->buffer.block_size);
 
-	*power = *task->read_ptr;
-	*channel = task->read_channel;
+	*power = *ctx->read_ptr;
+	*channel = ctx->read_channel;
 
-	task->read_ptr++;
-	task->read_channel += task->sweep_config->channel_step;
+	ctx->read_ptr++;
+	ctx->read_channel += task->sweep_config->channel_step;
 
 	return VSS_OK;
 }

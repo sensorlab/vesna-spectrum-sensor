@@ -68,15 +68,8 @@ struct vss_task {
 	/** @brief Current channel being measured. */
 	unsigned int write_channel;
 
-	/** @brief Current channel being read from the buffer. */
-	unsigned int read_channel;
-
-	power_t* read_ptr;
-
+	/** @brief Pointer for writing to buffer. */
 	power_t* write_ptr;
-
-	/** @brief State of the buffer reader. */
-	int read_state;
 
 	/** @brief Error message for the task. */
 	const char* volatile error_msg;
@@ -84,14 +77,11 @@ struct vss_task {
 
 /** @brief Result of a buffer read operation. */
 struct vss_task_read_result {
-	/** @brief Pointer to the current block being read. */
-	const power_t* data;
+	/** @brief Pointer for reading from buffer. */
+	power_t* read_ptr;
 
-	/** @brief Length of the current block. */
-	size_t len;
-
-	/** @brief Index of the next element to parse. */
-	size_t p;
+	/** @brief Current channel being read from the buffer. */
+	unsigned int read_channel;
 };
 
 /** @brief Initialize a device task with statically allocated storage.
