@@ -89,6 +89,35 @@ void test_single_run(void)
 	TEST_ASSERT_EQUAL(10, cnt);
 }
 
+void test_single_run_block(void)
+{
+	vss_task_init(&run, &sweep_config, 5, buffer_data);
+	vss_task_start(&run);
+
+	int cnt = 0;
+	while(1) {
+		power_t *wptr;
+
+		int r = vss_task_reserve_block(&run, &wptr, 0xdeadbeef);
+		TEST_ASSERT_EQUAL(VSS_OK, r);
+
+		memset(wptr, 0x01, sweep_config.n_average*sizeof(*wptr));
+
+		r = vss_task_write_block(&run);
+		if(r == VSS_OK) {
+			cnt++;
+		} else if(r == VSS_STOP) {
+			cnt++;
+			break;
+		} else {
+			break;
+		}
+	}
+
+	TEST_ASSERT_EQUAL(5, cnt);
+}
+
+
 void test_infinite_run(void)
 {
 	const power_t v = 0x70fe;

@@ -21,9 +21,6 @@
 
 /** @brief Initialize a device task.
  *
- * Note: circular buffer needs to be initialized separately. Use the
- * vss_task_init() macro which does that automatically.
- *
  * @param task Pointer to the task to initialize.
  * @param sweep_config Pointer to the spectrum sweep configuration to use.
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for
@@ -94,6 +91,17 @@ unsigned int vss_task_get_n_average(struct vss_task* task)
 	return task->sweep_config->n_average;
 }
 
+static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
+{
+	vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
+	if(task->write_ptr == NULL) {
+		vss_task_set_error(task, "buffer overflow");
+		return VSS_ERROR;
+	}
+	vss_task_insert_timestamp(task, timestamp);
+	return VSS_OK;
+}
+
 /** @brief Add a new measurement result for the task.
  *
  * Called by the device driver to report a new measurement.
@@ -106,12 +114,10 @@ unsigned int vss_task_get_n_average(struct vss_task* task)
 int vss_task_insert(struct vss_task* task, power_t data, uint32_t timestamp)
 {
 	if(task->write_channel == task->sweep_config->channel_start) {
-		vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
-		if(task->write_ptr == NULL) {
-			vss_task_set_error(task, "buffer overflow");
-			return VSS_ERROR;
+		int r = vss_task_reserve_block_(task, timestamp);
+		if(r) {
+			return r;
 		}
-		vss_task_insert_timestamp(task, timestamp);
 	}
 
 	assert((void*) task->write_ptr <
@@ -122,18 +128,35 @@ int vss_task_insert(struct vss_task* task, power_t data, uint32_t timestamp)
 
 	task->write_channel += task->sweep_config->channel_step;
 	if(task->write_channel >= task->sweep_config->channel_stop) {
-		vss_buffer_write(&task->buffer);
-		if(task->sweep_num > 1 || task->sweep_num < 0) {
-			task->sweep_num--;
-			task->write_channel = task->sweep_config->channel_start;
-
-			return VSS_OK;
-		} else {
-			task->state = VSS_DEVICE_RUN_FINISHED;
-			return VSS_STOP;
-		}
+		return vss_task_write_block(task);
 	} else {
 		return VSS_OK;
+	}
+}
+
+int vss_task_reserve_block(struct vss_task* task, power_t** data,
+		uint32_t timestamp)
+{
+	int r = vss_task_reserve_block_(task, timestamp);
+	if(r) {
+		return r;
+	}
+
+	*data = task->write_ptr;
+	return VSS_OK;
+}
+
+int vss_task_write_block(struct vss_task* task)
+{
+	vss_buffer_write(&task->buffer);
+	if(task->sweep_num > 1 || task->sweep_num < 0) {
+		task->sweep_num--;
+		task->write_channel = task->sweep_config->channel_start;
+
+		return VSS_OK;
+	} else {
+		task->state = VSS_DEVICE_RUN_FINISHED;
+		return VSS_STOP;
 	}
 }
 
