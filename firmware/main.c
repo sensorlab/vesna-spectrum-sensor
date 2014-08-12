@@ -227,7 +227,7 @@ static void command_task_on(enum vss_task_type type)
 				&current_sweep_config, -1, data_buffer);
 		if(r) {
 			if(r == VSS_TOO_MANY) {
-				printf("error: not enough memory for sweep\n");
+				printf("error: not enough memory for task\n");
 			} else {
 				printf("error: vss_task_init returned %d\n", r);
 			}
