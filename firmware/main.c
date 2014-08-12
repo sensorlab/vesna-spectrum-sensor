@@ -369,7 +369,7 @@ static void dispatch(const char* cmd)
 	} else if (sscanf(cmd, "select channel %d config %d,%d",
 				&start,
 				&dev_id, &config_id) == 3) {
-		command_select(start, 1, start+1, dev_id, config_id);
+		command_select(start, 0, start, dev_id, config_id);
 	} else if (sscanf(cmd, "average %d",
 				&n_average) == 1) {
 		command_average(n_average);

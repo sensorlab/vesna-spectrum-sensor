@@ -208,6 +208,7 @@ void test_read_sample(void)
 		if(channel != -1) {
 			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
 			TEST_ASSERT_EQUAL(0x0101, power);
+			TEST_ASSERT_EQUAL(0, channel);
 			cnt++;
 		}
 	}

@@ -203,7 +203,11 @@ int vss_task_start(struct vss_task* task)
 	int r;
 	switch(task->type) {
 		case VSS_TASK_SWEEP:
-			r = vss_device_run_sweep(device, task);
+			if(task->sweep_config->channel_step <= 0) {
+				r = VSS_ERROR;
+			} else {
+				r = vss_device_run_sweep(device, task);
+			}
 			break;
 		case VSS_TASK_SAMPLE:
 			r = vss_device_run_sample(device, task);
