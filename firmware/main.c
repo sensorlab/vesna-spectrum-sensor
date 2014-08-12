@@ -441,7 +441,7 @@ int main(void)
 			printf(" DE\n");
 		}
 
-		if(has_finished && has_started) {
+		if(n == 0 && has_finished && has_started) {
 			const char* msg = vss_task_get_error(&current_task);
 			if(msg) {
 				printf("error: %s\n", msg);
