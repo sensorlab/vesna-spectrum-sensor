@@ -36,7 +36,7 @@
 #include "version.h"
 
 #define USART_BUFFER_SIZE		128
-#define DATA_BUFFER_SIZE		32
+#define DATA_BUFFER_SIZE		20480
 
 static char usart_buffer[USART_BUFFER_SIZE];
 static int usart_buffer_len = 0;
