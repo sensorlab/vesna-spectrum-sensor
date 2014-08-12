@@ -146,26 +146,12 @@ static int dev_dummy_run(void* priv, struct vss_task* task)
 	return dev_dummy_resume(priv, task);
 }
 
-static int dev_dummy_baseband(void* priv __attribute__((unused)),
-		const struct vss_sweep_config* sweep_config, power_t* buffer, size_t len)
-{
-	const struct dev_dummy_config_priv* config_priv = sweep_config->device_config->priv;
-
-	size_t n;
-	for(n = 0; n < len; n++) {
-		config_priv->get_baseband(&buffer[n]);
-	}
-
-	return VSS_OK;
-}
-
 static const struct vss_device device_dummy = {
 	.name = "dummy device",
 
 	.run			= dev_dummy_run,
 	.resume			= dev_dummy_resume,
 	.status			= dev_dummy_status,
-	.baseband		= dev_dummy_baseband,
 
 	.supports_task_baseband	= 1,
 

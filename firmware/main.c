@@ -262,32 +262,6 @@ static void command_task_off(void)
 	}
 }
 
-static void command_baseband(void)
-{
-	if(current_sweep_config.device_config == NULL) {
-		printf("error: set channel config first\n");
-	} else if(has_started) {
-		printf("error: stop current sweep first\n");
-	} else {
-		power_t buffer[BASEBAND_SAMPLE_NUM];
-		int r = vss_device_baseband(current_sweep_config.device_config->device,
-				&current_sweep_config, buffer, BASEBAND_SAMPLE_NUM);
-		if(r == VSS_NOT_SUPPORTED) {
-			printf("error: device doesn't support baseband sampling\n");
-		} else if(r) {
-			printf("error: vss_device_baseband returned %d\n", r);
-		} else {
-			int n;
-			printf("DS");
-			for(n = 0; n < BASEBAND_SAMPLE_NUM; n++) {
-				printf(" %hd", buffer[n]);
-			}
-			printf(" DE\n");
-			printf("ok\n");
-		}
-	}
-}
-
 static void command_select(int start, int step, int stop, int dev_id, int config_id) 
 {
 	if(has_started) {
@@ -358,8 +332,6 @@ static void dispatch(const char* cmd)
 	} else if (!strcmp(cmd, "sweep-off") || !strcmp(cmd, "sample-off") ||
 						!strcmp(cmd, "report-off")) {
 		command_task_off();
-	} else if (!strcmp(cmd, "baseband")) {
-		command_baseband();
 	} else if (!strcmp(cmd, "status")) {
 		command_status();
 	} else if (sscanf(cmd, "select channel %d:%d:%d config %d,%d", 
