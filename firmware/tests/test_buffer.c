@@ -19,6 +19,7 @@
 
 #include "unity.h"
 #include "buffer.h"
+#include "vss.h"
 
 #define buffer_data_len 1024
 #define block_size 128
@@ -43,11 +44,17 @@ void test_new_is_empty(void)
 	TEST_ASSERT_EQUAL(0, r);
 }
 
+void test_too_large(void)
+{
+	int r = vss_buffer_init_size(&buffer, 100, buffer_data, 10);
+	TEST_ASSERT_EQUAL(VSS_TOO_MANY, r);
+}
+
 void test_empty_read(void)
 {
 	char *ptr;
 
-	vss_buffer_read(&buffer, &ptr);
+	vss_buffer_read(&buffer, (void**) &ptr);
 
 	TEST_ASSERT_EQUAL(NULL, ptr);
 }

@@ -24,9 +24,13 @@
  * @param data Pointer to the allocated storage array.
  * @param data_len Length of the allocated storage array.
  */
-void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
+int vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
 		void* data, size_t data_len)
 {
+	if(block_size > data_len) {
+		return VSS_TOO_MANY;
+	}
+
 	buffer->block_size = block_size;
 
 	buffer->start = data;
@@ -37,6 +41,8 @@ void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
 
 	buffer->n_read = 0;
 	buffer->n_write = 0;
+
+	return VSS_OK;
 }
 
 /** @brief Get number of blocks currently stored in the buffer.

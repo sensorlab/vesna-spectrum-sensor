@@ -73,7 +73,7 @@ struct vss_buffer {
 #define vss_buffer_init(buffer, block_size, data) \
 	vss_buffer_init_size(buffer, block_size, data, sizeof(data))
 
-void vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
+int vss_buffer_init_size(struct vss_buffer* buffer, size_t block_size,
 		void* data, size_t data_len);
 size_t vss_buffer_size(const struct vss_buffer* buffer);
 size_t vss_buffer_size2(const struct vss_buffer* buffer);
