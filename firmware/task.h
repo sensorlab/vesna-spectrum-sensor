@@ -50,7 +50,8 @@ enum vss_task_state {
 };
 
 enum vss_task_type {
-	VSS_TASK_SWEEP
+	VSS_TASK_SWEEP,
+	VSS_TASK_SAMPLE
 };
 
 /** @brief Spectrum sensing task. */

@@ -43,6 +43,9 @@ int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 		case VSS_TASK_SWEEP:
 			sample_num = vss_sweep_config_channel_num(sweep_config);
 			break;
+		case VSS_TASK_SAMPLE:
+			sample_num = sweep_config->n_average;
+			break;
 		default:
 			assert(0);
 	}
