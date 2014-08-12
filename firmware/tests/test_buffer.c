@@ -56,11 +56,11 @@ void test_read_write(void)
 {
 	char *wptr;
 
-	vss_buffer_reserve(&buffer, &wptr);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
 	memset(wptr, 0x42, block_size);
 	vss_buffer_write(&buffer);
 	char *rptr;
-	vss_buffer_read(&buffer, &rptr);
+	vss_buffer_read(&buffer, (void **) &rptr);
 
 	int n;
 	for(n = 0; n < block_size; n++) {
@@ -74,12 +74,12 @@ void test_write_full(void)
 
 	size_t n;
 	for(n = 0; n < nblocks; n++) {
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void**) &wptr);
 		TEST_ASSERT_TRUE(wptr != NULL);
 		vss_buffer_write(&buffer);
 	}
 
-	vss_buffer_reserve(&buffer, &wptr);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
 	TEST_ASSERT_EQUAL(NULL, wptr);
 
 	size_t s = vss_buffer_size(&buffer);
@@ -92,11 +92,11 @@ void read_write_half(void)
 
 	for(n = 0; n < nblocks/2; n++) {
 		char *wptr;
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void**) &wptr);
 		vss_buffer_write(&buffer);
 
 		char* rptr;
-		vss_buffer_read(&buffer, &rptr);
+		vss_buffer_read(&buffer, (void **) &rptr);
 		vss_buffer_release(&buffer);
 	}
 }
@@ -126,12 +126,12 @@ void test_write_full_wrap_around(void)
 	char *wptr;
 	size_t n;
 	for(n = 0; n < nblocks; n++) {
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void **) &wptr);
 		TEST_ASSERT_TRUE(wptr != NULL);
 		vss_buffer_write(&buffer);
 	}
 
-	vss_buffer_reserve(&buffer, &wptr);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
 	TEST_ASSERT_EQUAL(NULL, wptr);
 
 	size_t s = vss_buffer_size(&buffer);
@@ -145,7 +145,7 @@ void test_read_wrap_around(void)
 	size_t n;
 	for(n = 0; n < nblocks; n++) {
 		char *wptr;
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void **) &wptr);
 		TEST_ASSERT_TRUE(wptr != NULL);
 		memset(wptr, 0x42, block_size);
 		vss_buffer_write(&buffer);
@@ -155,7 +155,7 @@ void test_read_wrap_around(void)
 
 	size_t sum = 0;
 	while(1) {
-		vss_buffer_read(&buffer, &rptr);
+		vss_buffer_read(&buffer, (void **) &rptr);
 		if(rptr == NULL) break;
 
 		for(n = 0; n < block_size; n++) {
@@ -175,18 +175,18 @@ void test_dont_overwrite_values_just_read(void)
 
 	size_t n;
 	for(n = 0; n < nblocks/2; n++) {
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void **) &wptr);
 		memset(wptr, 0x01, block_size);
 		vss_buffer_write(&buffer);
 	}
 
 	char* rptr;
 
-	vss_buffer_read(&buffer, &rptr);
+	vss_buffer_read(&buffer, (void **) &rptr);
 
 	while(1) {
 		char* wptr;
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void **) &wptr);
 		if(wptr == NULL) break;
 
 		memset(wptr, 0x02, block_size);
@@ -199,7 +199,7 @@ void test_dont_overwrite_values_just_read(void)
 
 	vss_buffer_release(&buffer);
 
-	vss_buffer_reserve(&buffer, &wptr);
+	vss_buffer_reserve(&buffer, (void **) &wptr);
 	TEST_ASSERT_TRUE(wptr != NULL);
 }
 
@@ -211,7 +211,7 @@ void test_odd_sized_buffer(void)
 	int n = 0;
 	while(1) {
 		char* wptr;
-		vss_buffer_reserve(&buffer, &wptr);
+		vss_buffer_reserve(&buffer, (void**) &wptr);
 		if(wptr == NULL) break;
 
 		memset(wptr, 0x01, 30);
