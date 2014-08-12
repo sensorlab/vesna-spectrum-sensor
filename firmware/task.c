@@ -286,10 +286,14 @@ int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 	if(ctx->read_cnt == task->sample_num) {
 		vss_buffer_release(&task->buffer);
 		if(task->state == VSS_DEVICE_RUN_SUSPENDED) {
-			vss_device_resume(
+			task->state = VSS_DEVICE_RUN_RUNNING;
+			int r = vss_device_resume(
 				task->sweep_config->device_config->device,
 				task);
-			task->state = VSS_DEVICE_RUN_RUNNING;
+			if(r) {
+				vss_task_set_error(task, "device resume failed "
+						"after buffer overflow");
+			}
 		}
 		return VSS_STOP;
 	}
