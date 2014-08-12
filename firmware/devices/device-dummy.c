@@ -60,7 +60,7 @@ static int dev_dummy_status(void* priv __attribute__((unused)), char* buffer, si
 	return VSS_OK;
 }
 
-static void do_stuff(void)
+static void do_sweep(void)
 {
 	power_t result;
 
@@ -81,10 +81,44 @@ static void do_stuff(void)
 	}
 }
 
+static void do_sample(void)
+{
+	power_t* data;
+
+	const struct dev_dummy_config_priv* priv = current_task->sweep_config->device_config->priv;
+
+	int r;
+	r = vss_task_reserve_block(current_task, &data, vss_rtc_read());
+	if(r) {
+		current_task = NULL;
+		return;
+	}
+
+	unsigned n;
+	for(n = 0; n < current_task->sweep_config->n_average; n++) {
+		priv->get_baseband(&data[n]);
+	}
+
+	r = vss_task_write_block(current_task);
+	if(r) {
+		current_task = NULL;
+		return;
+	}
+
+	vss_timer_schedule(CHANNEL_TIME_MS);
+}
+
 void tim4_isr(void)
 {
 	vss_timer_ack();
-	do_stuff();	
+	switch (current_task->type) {
+		case VSS_TASK_SWEEP:
+			do_sweep();
+			break;
+		case VSS_TASK_SAMPLE:
+			do_sample();
+			break;
+	}
 }
 
 static int dev_dummy_run(void* priv __attribute__((unused)), struct vss_task* task)
@@ -122,7 +156,7 @@ static const struct vss_device device_dummy = {
 	.status			= dev_dummy_status,
 	.baseband		= dev_dummy_baseband,
 
-	.supports_task_baseband	= 0,
+	.supports_task_baseband	= 1,
 
 	.priv 			= NULL
 };
