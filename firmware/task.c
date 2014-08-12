@@ -29,7 +29,7 @@
  * @param sweep_num Number of spectrum sensing sweeps to perform (use -1 for
  * infinite).
  */
-void vss_task_init_size(struct vss_task* task, const struct vss_sweep_config* sweep_config,
+int vss_task_init_size(struct vss_task* task, const struct vss_sweep_config* sweep_config,
 		int sweep_num, power_t *data, size_t data_len)
 {
 	task->sweep_config = sweep_config;
@@ -37,8 +37,12 @@ void vss_task_init_size(struct vss_task* task, const struct vss_sweep_config* sw
 
 	unsigned channel_num = vss_sweep_config_channel_num(sweep_config);
 
-	vss_buffer_init_size(&task->buffer, sizeof(*data) * (channel_num+2),
+	int r = vss_buffer_init_size(&task->buffer,
+			sizeof(*data) * (channel_num+2),
 			data, data_len);
+	if(r) {
+		return r;
+	}
 
 	task->state = VSS_DEVICE_RUN_NEW;
 	task->write_channel = sweep_config->channel_start;

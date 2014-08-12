@@ -117,7 +117,8 @@ struct vss_task_read_result {
 
 /** @{ */
 
-void vss_task_init_size(struct vss_task* device_run, const struct vss_sweep_config* sweep_config,
+int vss_task_init_size(struct vss_task* device_run,
+		const struct vss_sweep_config* sweep_config,
 		int sweep_num, power_t *data, size_t data_len);
 
 int vss_task_start(struct vss_task* task);

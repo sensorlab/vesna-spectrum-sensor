@@ -204,9 +204,19 @@ static void command_report_on(void)
 	} else if (has_started) {
 		printf("error: stop current sweep first\n");
 	} else {
-		vss_task_init(&current_task, &current_sweep_config, -1, data_buffer);
+		int r;
+		r = vss_task_init(&current_task, &current_sweep_config, -1,
+				data_buffer);
+		if(r) {
+			if(r == VSS_TOO_MANY) {
+				printf("error: not enough memory for sweep\n");
+			} else {
+				printf("error: vss_task_init returned %d\n", r);
+			}
+			return;
+		}
 
-		int r = vss_task_start(&current_task);
+		r = vss_task_start(&current_task);
 		if(r) {
 			printf("error: vss_task_start returned %d\n", r);
 		}
