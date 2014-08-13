@@ -106,12 +106,13 @@ static int vss_adc_setup(uint8_t conv_time, uint32_t adcpre, uint16_t pin, int d
 
 	adc_enable_dma(ADC1);
 
-	vss_adc_setup_one(ADC1, conv_time, pin);
-
 	if(dual) {
+		adc_off(ADC2);
 		ADC1_CR1 |= ADC_CR1_DUALMOD_FIM;
 		vss_adc_setup_one(ADC2, conv_time, pin);
 	}
+
+	vss_adc_setup_one(ADC1, conv_time, pin);
 
 	// trigger start of continuous conversion
 	ADC_CR2(ADC1) |= ADC_CR2_SWSTART;
