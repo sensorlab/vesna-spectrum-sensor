@@ -17,6 +17,16 @@ time it takes the device to perform a measurement for a single channel.
 Currently the following hardware models are supported (selectable via the
 MODEL environment variable when invoking make):
 
+- sne-eshter
+
+  VESNA SNC + SNE-ESHTER hardware configuration
+
+  wide- and narrow-band energy detection in the UHF band using
+  NXPTDA18219HN tuner. Also supports sampling the baseband signal
+  directly.
+
+  (requires proprietary libtda18219 library)
+
 - sne-crewtv
 
   VESNA SNC + SNE-CREWTV hardware configuration
@@ -75,10 +85,11 @@ To compile and upload firmware to a VESNA using OpenOCD and Olimex
 ARM-USB-OCD:
 
 $ cd firmware
-$ make MODEL=sne-crewtv spectrum-sensor.u
+$ ./configure sne-eshter
+$ make spectrum-sensor.u
 
-Set the MODEL variable to the name of the hardware model you are
-using.
+Set argument to the ./configure script to the name of the hardware model you
+are using.
 
 If you want to run the application using the VESNA bootloader, add
 "LDSCRIPT=vesna_app.ld" to the make command-line.
@@ -94,11 +105,16 @@ Then run "make test":
 $ cd vesna-spectrum-sensor/firmware
 $ make test
 
+To install Python bindings:
+
+$ cd vesna-spectrum-sensor/python
+$ python setup.py
+
 
 Usage
 =====
 
-Connect VESNA to a serial terminal using 115200 baud, 8 data bits, 1 stop
+Connect VESNA to a serial terminal using 576000 baud, 8 data bits, 1 stop
 bit, no parity.
 
 You can then use the terminal to interact with the application in a
@@ -113,9 +129,9 @@ A typical session consists of:
 2. "select" command to select a configuration and setup the spectrum sweep
    parameters.
 
-3. "report-on" command to start the sweep.
+3. "sweep-on" command to start the sweep.
 
-4. "report-off" command to stop the sweep.
+4. "sweep-off" command to stop the sweep.
 
 
 The python/ directory includes Python classes that abstract this interface.
@@ -125,7 +141,7 @@ Please refer to the README in that directory for details.
 License
 =======
 
-Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+Copyright (C) 2014 SensorLab, Jozef Stefan Institute
 http://sensorlab.ijs.si
 
 This program is free software: you can redistribute it and/or modify
