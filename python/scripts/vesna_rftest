@@ -351,7 +351,7 @@ def test_ch_filter(dut, gen):
 
 		log("    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf)))
 
-		npoints = 40
+		npoints = 80
 
 		f_hz_list = [	(fc_hz - 1.5*dut.config.bw) + 3.0 * dut.config.bw / (npoints - 1) * n
 				for n in xrange(npoints) ]
