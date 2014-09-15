@@ -1,6 +1,6 @@
 BINARY = spectrum-sensor
 
-VERSION		= $(shell git describe --always)
+VERSION		= $(shell git describe --always --dirty=+)
 
 PREFIX		?= arm-none-eabi
 CC		= $(PREFIX)-gcc
