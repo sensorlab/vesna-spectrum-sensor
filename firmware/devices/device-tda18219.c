@@ -631,6 +631,28 @@ static const struct vss_device_config dev_tda18219_dvbt_500khz = {
 	.priv			= &dev_tda18219_dvbt_500khz_priv
 };
 
+static void delay(void)
+{
+	int n;
+	for(n = 0; n < 1000000; n++) {
+		__asm__("nop");
+	}
+}
+
+static void blink(void)
+{
+	vss_ltc1560_bwsel(LTC1560_BWSEL_500KHZ);
+	vss_dac_set_trigger(0xfff);
+	delay();
+	vss_ltc1560_bwsel(LTC1560_BWSEL_1000KHZ);
+	delay();
+	vss_dac_set_trigger(0x0);
+	delay();
+	vss_ltc1560_bwsel(LTC1560_BWSEL_500KHZ);
+	delay();
+	vss_dac_set_trigger(0xfff);
+}
+
 int vss_device_tda18219_register(void)
 {
 	int r;
@@ -645,6 +667,8 @@ int vss_device_tda18219_register(void)
 	vss_device_config_add(&dev_tda18219_dvbt_1000khz);
 	vss_device_config_add(&dev_tda18219_dvbt_500khz);
 #endif
+
+	blink();
 
 	return VSS_OK;
 }
