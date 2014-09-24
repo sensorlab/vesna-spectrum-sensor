@@ -20,9 +20,11 @@
 
 #ifdef MODEL_SNE_ESHTER
 #	define DAC_BBGAIN_PIN	GPIO4
+#	define DAC_THRLVL_PIN	GPIO5
 #endif
 
 int vss_dac_init(void);
 int vss_dac_set_bbgain(uint8_t gain);
+int vss_dac_set_trigger(uint16_t thr);
 
 #endif

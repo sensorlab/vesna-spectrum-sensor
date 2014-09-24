@@ -27,13 +27,20 @@
 int vss_dac_init(void)
 {
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO4);
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, DAC_BBGAIN_PIN);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, DAC_THRLVL_PIN);
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_DACEN);
 
 	dac_disable(CHANNEL_1);
 	dac_disable_waveform_generation(CHANNEL_1);
 	dac_enable(CHANNEL_1);
-	dac_set_trigger_source(DAC_CR_TSEL1_SW);
+
+	dac_disable(CHANNEL_2);
+	dac_disable_waveform_generation(CHANNEL_2);
+	dac_enable(CHANNEL_2);
+
+	dac_set_trigger_source(DAC_CR_TSEL1_SW|DAC_CR_TSEL2_SW);
 	return VSS_OK;
 }
 
@@ -41,5 +48,12 @@ int vss_dac_set_bbgain(uint8_t gain)
 {
 	dac_load_data_buffer_single(gain, RIGHT8, CHANNEL_1);
 	dac_software_trigger(CHANNEL_1);
+	return VSS_OK;
+}
+
+int vss_dac_set_trigger(uint16_t thr)
+{
+	dac_load_data_buffer_single(thr, RIGHT12, CHANNEL_2);
+	dac_software_trigger(CHANNEL_2);
 	return VSS_OK;
 }
