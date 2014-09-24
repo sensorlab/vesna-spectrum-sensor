@@ -640,8 +640,11 @@ int vss_device_tda18219_register(void)
 
 	vss_device_config_add(&dev_tda18219_dvbt_1700khz);
 	vss_device_config_add(&dev_tda18219_dvbt_8000khz);
+
+#ifdef MODEL_SNE_ESHTER
 	vss_device_config_add(&dev_tda18219_dvbt_1000khz);
 	vss_device_config_add(&dev_tda18219_dvbt_500khz);
+#endif
 
 	return VSS_OK;
 }
