@@ -30,7 +30,7 @@ OPENBLT_PATH=../../../src/openblt_v010001/Target
 #|---------------------------------------------------------------------------------------|
 #| Configure project name                                                                |
 #|---------------------------------------------------------------------------------------|
-PROJ_NAME=openbtl_olimex_stm32p103
+PROJ_NAME=openbtl_vss
 
 
 #|---------------------------------------------------------------------------------------|
@@ -147,6 +147,13 @@ LIBS =
 
 
 #|---------------------------------------------------------------------------------------|
+#| OpenOCD configuration                                                                 |
+#|---------------------------------------------------------------------------------------|
+OPENOCD		?= openocd
+OPENOCD_PARAMS  ?= -f interface/olimex-arm-usb-ocd.cfg -f target/stm32f1x.cfg
+
+
+#|---------------------------------------------------------------------------------------|
 #| Define targets                                                                        |
 #|---------------------------------------------------------------------------------------|
 AOBJS = $(patsubst %.s,%.o,$(PROJ_ASRCS))
@@ -156,8 +163,18 @@ COBJS = $(patsubst %.c,%.o,$(PROJ_CSRCS))
 #|---------------------------------------------------------------------------------------|
 #| Make ALL                                                                              |
 #|---------------------------------------------------------------------------------------|
-all : $(BIN_PATH)/$(PROJ_NAME).srec
+all : $(BIN_PATH)/$(PROJ_NAME).elf
 
+upload: $(BIN_PATH)/$(PROJ_NAME).elf
+	$(OPENOCD) $(OPENOCD_PARAMS) -c "\
+		reset_config trst_and_srst; \
+		init; \
+		reset halt; \
+		poll; \
+		flash write_image erase $< 0 elf; \
+		reset run; \
+		shutdown \
+	"
 
 $(BIN_PATH)/$(PROJ_NAME).srec : $(BIN_PATH)/$(PROJ_NAME).elf
 	@$(OC) $< $(OFLAGS) $@
