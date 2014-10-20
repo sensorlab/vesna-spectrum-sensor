@@ -25,6 +25,8 @@
 #****************************************************************************************
 SHELL = sh
 
+OPENBLT_PATH=../../../src/openblt_v010001/Target
+
 #|---------------------------------------------------------------------------------------|
 #| Configure project name                                                                |
 #|---------------------------------------------------------------------------------------|
@@ -54,41 +56,41 @@ main.c \
 ./lib/STM32F10x_StdPeriph_Driver/src/stm32f10x_spi.c \
 ./lib/STM32F10x_StdPeriph_Driver/src/stm32f10x_usart.c \
 ./lib/STM32F10x_StdPeriph_Driver/stm32f10x_conf.h \
-../../../Source/third_party/fatfs/src/diskio.h \
-../../../Source/third_party/fatfs/src/ff.c \
-../../../Source/third_party/fatfs/src/ff.h \
-../../../Source/third_party/fatfs/src/integer.h \
-../../../Source/third_party/fatfs/src/option/unicode.c \
-../../../Source/boot.c \
-../../../Source/boot.h \
-../../../Source/com.c \
-../../../Source/com.h \
-../../../Source/xcp.c \
-../../../Source/xcp.h \
-../../../Source/backdoor.c \
-../../../Source/backdoor.h \
-../../../Source/cop.c \
-../../../Source/cop.h \
-../../../Source/file.c \
-../../../Source/file.h \
-../../../Source/assert.c \
-../../../Source/assert.h \
-../../../Source/plausibility.h \
-../../../Source/ARMCM3_STM32/types.h \
-../../../Source/ARMCM3_STM32/cpu.c \
-../../../Source/ARMCM3_STM32/cpu.h \
-../../../Source/ARMCM3_STM32/can.c \
-../../../Source/ARMCM3_STM32/can.h \
-../../../Source/ARMCM3_STM32/uart.c \
-../../../Source/ARMCM3_STM32/uart.h \
-../../../Source/ARMCM3_STM32/nvm.c \
-../../../Source/ARMCM3_STM32/nvm.h \
-../../../Source/ARMCM3_STM32/timer.c \
-../../../Source/ARMCM3_STM32/timer.h \
-../../../Source/ARMCM3_STM32/flash.c \
-../../../Source/ARMCM3_STM32/flash.h \
-../../../Source/ARMCM3_STM32/GCC/vectors.c \
-../../../Source/ARMCM3_STM32/GCC/cstart.c
+$(OPENBLT_PATH)/Source/third_party/fatfs/src/diskio.h \
+$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.c \
+$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.h \
+$(OPENBLT_PATH)/Source/third_party/fatfs/src/integer.h \
+$(OPENBLT_PATH)/Source/third_party/fatfs/src/option/unicode.c \
+$(OPENBLT_PATH)/Source/boot.c \
+$(OPENBLT_PATH)/Source/boot.h \
+$(OPENBLT_PATH)/Source/com.c \
+$(OPENBLT_PATH)/Source/com.h \
+$(OPENBLT_PATH)/Source/xcp.c \
+$(OPENBLT_PATH)/Source/xcp.h \
+$(OPENBLT_PATH)/Source/backdoor.c \
+$(OPENBLT_PATH)/Source/backdoor.h \
+$(OPENBLT_PATH)/Source/cop.c \
+$(OPENBLT_PATH)/Source/cop.h \
+$(OPENBLT_PATH)/Source/file.c \
+$(OPENBLT_PATH)/Source/file.h \
+$(OPENBLT_PATH)/Source/assert.c \
+$(OPENBLT_PATH)/Source/assert.h \
+$(OPENBLT_PATH)/Source/plausibility.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/types.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/cpu.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/cpu.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/uart.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/uart.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/nvm.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/nvm.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/timer.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/timer.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/flash.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/flash.h \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/GCC/vectors.c \
+$(OPENBLT_PATH)/Source/ARMCM3_STM32/GCC/cstart.c
 
 
 #|---------------------------------------------------------------------------------------|
@@ -120,7 +122,7 @@ OBJ_PATH = obj
 BIN_PATH = bin
 INC_PATH = $(patsubst %,-I%,$(sort $(foreach file,$(filter %.h,$(PROJ_FILES)),$(dir $(file)))))
 INC_PATH += -I.
-LIB_PATH  = -L../../../Source/ARMCM3_STM32/GCC/
+LIB_PATH  = -L$(OPENBLT_PATH)/Source/ARMCM3_STM32/GCC/
 
 
 #|---------------------------------------------------------------------------------------|
@@ -186,11 +188,9 @@ $(COBJS): %.o: %.c $(PROJ_CHDRS)
 #|---------------------------------------------------------------------------------------|
 clean : 
 	@echo +++ Cleaning build environment
-	@cs-rm -f $(foreach file,$(AOBJS),$(OBJ_PATH)/$(file))
-	@cs-rm -f $(foreach file,$(COBJS),$(OBJ_PATH)/$(file))
-	@cs-rm -f $(patsubst %.o,%.lst,$(foreach file,$(COBJS),$(OBJ_PATH)/$(file)))
-	@cs-rm -f $(BIN_PATH)/$(PROJ_NAME).elf $(BIN_PATH)/$(PROJ_NAME).map
-	@cs-rm -f $(BIN_PATH)/$(PROJ_NAME).srec
+	@rm -f $(foreach file,$(AOBJS),$(OBJ_PATH)/$(file))
+	@rm -f $(foreach file,$(COBJS),$(OBJ_PATH)/$(file))
+	@rm -f $(patsubst %.o,%.lst,$(foreach file,$(COBJS),$(OBJ_PATH)/$(file)))
+	@rm -f $(BIN_PATH)/$(PROJ_NAME).elf $(BIN_PATH)/$(PROJ_NAME).map
+	@rm -f $(BIN_PATH)/$(PROJ_NAME).srec
 	@echo +++ Clean complete
-
-                                                                                                                                                                                                                                                                
