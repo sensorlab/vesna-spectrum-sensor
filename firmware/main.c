@@ -88,6 +88,7 @@ static void setup_usart(void)
 static void setup(void)
 {
 	SCB_VTOR = (u32) vector_table;
+	asm volatile ("cpsie i");
 
 	rcc_clock_setup_in_hsi_out_56mhz();
 

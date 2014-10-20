@@ -30,6 +30,8 @@ void rcc_clock_setup_in_hsi_out_56mhz(void)
 	/* Select HSI as SYSCLK source. */
 	rcc_set_sysclk_source(RCC_CFGR_SW_SYSCLKSEL_HSICLK);
 
+	rcc_osc_off(PLL);
+
 	/*
 	 * Set prescalers for AHB, ADC, ABP1, ABP2.
 	 * Do this before touching the PLL (TODO: why?).
