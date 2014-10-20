@@ -45,7 +45,6 @@
 * Function prototypes
 ****************************************************************************************/
 static void Init(void);
-static void InitUsart(void);
 
 
 /************************************************************************************//**
@@ -107,38 +106,6 @@ static void Init(void)
 
   RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
   while(RCC_GetSYSCLKSource() != 0x08);
-
-  InitUsart();
 }
-
-static void InitUsart(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct;
-  USART_InitTypeDef USART_InitStruct;
-
-  /* enable UART peripheral clock */
-  /* enable GPIO peripheral clock for transmitter and receiver pins */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
-  /* configure USART Tx as alternate function push-pull */
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
-  /* Configure USART Rx as alternate function input floating */
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
-  /* configure UART communcation parameters */  
-  USART_InitStruct.USART_BaudRate = BOOT_COM_UART_BAUDRATE;
-  USART_InitStruct.USART_WordLength = USART_WordLength_8b;
-  USART_InitStruct.USART_StopBits = USART_StopBits_1;
-  USART_InitStruct.USART_Parity = USART_Parity_No;
-  USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(USART1, &USART_InitStruct);
-  /* enable UART */
-  USART_Cmd(USART1, ENABLE);
-} /*** end of Init ***/
-
 
 /*********************************** end of main.c *************************************/
