@@ -23,6 +23,9 @@ include Makefile.conf
 
 all: $(BINARY).elf
 
+%.srec: %.elf
+	$(OBJCOPY) -Osrec $< $@
+
 %.bin: %.elf
 	$(OBJCOPY) -Obinary $(*).elf $(*).bin
 
@@ -33,7 +36,7 @@ all: $(BINARY).elf
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -f *.o *.d *.elf *.bin
+	rm -f *.o *.d *.elf *.bin *.srec
 	rm -f platform/*.o platform/*.d
 	rm -f devices/*.o devices/*.d
 	$(MAKE) -C tests clean
