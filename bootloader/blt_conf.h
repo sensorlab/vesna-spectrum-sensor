@@ -51,7 +51,7 @@
 /** \brief Frequency of the external crystal oscillator. */
 #define BOOT_CPU_XTAL_SPEED_KHZ         (8000)
 /** \brief Desired system speed. */
-#define BOOT_CPU_SYSTEM_SPEED_KHZ       (72000)
+#define BOOT_CPU_SYSTEM_SPEED_KHZ       (64000)
 /** \brief Motorola or Intel style byte ordering. */
 #define BOOT_CPU_BYTE_ORDER_MOTOROLA    (0)
 /** \brief Enable/disable hook function call right before user program start. */
@@ -157,6 +157,8 @@
  */
 /** \brief Enable/disable the backdoor override hook functions. */
 #define BOOT_BACKDOOR_HOOKS_ENABLE      (0)
+
+#define BACKDOOR_ENTRY_TIMEOUT_MS	(2000)
 
 
 /****************************************************************************************
