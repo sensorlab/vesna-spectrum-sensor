@@ -327,7 +327,7 @@ void FileFirmwareUpdateCompletedHook(void)
     f_close(&logfile.handle);
   }
   /* wait for all logging related transmission to complete */
-  while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
+  while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
   #endif
   /* now delete the firmware file from the disk since the update was successful */
   f_unlink(firmwareFilename);
@@ -378,9 +378,9 @@ void FileFirmwareUpdateLogHook(blt_char *info_string)
   while(*info_string != '\0')
   {
     /* write character to transmit holding register */
-    USART_SendData(USART2, *info_string);
+    USART_SendData(USART1, *info_string);
     /* wait for tx holding register to be empty */
-    while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+    while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
     /* point to the next character in the string */
     info_string++;
   }

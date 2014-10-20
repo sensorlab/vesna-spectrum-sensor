@@ -81,10 +81,8 @@ static void Init(void)
 {
   volatile blt_int32u StartUpCounter = 0, HSEStatus = 0;
   blt_int32u pll_multiplier;
-#if (BOOT_FILE_LOGGING_ENABLE > 0) && (BOOT_COM_UART_ENABLE == 0)
   GPIO_InitTypeDef  GPIO_InitStruct;
   USART_InitTypeDef USART_InitStruct;  
-#endif  
 
   /* reset the RCC clock configuration to the default reset state (for debug purpose) */
   /* set HSION bit */
@@ -175,26 +173,9 @@ static void Init(void)
   /* enable clocks for CAN controller peripheral */
   RCC->APB1ENR |= (blt_int32u)0x02000000;
 #endif
-#if (BOOT_COM_UART_ENABLE > 0)
-  /* enable clock for USART2 peripheral */
-  RCC->APB1ENR |= (blt_int32u)0x00020000;
-  /* enable clocks for USART2 transmitter and receiver pins (GPIOA and AFIO) */
-  RCC->APB2ENR |= (blt_int32u)(0x00000004 | 0x00000001);
-  /* configure USART2 Tx (GPIOA2) as alternate function push-pull */
-  /* first reset the configuration */
-  GPIOA->CRL &= ~(blt_int32u)((blt_int32u)0xf << 8);
-  /* CNF2[1:0] = %10 and MODE2[1:0] = %11 */
-  GPIOA->CRL |= (blt_int32u)((blt_int32u)0xb << 8);
-  /* configure USART2 Rx (GPIOA3) as alternate function input floating */
-  /* first reset the configuration */
-  GPIOA->CRL &= ~(blt_int32u)((blt_int32u)0xf << 12);
-  /* CNF2[1:0] = %01 and MODE2[1:0] = %00 */
-  GPIOA->CRL |= (blt_int32u)((blt_int32u)0x4 << 12);
-#elif (BOOT_FILE_LOGGING_ENABLE > 0)
   /* enable UART peripheral clock */
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
   /* enable GPIO peripheral clock for transmitter and receiver pins */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
   /* configure USART Tx as alternate function push-pull */
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
   GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2;
@@ -211,10 +192,9 @@ static void Init(void)
   USART_InitStruct.USART_Parity = USART_Parity_No;
   USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(USART2, &USART_InitStruct);
+  USART_Init(USART1, &USART_InitStruct);
   /* enable UART */
-  USART_Cmd(USART2, ENABLE);
-#endif
+  USART_Cmd(USART1, ENABLE);
 } /*** end of Init ***/
 
 
