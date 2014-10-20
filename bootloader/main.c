@@ -1,3 +1,4 @@
+// vim: ts=2 sw=2 expandtab
 /************************************************************************************//**
 * \file         Demo\ARMCM3_STM32_Olimex_STM32P103_GCC\Boot\main.c
 * \brief        Bootloader application source file.
