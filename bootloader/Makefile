@@ -40,8 +40,6 @@ PROJ_FILES= \
 blt_conf.h \
 hooks.c \
 main.c \
-./lib/fatfs/ffconf.h \
-./lib/fatfs/mmc.c \
 ./lib/CMSIS/CM3/CoreSupport/core_cm3.c \
 ./lib/CMSIS/CM3/CoreSupport/core_cm3.h \
 ./lib/CMSIS/CM3/DeviceSupport/ST/STM32F10x/stm32f10x.h \
@@ -56,11 +54,6 @@ main.c \
 ./lib/STM32F10x_StdPeriph_Driver/src/stm32f10x_spi.c \
 ./lib/STM32F10x_StdPeriph_Driver/src/stm32f10x_usart.c \
 ./lib/STM32F10x_StdPeriph_Driver/stm32f10x_conf.h \
-$(OPENBLT_PATH)/Source/third_party/fatfs/src/diskio.h \
-$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.c \
-$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.h \
-$(OPENBLT_PATH)/Source/third_party/fatfs/src/integer.h \
-$(OPENBLT_PATH)/Source/third_party/fatfs/src/option/unicode.c \
 $(OPENBLT_PATH)/Source/boot.c \
 $(OPENBLT_PATH)/Source/boot.h \
 $(OPENBLT_PATH)/Source/com.c \
@@ -79,8 +72,6 @@ $(OPENBLT_PATH)/Source/plausibility.h \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/types.h \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/cpu.c \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/cpu.h \
-$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.c \
-$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.h \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/uart.c \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/uart.h \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/nvm.c \
@@ -92,6 +83,15 @@ $(OPENBLT_PATH)/Source/ARMCM3_STM32/flash.h \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/GCC/vectors.c \
 $(OPENBLT_PATH)/Source/ARMCM3_STM32/GCC/cstart.c
 
+#./lib/fatfs/ffconf.h \
+#./lib/fatfs/mmc.c \
+#$(OPENBLT_PATH)/Source/third_party/fatfs/src/diskio.h \
+#$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.c \
+#$(OPENBLT_PATH)/Source/third_party/fatfs/src/ff.h \
+#$(OPENBLT_PATH)/Source/third_party/fatfs/src/integer.h \
+#$(OPENBLT_PATH)/Source/third_party/fatfs/src/option/unicode.c \
+#$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.c \
+#$(OPENBLT_PATH)/Source/ARMCM3_STM32/can.h \
 
 #|---------------------------------------------------------------------------------------|
 #| Compiler binaries                                                                     |
