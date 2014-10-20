@@ -45,6 +45,7 @@
 * Function prototypes
 ****************************************************************************************/
 static void Init(void);
+static void InitUsart(void);
 
 
 /************************************************************************************//**
@@ -79,111 +80,53 @@ int main(void)
 ****************************************************************************************/
 static void Init(void)
 {
-  volatile blt_int32u StartUpCounter = 0, HSEStatus = 0;
-  blt_int32u pll_multiplier;
-  GPIO_InitTypeDef  GPIO_InitStruct;
-  USART_InitTypeDef USART_InitStruct;  
+  SystemInit();
 
-  /* reset the RCC clock configuration to the default reset state (for debug purpose) */
-  /* set HSION bit */
-  RCC->CR |= (blt_int32u)0x00000001;
-  /* reset SW, HPRE, PPRE1, PPRE2, ADCPRE and MCO bits */
-  RCC->CFGR &= (blt_int32u)0xF8FF0000;
-  /* reset HSEON, CSSON and PLLON bits */
-  RCC->CR &= (blt_int32u)0xFEF6FFFF;
-  /* reset HSEBYP bit */
-  RCC->CR &= (blt_int32u)0xFFFBFFFF;
-  /* reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE/OTGFSPRE bits */
-  RCC->CFGR &= (blt_int32u)0xFF80FFFF;
-  /* disable all interrupts and clear pending bits  */
-  RCC->CIR = 0x009F0000;
-  /* enable HSE */    
-  RCC->CR |= ((blt_int32u)RCC_CR_HSEON);
-  /* wait till HSE is ready and if Time out is reached exit */
-  do
-  {
-    HSEStatus = RCC->CR & RCC_CR_HSERDY;
-    StartUpCounter++;  
-  } 
-  while((HSEStatus == 0) && (StartUpCounter != 1500));
-  /* check if time out was reached */
-  if ((RCC->CR & RCC_CR_HSERDY) == RESET)
-  {
-    /* cannot continue when HSE is not ready */
-    ASSERT_RT(BLT_FALSE);
-  }
-  /* enable flash prefetch buffer */
+	RCC_DeInit();
+	//FLASH_HalfCycleAccessCmd(FLASH_HalfCycleAccess_Disable);
+	RCC_ClockSecuritySystemCmd(DISABLE);
+
+	//FLASH_PrefetchBufferCmd(FLASH_PrefetchBuffer_Enable);
   FLASH->ACR |= FLASH_ACR_PRFTBE;
-  /* reset flash wait state configuration to default 0 wait states */
-  FLASH->ACR &= (blt_int32u)((blt_int32u)~FLASH_ACR_LATENCY);
-#if (BOOT_CPU_SYSTEM_SPEED_KHZ > 48000)
-  /* configure 2 flash wait states */
-  FLASH->ACR |= (blt_int32u)FLASH_ACR_LATENCY_2;    
-#elif (BOOT_CPU_SYSTEM_SPEED_KHZ > 24000)  
-  /* configure 1 flash wait states */
-  FLASH->ACR |= (blt_int32u)FLASH_ACR_LATENCY_1;    
-#endif
-  /* HCLK = SYSCLK */
-  RCC->CFGR |= (blt_int32u)RCC_CFGR_HPRE_DIV1;
-  /* PCLK2 = HCLK/2 */
-  RCC->CFGR |= (blt_int32u)RCC_CFGR_PPRE2_DIV2;
-  /* PCLK1 = HCLK/2 */
-  RCC->CFGR |= (blt_int32u)RCC_CFGR_PPRE1_DIV2;
-  /* reset PLL configuration */
-  RCC->CFGR &= (blt_int32u)((blt_int32u)~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | \
-                                          RCC_CFGR_PLLMULL));
-  /* assert that the pll_multiplier is between 2 and 16 */
-  ASSERT_CT((BOOT_CPU_SYSTEM_SPEED_KHZ/BOOT_CPU_XTAL_SPEED_KHZ) >= 2);
-  ASSERT_CT((BOOT_CPU_SYSTEM_SPEED_KHZ/BOOT_CPU_XTAL_SPEED_KHZ) <= 16);
-  /* calculate multiplier value */
-  pll_multiplier = BOOT_CPU_SYSTEM_SPEED_KHZ/BOOT_CPU_XTAL_SPEED_KHZ;
-  /* convert to register value */
-  pll_multiplier = (blt_int32u)((pll_multiplier - 2) << 18);
-  /* set the PLL multiplier and clock source */
-  RCC->CFGR |= (blt_int32u)(RCC_CFGR_PLLSRC_HSE | pll_multiplier);
-  /* enable PLL */
-  RCC->CR |= RCC_CR_PLLON;
-  /* wait till PLL is ready */
-  while((RCC->CR & RCC_CR_PLLRDY) == 0)
-  {
-  }
-  /* select PLL as system clock source */
-  RCC->CFGR &= (blt_int32u)((blt_int32u)~(RCC_CFGR_SW));
-  RCC->CFGR |= (blt_int32u)RCC_CFGR_SW_PLL;    
-  /* wait till PLL is used as system clock source */
-  while ((RCC->CFGR & (blt_int32u)RCC_CFGR_SWS) != (blt_int32u)0x08)
-  {
-  }
-#if (BOOT_COM_CAN_ENABLE > 0)
-  /* enable clocks for CAN transmitter and receiver pins (GPIOB and AFIO) */
-  RCC->APB2ENR |= (blt_int32u)(0x00000008 | 0x00000001);
-  /* configure CAN Rx (GPIOB8) as alternate function input pull-up */
-  /* first reset the configuration */
-  GPIOB->CRH &= ~(blt_int32u)((blt_int32u)0xf << 0);
-  /* CNF8[1:0] = %10 and MODE8[1:0] = %00 */
-  GPIOB->CRH |= (blt_int32u)((blt_int32u)0x8 << 0);
-  /* configure CAN Tx (GPIOB9) as alternate function push-pull */
-  /* first reset the configuration */
-  GPIOB->CRH &= ~(blt_int32u)((blt_int32u)0xf << 4);
-  /* CNF9[1:0] = %10 and MODE9[1:0] = %11 */
-  GPIOB->CRH |= (blt_int32u)((blt_int32u)0xb << 4);
-  /* remap CAN1 pins to PortB */
-  AFIO->MAPR &= ~(blt_int32u)((blt_int32u)0x3 << 13);
-  AFIO->MAPR |=  (blt_int32u)((blt_int32u)0x2 << 13);
-  /* enable clocks for CAN controller peripheral */
-  RCC->APB1ENR |= (blt_int32u)0x02000000;
-#endif
+
+	RCC_HCLKConfig(RCC_SYSCLK_Div1); 	/* HCLK = SYSCLK = 64MHZ */
+	RCC_PCLK2Config(RCC_HCLK_Div1); 	/* PCLK2 = HCLK/1 = 64MHz */
+	RCC_PCLK1Config(RCC_HCLK_Div2); 	/* PCLK1 = HCLK/2 = 32MHz */
+	RCC_ADCCLKConfig(RCC_PCLK2_Div8);	/* ADCCLK = HCLK/8 = 8MHz */
+
+  /* Flash 2 wait state */
+	//FLASH_SetLatency(FLASH_Latency_2);
+  FLASH->ACR &= ~FLASH_ACR_LATENCY;
+  FLASH->ACR |= FLASH_ACR_LATENCY_2;
+
+	/* Select the PLL as system clock source */
+	RCC_PLLConfig(RCC_PLLSource_HSI_Div2, RCC_PLLMul_16);
+	RCC_PLLCmd(ENABLE);
+
+	while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET);
+
+  RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+  while(RCC_GetSYSCLKSource() != 0x08);
+
+  InitUsart();
+}
+
+static void InitUsart(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct;
+  USART_InitTypeDef USART_InitStruct;
+
   /* enable UART peripheral clock */
   /* enable GPIO peripheral clock for transmitter and receiver pins */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
   /* configure USART Tx as alternate function push-pull */
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_2;
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(GPIOA, &GPIO_InitStruct);
   /* Configure USART Rx as alternate function input floating */
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_3;
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10;
   GPIO_Init(GPIOA, &GPIO_InitStruct);
   /* configure UART communcation parameters */  
   USART_InitStruct.USART_BaudRate = BOOT_COM_UART_BAUDRATE;
