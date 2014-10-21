@@ -62,6 +62,8 @@ int main(void)
   /* initialize the bootloader */
   BootInit();
 
+  USART_SendData(USART1, 'B');
+
   /* start the infinite program loop */
   while (1)
   {

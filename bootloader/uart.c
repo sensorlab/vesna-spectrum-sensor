@@ -45,6 +45,7 @@
 ****************************************************************************************/
 static blt_bool UartReceiveByte(blt_int8u *data);
 static blt_bool UartTransmitByte(blt_int8u data);
+static blt_bool UartXTransmitByte(USART_TypeDef* USARTx, blt_int8u data);
 
 
 /************************************************************************************//**
@@ -60,8 +61,9 @@ void UartInit(void)
   USART_InitTypeDef USART_InitStruct;
 
   /* enable UART peripheral clock */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
   /* enable GPIO peripheral clock for transmitter and receiver pins */
-  RCC_APB2PeriphClockCmd(RCC_APB1Periph_USART3 | RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
 
   GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
   /* configure USART Tx as alternate function push-pull */
@@ -199,16 +201,21 @@ static blt_bool UartReceiveByte(blt_int8u *data)
 ****************************************************************************************/
 static blt_bool UartTransmitByte(blt_int8u data)
 {
+  return UartXTransmitByte(USART3, data);
+}
+
+static blt_bool UartXTransmitByte(USART_TypeDef* USARTx, blt_int8u data)
+{
   /* check if tx holding register can accept new data */
-  if ((USART3->SR & USART_FLAG_TXE) == 0)
+  if ((USARTx->SR & USART_FLAG_TXE) == 0)
   {
     /* UART not ready. should not happen */
     return BLT_FALSE;
   }
   /* write byte to transmit holding register */
-  USART_SendData(USART3, data);
+  USART_SendData(USARTx, data);
   /* wait for tx holding register to be empty */
-  while((USART3->SR & USART_FLAG_TXE) == 0)
+  while((USARTx->SR & USART_FLAG_TXE) == 0)
   { 
     /* keep the watchdog happy */
     CopService();
