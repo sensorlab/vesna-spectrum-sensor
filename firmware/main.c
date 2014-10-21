@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <ctype.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/scb.h>
@@ -389,10 +390,23 @@ static void command_calib_off(void)
 	printf("ok\n");
 }
 
-static void dispatch(const char* cmd)
+static char* trim(char* cmd)
+{
+	char* end = cmd + strlen(cmd) - 1;
+	while(end > cmd && isspace((int) *end)) end--;
+	end++;
+
+	*end = 0;
+
+	return cmd;
+}
+
+static void dispatch(char* cmdi)
 {
 	int start, stop, step, dev_id, config_id;
 	int n_average;
+
+	char* cmd = trim(cmdi);
 
 	if (!strcmp(cmd, "help")) {
 		command_help();
