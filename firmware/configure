@@ -1,6 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 MODEL=$1
+
+if [ "$#" -gt 1 ]; then
+	UART=$2
+else
+	UART=usart1
+fi
+
 CONFIG_H="config.h"
 
 TDA18219_OBJS="platform/ltc1560.o platform/adc.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o platform/dac.o"
@@ -56,12 +63,24 @@ case "$MODEL" in
 
 	"")
 		cat <<END
-USAGE: $0 model
+USAGE: $0 model [ uart ]
 END
 		exit 1
 		;;
 	*)
 		echo "Unknown model $MODEL"
+		exit 1
+esac
+
+UART=${UART^^}
+
+case "$UART" in
+	USART1)
+		;;
+	USART3)
+		;;
+	*)
+		echo "Unknown or unsupported UART $UART"
 		exit 1
 esac
 
@@ -76,3 +95,4 @@ echo "/* command line: $0 $@ */" >> "$CONFIG_H"
 for DEF in $DEFS; do
 	echo "#define $DEF 1" >> "$CONFIG_H"
 done
+echo "#define VSS_UART $UART" >> "$CONFIG_H"

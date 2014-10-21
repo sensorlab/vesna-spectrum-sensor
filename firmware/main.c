@@ -60,29 +60,52 @@ extern void (*const vector_table[]) (void);
 
 /* Set up all the peripherals */
 
-static void setup_usart(void) 
+static void setup_usart(void)
 {
-	/* GPIO pin for USART TX */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
+	uint32_t baudrate;
 
-	/* GPIO pin for USART RX */
-	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-		      GPIO_CNF_INPUT_FLOAT, GPIO10);
+	if(VSS_UART == USART1) {
+		/* GPIO pin for USART TX */
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+				GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
+
+		/* GPIO pin for USART RX */
+		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+			      GPIO_CNF_INPUT_FLOAT, GPIO10);
+
+		baudrate = 576000;
+	} else {
+		// GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
+		uint32_t r = AFIO_MAPR;
+		r &= ~AFIO_MAPR_USART3_REMAP_FULL_REMAP;
+		r |= AFIO_MAPR_USART3_REMAP_PARTIAL_REMAP;
+		AFIO_MAPR = r;
+
+		/* GPIO pin for USART TX */
+		gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ,
+				GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO10);
+
+		/* GPIO pin for USART RX */
+		gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
+			      GPIO_CNF_INPUT_FLOAT, GPIO11);
+
+		// maximum supported by DigiConnect ME
+		baudrate = 230400;
+	}
 
 	/* Setup USART parameters. */
-	usart_set_baudrate(USART1, 576000);
-	usart_set_databits(USART1, 8);
-	usart_set_stopbits(USART1, USART_STOPBITS_1);
-	usart_set_parity(USART1, USART_PARITY_NONE);
-	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
-	usart_set_mode(USART1, USART_MODE_TX_RX);
+	usart_set_baudrate(VSS_UART, baudrate);
+	usart_set_databits(VSS_UART, 8);
+	usart_set_stopbits(VSS_UART, USART_STOPBITS_1);
+	usart_set_parity(VSS_UART, USART_PARITY_NONE);
+	usart_set_flow_control(VSS_UART, USART_FLOWCONTROL_NONE);
+	usart_set_mode(VSS_UART, USART_MODE_TX_RX);
 
-	/* Enable USART1 Receive interrupt. */
-	USART_CR1(USART1) |= USART_CR1_RXNEIE;
+	/* Enable VSS_UART Receive interrupt. */
+	USART_CR1(VSS_UART) |= USART_CR1_RXNEIE;
 
 	/* Finally enable the USART. */
-	usart_enable(USART1);
+	usart_enable(VSS_UART);
 }
 
 static void setup(void)
@@ -95,11 +118,22 @@ static void setup(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
 			RCC_APB2ENR_IOPAEN |
 			RCC_APB2ENR_IOPBEN |
-			RCC_APB2ENR_AFIOEN |
-			RCC_APB2ENR_USART1EN);
+			RCC_APB2ENR_IOPCEN |
+			RCC_APB2ENR_AFIOEN);
 
-	nvic_enable_irq(NVIC_USART1_IRQ);
-	nvic_set_priority(NVIC_USART1_IRQ, 0);
+	uint8_t irqn;
+	if(VSS_UART == USART1) {
+		rcc_peripheral_enable_clock(&RCC_APB2ENR,
+			RCC_APB2ENR_USART1EN);
+		irqn = NVIC_USART1_IRQ;
+	} else {
+		rcc_peripheral_enable_clock(&RCC_APB1ENR,
+			RCC_APB1ENR_USART3EN);
+		irqn = NVIC_USART3_IRQ;
+	}
+
+	nvic_enable_irq(irqn);
+	nvic_set_priority(irqn, 0);
 
 	/* GPIO pin for the LED */
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
@@ -118,13 +152,13 @@ static void led_off(void)
 	gpio_clear(GPIOB, GPIO2);
 }
 
-void usart1_isr(void)
+void usart_isr(void)
 {
 	/* Check if we were called because of RXNE. */
-	if (((USART_CR1(USART1) & USART_CR1_RXNEIE) != 0) &&
-	    ((USART_SR(USART1) & USART_SR_RXNE) != 0)) {
+	if (((USART_CR1(VSS_UART) & USART_CR1_RXNEIE) != 0) &&
+	    ((USART_SR(VSS_UART) & USART_SR_RXNE) != 0)) {
 
-		char c = usart_recv(USART1);
+		char c = usart_recv(VSS_UART);
 
 		/* If we haven't yet processed previous command ignore input */
 		if (!usart_buffer_attn) {
@@ -140,6 +174,16 @@ void usart1_isr(void)
 	}
 }
 
+void usart1_isr(void)
+{
+	usart_isr();
+}
+
+void usart3_isr(void)
+{
+	usart_isr();
+}
+
 /* Provide _write syscall used by libc */
 int _write(int file, char *ptr, int len)
 {
@@ -148,7 +192,7 @@ int _write(int file, char *ptr, int len)
 	if (file == 1) {
 		led_on();
 		for (i = 0; i < len; i++) {
-			usart_send_blocking(USART1, ptr[i]);
+			usart_send_blocking(VSS_UART, ptr[i]);
 		}
 		led_off();
 		return i;
