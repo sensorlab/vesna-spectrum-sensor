@@ -163,7 +163,7 @@ void usart_isr(void)
 
 		/* If we haven't yet processed previous command ignore input */
 		if (!usart_buffer_attn) {
-			if (c == '\n' || usart_buffer_len >= (USART_BUFFER_SIZE-1)) {
+			if (c == '\n' || c == 0 || usart_buffer_len >= (USART_BUFFER_SIZE-1)) {
 				usart_buffer[usart_buffer_len] = 0;
 				usart_buffer_len = 0;
 				usart_buffer_attn = 1;
@@ -439,6 +439,11 @@ static void dispatch(char* cmdi)
 		command_version();
 	} else if (!strcmp(cmd, "calib-off")) {
 		command_calib_off();
+	} else if (!strcmp(cmd, "\x02\xff")) {
+		// "\x02\xff\x00" is a XCP connect command. It means
+		// someone wants to talk to the bootloader. Hence we
+		// reset the system to start the bootloader...
+		scb_reset_system();
 	} else {
 		printf("error: unknown command: %s\n", cmd);
 	}
