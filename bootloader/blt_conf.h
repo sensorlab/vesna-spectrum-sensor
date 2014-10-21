@@ -99,13 +99,13 @@
 /** \brief Enable/disable UART transport layer. */
 #define BOOT_COM_UART_ENABLE            (1)
 /** \brief Configure the desired communication speed. */
-#define BOOT_COM_UART_BAUDRATE          (115200)
+#define BOOT_COM_UART_BAUDRATE          (230400)
 /** \brief Configure number of bytes in the target->host data packet. */
 #define BOOT_COM_UART_TX_MAX_DATA       (64)
 /** \brief Configure number of bytes in the host->target data packet. */
 #define BOOT_COM_UART_RX_MAX_DATA       (64)
 /** \brief Select the desired UART peripheral as a zero based index. */
-#define BOOT_COM_UART_CHANNEL_INDEX     (0)
+#define BOOT_COM_UART_CHANNEL_INDEX     (2)
 
 
 /****************************************************************************************

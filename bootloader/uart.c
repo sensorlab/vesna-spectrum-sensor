@@ -1,3 +1,4 @@
+// vim: ts=2 sw=2 expandtab
 /************************************************************************************//**
 * \file         Source\ARMCM3_STM32\uart.c
 * \brief        Bootloader UART communication interface source file.
@@ -53,23 +54,25 @@ static blt_bool UartTransmitByte(blt_int8u data);
 ****************************************************************************************/
 void UartInit(void)
 {
-  ASSERT_CT((BOOT_COM_UART_CHANNEL_INDEX == 0));
+  ASSERT_CT((BOOT_COM_UART_CHANNEL_INDEX == 2));
 
   GPIO_InitTypeDef GPIO_InitStruct;
   USART_InitTypeDef USART_InitStruct;
 
   /* enable UART peripheral clock */
   /* enable GPIO peripheral clock for transmitter and receiver pins */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_GPIOA | RCC_APB2Periph_AFIO, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB1Periph_USART3 | RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
+
+  GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, ENABLE);
   /* configure USART Tx as alternate function push-pull */
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_9;
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_Init(GPIOC, &GPIO_InitStruct);
   /* Configure USART Rx as alternate function input floating */
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_11;
+  GPIO_Init(GPIOC, &GPIO_InitStruct);
   /* configure UART communcation parameters */  
   USART_InitStruct.USART_BaudRate = BOOT_COM_UART_BAUDRATE;
   USART_InitStruct.USART_WordLength = USART_WordLength_8b;
@@ -77,9 +80,9 @@ void UartInit(void)
   USART_InitStruct.USART_Parity = USART_Parity_No;
   USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_InitStruct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(USART1, &USART_InitStruct);
+  USART_Init(USART3, &USART_InitStruct);
   /* enable UART */
-  USART_Cmd(USART1, ENABLE);
+  USART_Cmd(USART3, ENABLE);
 } /*** end of UartInit ***/
 
 
@@ -176,10 +179,10 @@ blt_bool UartReceivePacket(blt_int8u *data)
 static blt_bool UartReceiveByte(blt_int8u *data)
 {
   /* check if a new byte was received by means of the RDR-bit */
-  if((USART1->SR & USART_FLAG_RXNE) != 0)
+  if((USART3->SR & USART_FLAG_RXNE) != 0)
   {
     /* store the received byte */
-    data[0] = USART_ReceiveData(USART1);
+    data[0] = USART_ReceiveData(USART3);
     /* inform caller of the newly received byte */
     return BLT_TRUE;
   }
@@ -197,15 +200,15 @@ static blt_bool UartReceiveByte(blt_int8u *data)
 static blt_bool UartTransmitByte(blt_int8u data)
 {
   /* check if tx holding register can accept new data */
-  if ((USART1->SR & USART_FLAG_TXE) == 0)
+  if ((USART3->SR & USART_FLAG_TXE) == 0)
   {
     /* UART not ready. should not happen */
     return BLT_FALSE;
   }
   /* write byte to transmit holding register */
-  USART_SendData(USART1, data);
+  USART_SendData(USART3, data);
   /* wait for tx holding register to be empty */
-  while((USART1->SR & USART_FLAG_TXE) == 0) 
+  while((USART3->SR & USART_FLAG_TXE) == 0)
   { 
     /* keep the watchdog happy */
     CopService();
