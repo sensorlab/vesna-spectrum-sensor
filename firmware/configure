@@ -1,0 +1,98 @@
+#!/bin/bash
+
+MODEL=$1
+
+if [ "$#" -gt 1 ]; then
+	UART=$2
+else
+	UART=usart1
+fi
+
+CONFIG_H="config.h"
+
+TDA18219_OBJS="platform/ltc1560.o platform/adc.o platform/i2c.o platform/tda18219.o platform/ad8307.o devices/device-tda18219.o platform/dac.o"
+
+case "$MODEL" in
+
+	sne-crewtv)
+		LIBS="-ltda18219"
+
+		OBJS="$TDA18219_OBJS"
+
+		DEFS="TUNER_TDA18219 MODEL_SNE_CREWTV"
+		;;
+
+	sne-ismtv-uhf)
+		LIBS="-ltda18219"
+
+		OBJS="$TDA18219_OBJS"
+
+		DEFS="TUNER_TDA18219 MODEL_SNE_ISMTV_UHF"
+		;;
+
+	sne-eshter)
+		LIBS="-ltda18219"
+		OBJS="$TDA18219_OBJS eeprom.o"
+		DEFS="TUNER_TDA18219 MODEL_SNE_ESHTER"
+		;;
+
+	sne-ismtv-868)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNE_ISMTV_868"
+		;;
+
+	sne-ismtv-2400)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNE_ISMTV_2400"
+		;;
+
+	snr-trx-868)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNR_TRX_868"
+		;;
+
+	snr-trx-2400)
+		OBJS="platform/cc.o devices/device-cc.o"
+		DEFS="TUNER_CC MODEL_SNR_TRX_2400"
+		;;
+
+	dummy)
+		OBJS="devices/device-dummy.o"
+		DEFS="TUNER_NULL"
+		;;
+
+	"")
+		cat <<END
+USAGE: $0 model [ uart ]
+END
+		exit 1
+		;;
+	*)
+		echo "Unknown model $MODEL"
+		exit 1
+esac
+
+UART=${UART^^}
+
+case "$UART" in
+	USART1)
+		;;
+	USART3)
+		;;
+	*)
+		echo "Unknown or unsupported UART $UART"
+		exit 1
+esac
+
+cat > Makefile.conf <<END
+# command line: $0 $@
+LIBS += $LIBS
+OBJS += $OBJS
+END
+
+rm -f "$CONFIG_H"
+echo "/* command line: $0 $@ */" >> "$CONFIG_H"
+for DEF in $DEFS; do
+	echo "#define $DEF 1" >> "$CONFIG_H"
+done
+echo "#define VSS_UART $UART" >> "$CONFIG_H"

@@ -3,6 +3,7 @@
 *.elf
 *.o
 *.pyc
+*.srec
 tags
 python/build
 python/log

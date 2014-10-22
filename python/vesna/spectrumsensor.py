@@ -18,6 +18,7 @@ class Device:
 		"""
 		self.id = id
 		self.name = name
+		self.supports_sampling = False
 
 class DeviceConfig:
 	"""Configuration for a spectrum sensing device.
@@ -47,6 +48,12 @@ class DeviceConfig:
 		assert ch < self.num
 
 		return self.base + self.spacing * ch
+
+	def hz_to_ch(self, hz):
+		"""Convert center frequency in hertz to channel number."""
+		assert self.covers(hz, hz)
+
+		return int(round((hz - self.base) / self.spacing))
 
 	def get_start_hz(self):
 		"""Return the lowest settable frequency."""
@@ -89,11 +96,16 @@ class DeviceConfig:
 
 		# channel start, step, stop as passed to vesna channel config
 		# (stop_ch is one past the last channel to be scanned)
-		start_ch = int(round((start_hz - self.base) / self.spacing))
+		start_ch = self.hz_to_ch(start_hz)
 		step_ch = max(1, int(round(step_hz / self.spacing)))
-		stop_ch = int(round((stop_hz - self.base) / self.spacing)) + 1
+		stop_ch = self.hz_to_ch(stop_hz) + 1
 
 		return SweepConfig(self, start_ch, stop_ch, step_ch)
+
+	def get_sample_config(self, hz, nsamples):
+		ch = self.hz_to_ch(hz)
+
+		return SampleConfig(self, ch, nsamples)
 
 	def __str__(self):
 		return "channel config %d,%d: %10d - %10d Hz" % (
@@ -101,24 +113,28 @@ class DeviceConfig:
 
 class SweepConfig:
 	"""Frequency sweep configuration for a spectrum sensing device."""
-	def __init__(self, config, start_ch, stop_ch, step_ch):
+	def __init__(self, config, start_ch, stop_ch, step_ch, nsamples=100):
 		"""Create a new sweep configuration.
 
 		config -- Device configuration object to use
 		start_ch -- Lowest frequency channel to sweep
 		stop_ch -- One past the highest frequency channel to sweep
 		step_ch -- How many channels in a step
+		nsamples -- How many samples to average per measurement (only
+		supported on some devices)
 		"""
 		assert start_ch >= 0
 		assert start_ch < config.num
 		assert stop_ch >= 0
 		assert stop_ch <= config.num
 		assert step_ch > 0
+		assert nsamples > 0
 
 		self.config = config
 		self.start_ch = start_ch
 		self.stop_ch = stop_ch
 		self.step_ch = step_ch
+		self.nsamples = nsamples
 
 		# given (start_ch - stop_ch) range may not be an integer number of step_ch
 		last_ch = stop_ch - (stop_ch - start_ch - 1) % step_ch - 1
@@ -142,7 +158,28 @@ class SweepConfig:
 		"""
 		return map(self.config.ch_to_hz, self.get_ch_list())
 
-class Sweep:
+class SampleConfig:
+	"""Frequency sweep configuration for a spectrum sensing device."""
+	def __init__(self, config, ch, nsamples):
+		"""Create a new sweep configuration.
+
+		config -- Device configuration object to use
+		ch -- Frequency channel to sample,
+		nsamples -- Number of samples to record
+		"""
+		assert ch >= 0
+		assert ch < config.num
+		assert nsamples > 0
+		assert config.device.supports_sampling
+
+		self.config = config
+		self.ch = ch
+		self.nsamples = nsamples
+
+		# real frequency
+		self.hz = config.ch_to_hz(ch)
+
+class TimestampedData:
 	"""Measurement data from a single frequency sweep.
 
 	Attributes:
@@ -153,6 +190,8 @@ class Sweep:
 	def __init__(self):
 		self.timestamp = None
 		self.data = []
+
+Sweep = TimestampedData
 
 class ConfigList:
 	"""List of devices and device configurations supported by attached hardware."""
@@ -211,14 +250,17 @@ class ConfigList:
 class SpectrumSensor:
 	"""Top-level abstraction of the attached spectrum sensing hardware."""
 
-	def __init__(self, device):
+	def __init__(self, device, calibration=True):
 		"""Create a new spectrum sensor object.
 
 		device -- path to the character device for the RS232 port with the spectrum sensor.
 		"""
-		self.comm = serial.Serial(device, 115200, timeout=.5)
+		self.comm = serial.Serial(device, 576000, timeout=.5)
+		self.calibration = calibration
 
-		self.comm.write("report-off\n")
+		self.comm.write("sweep-off\n")
+		self._wait_for_ok()
+		self.comm.write("sample-off\n")
 		self._wait_for_ok()
 
 	def _wait_for_ok(self):
@@ -228,6 +270,11 @@ class SpectrumSensor:
 				break
 			elif r.startswith("error:"):
 				raise SpectrumSensorException(r.strip())
+
+	def set_calibration(self, state):
+		"""Turn calibration on or off.
+		"""
+		self.calibration = state
 	
 	def get_config_list(self):
 		"""Query and return the list of supported device configurations."""
@@ -249,6 +296,11 @@ class SpectrumSensor:
 				config_list._add_device(device)
 				continue
 
+			g = re.match("  device supports channel sampling", line)
+			if g:
+				device.supports_sampling = True
+				continue
+
 			g = re.match("  channel config ([0-9]+),([0-9]+): (.*)", line)
 			if g:
 				config = DeviceConfig(int(g.group(2)), g.group(3), device)
@@ -267,7 +319,7 @@ class SpectrumSensor:
 	def get_status(self, config):
 		"""Query and return the string with device status."""
 		sweep_config = SweepConfig(config, 0, 1, 1)
-		self._select_channel(sweep_config)
+		self._select_sweep_channel(sweep_config)
 
 		self.comm.write("status\n")
 
@@ -294,14 +346,93 @@ class SpectrumSensor:
 
 		return resp
 
-	def _select_channel(self, sweep_config):
+	def _select_sweep_channel(self, sweep_config):
 		self.comm.write("select channel %d:%d:%d config %d,%d\n" % (
 				sweep_config.start_ch, sweep_config.step_ch, sweep_config.stop_ch,
 				sweep_config.config.device.id, sweep_config.config.id))
+		self._wait_for_ok()
+
+		if not self.calibration:
+			self.comm.write("calib-off\n")
+			self._wait_for_ok()
+
+		self.comm.write("samples %d\n" % (
+				sweep_config.nsamples))
+		self._wait_for_ok()
+
+	def _select_sample_channel(self, sample_config):
+		self.comm.write("select channel %d config %d,%d\n" % (
+				sample_config.ch,
+				sample_config.config.device.id, sample_config.config.id))
+		self._wait_for_ok()
+
+		self.comm.write("samples %d\n" % (
+				sample_config.nsamples))
+		self._wait_for_ok()
+
+	def _iter_timestamps(self, num):
+		while True:
+			try:
+				line = self.comm.readline()
+			except select.error:
+				break
+
+			if not line:
+				break
+
+			try:
+				fields = line.split()
+				if len(fields) != num + 4:
+					raise ValueError
+				if fields[0] != 'TS':
+					raise ValueError
+				if fields[2] != 'DS':
+					raise ValueError
+				if fields[-1] != 'DE':
+					raise ValueError
+
+				sweep = TimestampedData()
+
+				sweep.timestamp = float(fields[1])
+				sweep.data = map(float, fields[3:-1])
+			except ValueError:
+				print "Ignoring corrupted line: %s" % (line,)
+			else:
+				yield sweep
+
+	def sample_run(self, sample_config, cb):
+		"""Run the specified frequency sweep.
+
+		sweep_config -- frequency sweep configuration object
+		cb -- callback function
+		n_average -- number of samples to average
+
+		This function continuously runs the specified frequency sweep on the attached
+		hardware.  The provided callback function is called for each completed sweep:
+
+		cb(sweep_config, sweep)
+
+		Where sweep_config is the SweepConfig object provided when calling run() and sweep
+		the Sweep object with measured data.
+		"""
+
+		self._select_sample_channel(sample_config)
+
+		self.comm.write("sample-on\n")
+
+		self.comm.timeout = None
+
+		for samples in self._iter_timestamps(sample_config.nsamples):
+			if not cb(sample_config, samples):
+				break
+
+		self.comm.timeout = 0.5
+
+		self.comm.write("sample-off\n")
 
 		self._wait_for_ok()
 
-	def run(self, sweep_config, cb):
+	def sweep_run(self, sweep_config, cb):
 		"""Run the specified frequency sweep.
 
 		sweep_config -- frequency sweep configuration object
@@ -316,39 +447,21 @@ class SpectrumSensor:
 		the Sweep object with measured data.
 		"""
 
-		self._select_channel(sweep_config)
+		self._select_sweep_channel(sweep_config)
 
-		self.comm.write("report-on\n")
+		self.comm.write("sweep-on\n")
 
 		self.comm.timeout = None
 
-		while True:
-			try:
-				line = self.comm.readline()
-			except select.error:
-				break
-
-			if not line:
-				break
-
-			try:
-				fields = line.split()
-				if len(fields) != sweep_config.num_channels + 4:
-					raise ValueError
-
-				sweep = Sweep()
-
-				sweep.timestamp = float(fields[1])
-				sweep.data = map(float, fields[3:-1])
-			except ValueError:
-				print "Ignoring corrupted line: %s" % (line,)
-				continue
-
+		for sweep in self._iter_timestamps(sweep_config.num_channels):
 			if not cb(sweep_config, sweep):
 				break
 
 		self.comm.timeout = 0.5
 
-		self.comm.write("report-off\n")
+		self.comm.write("sweep-off\n")
 
 		self._wait_for_ok()
+
+	def run(self, sweep_config, cb):
+		return self.sweep_run(sweep_config, cb)

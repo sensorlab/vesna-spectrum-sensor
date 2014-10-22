@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+/* Copyright (C) 2013 SensorLab, Jozef Stefan Institute
  * http://sensorlab.ijs.si
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,9 +15,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 /* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
-#ifndef HAVE_DEV_DUMMY_H
-#define HAVE_DEV_DUMMY_H
+#include "average.h"
 
-int dev_dummy_register(void);
+#include <math.h>
 
-#endif
+power_t vss_average(power_t* buffer, size_t len)
+{
+	int acc = 0;
+
+	size_t n;
+	for(n = 0; n < len; n++) {
+		acc += buffer[n];
+	}
+
+	return acc / (int) len;
+}
+
+power_t vss_signal_power(uint16_t* buffer, size_t len)
+{
+	int acc = 0;
+	size_t n;
+	for(n = 0; n < len; n++) {
+		acc += buffer[n];
+	}
+
+	double mean = ((double) acc) / len;
+
+	double pacc = 0.;
+	for(n = 0; n < len; n++) {
+		double m = buffer[n] - mean;
+		pacc += m*m;
+	}
+
+	if(pacc == 0.) {
+		return INT16_MIN;
+	} else {
+		return 100.*(10.*log10(pacc / len) - 90.31);
+	}
+}

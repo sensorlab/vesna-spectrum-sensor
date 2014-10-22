@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+/* Copyright (C) 2013 SensorLab, Jozef Stefan Institute
  * http://sensorlab.ijs.si
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,239 +17,192 @@
 /* Authors:	Ales Verbic
  * 		Zoltan Padrah
  * 		Tomaz Solc, <tomaz.solc@ijs.si> */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <libopencm3/stm32/f1/gpio.h>
-#include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/f1/rtc.h>
-#include <libopencm3/stm32/iwdg.h>
-#include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/systick.h>
 
-#include "dev-cc.h"
-#include "spectrum.h"
+#include "average.h"
+#include "cc.h"
+#include "rtc.h"
+#include "task.h"
+#include "timer.h"
 
-static void setup_stm32f1_peripherals(void)
+#include "device-cc.h"
+
+static struct vss_task* current_task = NULL;
+
+static int vss_device_cc_init(void)
 {
-	u32 br;
-	if(CC_SPI == SPI1) {
-		rcc_peripheral_enable_clock(&RCC_APB2ENR,
-				RCC_APB2ENR_SPI1EN);
-		br = SPI_CR1_BAUDRATE_FPCLK_DIV_4;
-	} else if(CC_SPI == SPI2) {
-		rcc_peripheral_enable_clock(&RCC_APB1ENR,
-				RCC_APB1ENR_SPI2EN);
-		br = SPI_CR1_BAUDRATE_FPCLK_DIV_2;
-	}
+	int r;
 
-	gpio_set_mode(CC_GPIO_NSS, GPIO_MODE_OUTPUT_10_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, CC_PIN_NSS);
+	r = vss_timer_init();
+	if(r) return r;
 
-	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_OUTPUT_10_MHZ,
-			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, CC_PIN_SCK);
-	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, CC_PIN_MISO);
-	gpio_set_mode(CC_GPIO_SPI, GPIO_MODE_OUTPUT_10_MHZ,
-			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, CC_PIN_MOSI);
+	r = vss_rtc_init();
+	if(r) return r;
 
+	r = vss_cc_init();
+	if(r) return r;
 
-	spi_init_master(CC_SPI,
-			br,
-			SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE, 
-			SPI_CR1_CPHA_CLK_TRANSITION_1,
-			SPI_CR1_DFF_8BIT,
-			SPI_CR1_MSBFIRST);
-	spi_set_unidirectional_mode(CC_SPI);
-	spi_set_full_duplex_mode(CC_SPI);
-	spi_enable_software_slave_management(CC_SPI);
-	spi_set_nss_high(CC_SPI);
-
-	spi_enable(CC_SPI);
-
-
-	systick_set_reload(0x00ffffff);
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
-	systick_counter_enable();
+	return VSS_OK;
 }
 
-static void cc_wait_while_miso_high(void)
+static int dev_cc_status_ic(char* buffer, size_t len, const char* ic)
 {
-	while(gpio_get(CC_GPIO_SPI, CC_PIN_MISO));
+	int r;
+
+	uint8_t partnum, version;
+
+	r = vss_cc_read_reg(CC_REG_PARTNUM, &partnum);
+	if(r) return r;
+
+	r = vss_cc_read_reg(CC_REG_VERSION, &version);
+	if(r) return r;
+
+	int wlen = snprintf(buffer, len,
+			"IC          : %s\n"
+			"Part number : %02hhx\n"
+			"Version     : %02hhx\n",
+			ic, partnum, version);
+	if(wlen >= (int) len) return VSS_TOO_MANY;
+		
+	return VSS_OK;
 }
 
-static const uint32_t systick_udelay_calibration = 6;
-
-static void systick_udelay(uint32_t usecs)
+static int dev_cc1101_status(void* priv __attribute__((unused)), char* buffer, size_t len)
 {
-	uint32_t val = (STK_VAL - systick_udelay_calibration * usecs) 
-		& 0x00ffffff;
-	while(!((STK_VAL - val) & 0x00800000));
+	return dev_cc_status_ic(buffer, len, "CC1101");
 }
 
-static void cc_reset() 
+static int dev_cc2500_status(void* priv __attribute__((unused)), char* buffer, size_t len)
 {
-	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
-	cc_wait_while_miso_high();
-
-	spi_send(CC_SPI, CC_STROBE_SRES);
-	uint16_t value = spi_read(CC_SPI);
-
-	cc_wait_while_miso_high();
-
-	gpio_set(CC_GPIO_NSS, CC_PIN_NSS);
+	return dev_cc_status_ic(buffer, len, "CC2500");
 }
 
-uint16_t cc_read_reg(uint8_t reg)
+static int dev_cc_setup(const uint8_t* init_seq)
 {
-	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
-	cc_wait_while_miso_high();
+	int r;
 
-	spi_send(CC_SPI, reg|0x80);
-	spi_read(CC_SPI);
+	r = vss_cc_strobe(CC_STROBE_SIDLE);
+	if(r) return r;
 
-	spi_send(CC_SPI, 0);
-	uint16_t value = spi_read(CC_SPI);
-
-	gpio_set(CC_GPIO_NSS,CC_PIN_NSS);
-
-	return value;
-}
-
-void cc_write_reg(uint8_t reg, uint8_t value) 
-{
-	gpio_clear(CC_GPIO_NSS,CC_PIN_NSS);
-	cc_wait_while_miso_high();
-
-	spi_send(CC_SPI, reg);
-	spi_read(CC_SPI);
-
-	spi_send(CC_SPI, value);
-	spi_read(CC_SPI);
-
-	gpio_set(CC_GPIO_NSS,CC_PIN_NSS);
-}
-
-uint16_t cc_strobe(uint8_t strobe) 
-{
-	gpio_clear(CC_GPIO_NSS, CC_PIN_NSS);
-	cc_wait_while_miso_high();
-
-	spi_send(CC_SPI, strobe);
-	uint16_t value = spi_read(CC_SPI);
-
-	gpio_set(CC_GPIO_NSS, CC_PIN_NSS);
-
-	return value;
-}
-
-void cc_wait_state(uint8_t state)
-{
-	while(cc_read_reg(CC_REG_MARCSTATE) != state);
-}
-
-int dev_cc_reset(void* priv __attribute__((unused))) 
-{
-	setup_stm32f1_peripherals();
-	cc_reset();
-	return E_SPECTRUM_OK;
-}
-
-int dev_cc_setup(void* priv __attribute__((unused)), 
-		const struct spectrum_sweep_config* sweep_config) 
-{
-	uint8_t *init_seq = (uint8_t*) sweep_config->dev_config->priv;
-
-	cc_strobe(CC_STROBE_SIDLE);
-	cc_wait_state(CC_MARCSTATE_IDLE);
+	r = vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	if(r) return r;
 
 	int n;
 	for(n = 0; init_seq[n] != 0xff; n += 2) {
 		uint8_t reg = init_seq[n];
 		uint8_t value = init_seq[n+1];
-		cc_write_reg(reg, value);
+
+		r = vss_cc_write_reg(reg, value);
+		if(r) return r;
 	}
 
-	return E_SPECTRUM_OK;
+	return VSS_OK;
 }
 
-int dev_cc_run(void* priv __attribute__((unused)),
-		const struct spectrum_sweep_config* sweep_config)
+static int dev_cc_prepare_measurement(struct vss_task* task)
+{
+	unsigned int ch = vss_task_get_channel(task);
+
+	int r;
+
+	r = vss_cc_strobe(CC_STROBE_SIDLE);
+	if(r) return r;
+
+	r = vss_cc_wait_state(CC_MARCSTATE_IDLE);
+	if(r) return r;
+
+	r = vss_cc_write_reg(CC_REG_CHANNR, ch);
+	if(r) return r;
+
+	r = vss_cc_strobe(CC_STROBE_SRX);
+	if(r) return r;
+
+	r = vss_cc_wait_state(CC_MARCSTATE_RX);
+	if(r) return r;
+
+	vss_timer_schedule(2);
+
+	return VSS_OK;
+}
+
+static void dev_cc_take_measurement(struct vss_task* task)
 {
 	int r;
-	short int *data;
-	/* FIXME: calculate value according to the formula in the datasheet */
-	const uint32_t rssi_delay_us = 5000;
+	int8_t reg;
 
-	rtc_set_counter_val(0);
+	unsigned n;
+	unsigned n_average = vss_task_get_n_average(task);
+	power_t buffer[n_average];
 
-	int channel_num = spectrum_sweep_channel_num(sweep_config);
-	data = calloc(channel_num, sizeof(*data));
-	if (data == NULL) {
-		return E_SPECTRUM_TOOMANY;
-	}
-
-	do {
-		IWDG_KR = IWDG_KR_RESET;
-		uint32_t rtc_counter = rtc_get_counter_val();
-		/* LSE clock is 32768 Hz. Prescaler is set to 16.
-		 *
-		 *                 rtc_counter * 16
-		 * t [ms] = 1000 * ----------------
-		 *                       32768
-		 */
-		int timestamp = ((long long) rtc_counter) * 1000 / 2048;
-
-		int n, ch;
-		for(		ch = sweep_config->channel_start, n = 0; 
-				ch < sweep_config->channel_stop && n < channel_num; 
-				ch += sweep_config->channel_step, n++) {
-
-			cc_strobe(CC_STROBE_SIDLE);
-			cc_wait_state(CC_MARCSTATE_IDLE);
-
-			cc_write_reg(CC_REG_CHANNR, ch);
-
-			cc_strobe(CC_STROBE_SRX);
-			cc_wait_state(CC_MARCSTATE_RX);
-
-			systick_udelay(rssi_delay_us);
-
-			int8_t reg = cc_read_reg(CC_REG_RSSI);
-
-			int rssi_dbm_100 = -5920 + ((int) reg) * 50;
-			data[n] = rssi_dbm_100;
+	for(n = 0; n < n_average; n++) {
+		r = vss_cc_read_reg(CC_REG_RSSI, (uint8_t*) &reg);
+		if(r) {
+			vss_task_set_error(task,
+					"vss_cc_read_reg for RSSI returned an error");
+			current_task = NULL;
+			return;
 		}
-		r = sweep_config->cb(sweep_config, timestamp, data);
-	} while(!r);
 
-	free(data);
+		power_t rssi_dbm_100 = -5920 + reg * 50;
+		buffer[n] = rssi_dbm_100;
+	}
 
-	if (r == E_SPECTRUM_STOP_SWEEP) {
-		return E_SPECTRUM_OK;
+	power_t rssi_dbm_100 = vss_average(buffer, n_average);
+
+	if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+		r = dev_cc_prepare_measurement(task);
+		if(r) {
+			vss_task_set_error(task,
+				"dev_cc_prepare_measurement() returned an error");
+			current_task = NULL;
+			return;
+		}
 	} else {
-		return r;
+		current_task = NULL;
 	}
 }
 
-static void dev_cc_print_status(void)
+static int dev_cc_run(void* priv __attribute__((unused)), struct vss_task* task)
 {
-	printf("Part number : %02x\n", cc_read_reg(CC_REG_PARTNUM));
-	printf("Version     : %02x\n", cc_read_reg(CC_REG_VERSION));
+	if(current_task != NULL) {
+		return VSS_TOO_MANY;
+	}
+	current_task = task;
+
+	int r;
+	r = dev_cc_setup(task->sweep_config->device_config->priv);
+	if(r) return r;
+
+	r = vss_rtc_reset();
+	if(r) return r;
+
+	r = dev_cc_prepare_measurement(task);
+	if(r) return r;
+
+	return VSS_OK;
 }
 
-void dev_cc1101_print_status(void)
+void vss_device_cc_timer_isr(void)
 {
-	printf("IC          : CC1101\n\n");
-	dev_cc_print_status();
+	dev_cc_take_measurement(current_task);
 }
 
-void dev_cc2500_print_status(void)
-{
-	printf("IC          : CC2500\n\n");
-	dev_cc_print_status();
-}
+static const struct vss_device device_cc1101 = {
+	.name = "cc1101",
 
-uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
+	.run			= dev_cc_run,
+	.resume			= NULL.
+	.status			= dev_cc1101_status,
+
+	.supports_task_baseband	= 0,
+
+	.priv 			= NULL
+};
+
+static uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 60.267857
 	 * Base frequency = 862.999695
@@ -318,7 +271,7 @@ uint8_t dev_cc1101_868mhz_60khz_init_seq[] = {
 	0xFF,                 0xFF
 };
 
-uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 105.468750
 	 * Base frequency = 867.999985
@@ -387,7 +340,7 @@ uint8_t dev_cc1101_868mhz_100khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 210.937500
 	 * Base frequency = 867.999985
@@ -456,7 +409,7 @@ uint8_t dev_cc1101_868mhz_200khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	/* Channel spacing = 49.953461
 	 * RX filter BW = 421.875000
 	 * Base frequency = 867.999985
@@ -525,7 +478,7 @@ uint8_t dev_cc1101_868mhz_400khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
 	/* Base frequency = 868.299911
 	 * Channel spacing = 199.813843
 	 * RX filter BW = 421.875000
@@ -594,7 +547,7 @@ uint8_t dev_cc1101_868mhz_400khz_200khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
+static uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
 	/* Base frequency = 867.999985
 	 * Channel spacing = 199.813843
 	 * RX filter BW = 843.750000
@@ -663,7 +616,7 @@ uint8_t dev_cc1101_868mhz_800khz_200khz_init_seq[] = {
 	0xFF,			   0xFF
 };
 
-uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
 	/* Base frequency = 905.999634
 	 * Channel spacing = 399.627686
 	 * RX filter BW = 421.875000
@@ -732,7 +685,7 @@ uint8_t dev_cc1101_905mhz_400khz_400khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
+static uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
 	/* Base frequency = 905.999634
 	 * Channel spacing = 399.627686
 	 * RX filter BW = 843.750000
@@ -801,8 +754,10 @@ uint8_t dev_cc1101_905mhz_800khz_400khz_init_seq[] = {
 	0xFF,		 	   0xFF
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_60khz = {
+static const struct vss_device_config dev_cc1101_868mhz_60khz = {
 	.name			= "868 MHz ISM, 60 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 862999695,
 	.channel_spacing_hz	= 49953,
@@ -814,8 +769,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_60khz = {
 	.priv			= dev_cc1101_868mhz_60khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
+static const struct vss_device_config dev_cc1101_868mhz_100khz = {
 	.name			= "868 MHz ISM, 100 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -827,8 +784,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_100khz = {
 	.priv			= dev_cc1101_868mhz_100khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_200khz = {
 	.name			= "868 MHz ISM, 200 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -840,8 +799,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_200khz = {
 	.priv			= dev_cc1101_868mhz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
+static const struct vss_device_config dev_cc1101_868mhz_400khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 49953,
@@ -853,8 +814,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_400khz = {
 	.priv			= dev_cc1101_868mhz_400khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_400khz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_400khz_200khz = {
 	.name			= "868 MHz ISM, 400 kHz bandwidth, 200 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 868299911,
 	.channel_spacing_hz	= 199814,
@@ -866,8 +829,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_400khz_200khz = {
 	.priv			= dev_cc1101_868mhz_400khz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_868mhz_800khz_200khz = {
+static const struct vss_device_config dev_cc1101_868mhz_800khz_200khz = {
 	.name			= "868 MHz ISM, 800 kHz bandwidth, 200 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 867999985,
 	.channel_spacing_hz	= 199814,
@@ -879,8 +844,10 @@ const struct spectrum_dev_config dev_cc1101_868mhz_800khz_200khz = {
 	.priv			= dev_cc1101_868mhz_800khz_200khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_905mhz_400khz_400khz = {
+static const struct vss_device_config dev_cc1101_905mhz_400khz_400khz = {
 	.name			= "905 MHz, 400 kHz bandwidth, 400 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 905999634,
 	.channel_spacing_hz	= 399628,
@@ -892,8 +859,10 @@ const struct spectrum_dev_config dev_cc1101_905mhz_400khz_400khz = {
 	.priv			= dev_cc1101_905mhz_400khz_400khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc1101_905mhz_800khz_400khz = {
+static const struct vss_device_config dev_cc1101_905mhz_800khz_400khz = {
 	.name			= "905 MHz, 800 kHz bandwidth, 400 kHz spacing",
+
+	.device			= &device_cc1101,
 
 	.channel_base_hz 	= 905999634,
 	.channel_spacing_hz	= 399628,
@@ -905,31 +874,19 @@ const struct spectrum_dev_config dev_cc1101_905mhz_800khz_400khz = {
 	.priv			= dev_cc1101_905mhz_800khz_400khz_init_seq
 };
 
-const struct spectrum_dev_config* dev_cc1101_config_list[] = {
-	&dev_cc1101_868mhz_60khz,
-	&dev_cc1101_868mhz_100khz,
-	&dev_cc1101_868mhz_200khz,
-	&dev_cc1101_868mhz_400khz,
-	&dev_cc1101_868mhz_400khz_200khz,
-	&dev_cc1101_868mhz_800khz_200khz,
-	&dev_cc1101_905mhz_400khz_400khz,
-	&dev_cc1101_905mhz_800khz_400khz
-};
+static const struct vss_device device_cc2500 = {
+	.name = "cc2500",
 
-const struct spectrum_dev dev_cc1101 = {
-	.name = "cc1101",
+	.run			= dev_cc_run,
+	.resume			= NULL,
+	.status			= dev_cc2500_status,
 
-	.dev_config_list	= dev_cc1101_config_list,
-	.dev_config_num		= 8,
-
-	.dev_reset		= dev_cc_reset,
-	.dev_setup		= dev_cc_setup,
-	.dev_run		= dev_cc_run,
+	.supports_task_baseband	= 0,
 
 	.priv 			= NULL
 };
 
-uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
+static uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
 	CC_REG_IOCFG2,         0x2E,
 	CC_REG_IOCFG1,         0x2E,
 	CC_REG_IOCFG0,         0x2E,
@@ -994,7 +951,7 @@ uint8_t dev_cc2500_2400mhz_400khz_init_seq[] = {
 	0xFF,		       0xFF
 };
 
-uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
+static uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
 	CC_REG_IOCFG2,         0x2E,
 	CC_REG_IOCFG1,         0x2E,
 	CC_REG_IOCFG0,         0x2E,
@@ -1059,8 +1016,10 @@ uint8_t dev_cc2500_2400mhz_60khz_init_seq[] = {
 	0xFF,		       0xFF
 };
 
-const struct spectrum_dev_config dev_cc2500_2400mhz_60khz = {
+static const struct vss_device_config dev_cc2500_2400mhz_60khz = {
 	.name			= "2.4 GHz ISM, 60 kHz bandwidth",
+
+	.device			= &device_cc2500,
 
 	.channel_base_hz 	= 2399999908ll,
 	.channel_spacing_hz	= 399628,
@@ -1072,8 +1031,10 @@ const struct spectrum_dev_config dev_cc2500_2400mhz_60khz = {
 	.priv			= dev_cc2500_2400mhz_60khz_init_seq
 };
 
-const struct spectrum_dev_config dev_cc2500_2400mhz_400khz = {
+static const struct vss_device_config dev_cc2500_2400mhz_400khz = {
 	.name			= "2.4 GHz ISM, 400 kHz bandwidth",
+
+	.device			= &device_cc2500,
 
 	.channel_base_hz 	= 2399999908ll,
 	.channel_spacing_hz	= 399628,
@@ -1085,31 +1046,28 @@ const struct spectrum_dev_config dev_cc2500_2400mhz_400khz = {
 	.priv			= dev_cc2500_2400mhz_400khz_init_seq
 };
 
-const struct spectrum_dev_config* dev_cc2500_config_list[] = {
-	&dev_cc2500_2400mhz_400khz,
-	&dev_cc2500_2400mhz_60khz
-};
-
-const struct spectrum_dev dev_cc2500 = {
-	.name = "cc2500",
-
-	.dev_config_list	= dev_cc2500_config_list,
-	.dev_config_num		= 2,
-
-	.dev_reset		= dev_cc_reset,
-	.dev_setup		= dev_cc_setup,
-	.dev_run		= dev_cc_run,
-
-	.priv 			= NULL
-};
-
-int dev_cc_register(void)
+int vss_device_cc_register(void)
 {
+	int r;
+	
+	r = vss_device_cc_init();
+	if(r) return r;
+
 #if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNE_ISMTV_868)
-	return spectrum_add_dev(&dev_cc1101);
+	vss_device_config_add(&dev_cc1101_868mhz_60khz);
+	vss_device_config_add(&dev_cc1101_868mhz_100khz);
+	vss_device_config_add(&dev_cc1101_868mhz_200khz);
+	vss_device_config_add(&dev_cc1101_868mhz_400khz);
+	vss_device_config_add(&dev_cc1101_868mhz_400khz_200khz);
+	vss_device_config_add(&dev_cc1101_868mhz_800khz_200khz);
+	vss_device_config_add(&dev_cc1101_905mhz_400khz_400khz);
+	vss_device_config_add(&dev_cc1101_905mhz_800khz_400khz);
 #endif
 
 #if defined(MODEL_SNR_TRX_2400) || defined(MODEL_SNE_ISMTV_2400)
-	return spectrum_add_dev(&dev_cc2500);
+	vss_device_config_add(&dev_cc2500_2400mhz_60khz);
+	vss_device_config_add(&dev_cc2500_2400mhz_400khz);
 #endif
+
+	return VSS_OK;
 }

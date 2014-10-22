@@ -21,9 +21,12 @@ class LocalDeviceUnderTest(DeviceUnderTest):
 		parser.add_option("-d", "--device", dest="device", metavar="DEVICE",
 				help="Use VESNA spectrum sensor attached to serial DEVICE.",
 				default="/dev/ttyUSB0")
+		parser.add_option("--no-calibration", dest="calibration", action="store_false",
+				help="Don't use calibration tables.",
+				default=True)
 
 	def setup(self, options):
-		self.spectrumsensor = SpectrumSensor(options.device)
+		self.spectrumsensor = SpectrumSensor(options.device, calibration=options.calibration)
 
 		self.config_list = self.spectrumsensor.get_config_list()
 		if not self.config_list.configs:
@@ -110,7 +113,13 @@ def test_power_ramp(dut, gen):
 		p_dbm_start = int(round(nf_mean/10)*10-30)
 		p_dbm_step = 5
 
-		p_dbm_list = range(p_dbm_start, p_dbm_step, p_dbm_step)
+		if p_dbm_start < -85:
+			p_dbm_list =	range(p_dbm_start, -85, p_dbm_step) + \
+					range(-85, -75, p_dbm_step/5) + \
+					range(-75, p_dbm_step, p_dbm_step)
+		else:
+			p_dbm_list = range(p_dbm_start, p_dbm_step, p_dbm_step)
+
 		pout_dbm_list = []
 		for p_dbm in p_dbm_list:
 			log("    Pin = %d dBm" % (p_dbm))
@@ -342,7 +351,7 @@ def test_ch_filter(dut, gen):
 
 		log("    N = %f dBm, u = %f" % (nf_mean, numpy.std(nf)))
 
-		npoints = 40
+		npoints = 80
 
 		f_hz_list = [	(fc_hz - 1.5*dut.config.bw) + 3.0 * dut.config.bw / (npoints - 1) * n
 				for n in xrange(npoints) ]

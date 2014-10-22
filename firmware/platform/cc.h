@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 SensorLab, Jozef Stefan Institute
+/* Copyright (C) 2013 SensorLab, Jozef Stefan Institute
  * http://sensorlab.ijs.si
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,42 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-/* Authors:	Ales Verbic
- * 		Zoltan Padrah
- * 		Tomaz Solc, <tomaz.solc@ijs.si> */
-#ifndef HAVE_DEV_CC_H
-#define HAVE_DEV_CC_H
+/* Author: Tomaz Solc, <tomaz.solc@ijs.si> */
+#ifndef HAVE_CC_H
+#define HAVE_CC_H
 
-#include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/spi.h>
-
-#if defined(MODEL_SNR_TRX_868) || defined(MODEL_SNR_TRX_2400)
-
-#	define CC_GPIO_NSS	GPIOB
-#	define CC_PIN_NSS	GPIO12
-
-#	define CC_GPIO_SPI	GPIOB
-#	define CC_PIN_SCK	GPIO13
-#	define CC_PIN_MISO	GPIO14
-#	define CC_PIN_MOSI	GPIO15
-
-#	define CC_SPI		SPI2
-
-#endif
-
-#if defined(MODEL_SNE_ISMTV_868) || defined(MODEL_SNE_ISMTV_2400)
-
-#	define CC_GPIO_NSS	GPIOB
-#	define CC_PIN_NSS	GPIO9
-
-#	define CC_GPIO_SPI	GPIOA
-#	define CC_PIN_SCK	GPIO5
-#	define CC_PIN_MISO	GPIO6
-#	define CC_PIN_MOSI	GPIO7
-
-#	define CC_SPI		SPI1
-
-#endif
+#include <stdint.h>
 
 /* Configuration Registers */
 #define CC_REG_IOCFG2           0x00        // GDO2 output pin configuration
@@ -198,7 +167,11 @@
 #define CC_REG_LQI_EST_BM                      0x7F
 #define CC_REG_PKTSTATUS_SFD		       0x08
 
-int dev_cc_register(void);
-void dev_cc1101_print_status(void);
-void dev_cc2500_print_status(void);
+int vss_cc_init(void);
+int vss_cc_reset(void);
+int vss_cc_read_reg(uint8_t reg, uint8_t* value);
+int vss_cc_write_reg(uint8_t reg, uint8_t value);
+int vss_cc_strobe(uint8_t strobe);
+int vss_cc_wait_state(uint8_t state);
+
 #endif
