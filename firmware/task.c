@@ -132,7 +132,7 @@ static int vss_task_inc_channel(struct vss_task* task)
 	}
 }
 
-/** @brief Add a new measurement result for the task.
+/** @brief Add a new measurement result for a sweep task.
  *
  * Called by the device driver to report a new measurement.
  *
@@ -163,6 +163,15 @@ int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestam
 	return r;
 }
 
+/** @brief Reserve a block for sample data.
+ *
+ * Called by the device driver before starting a new measurement.
+ *
+ * @param task Pointer to the task.
+ * @param data Pointer to the reserved block.
+ * @param timestamp Time of the measurement.
+ * @return VSS_OK on success or error otherwise.
+ */
 int vss_task_reserve_sample(struct vss_task* task, power_t** data, uint32_t timestamp)
 {
 	int r = vss_task_reserve_block(task, timestamp);
@@ -174,6 +183,13 @@ int vss_task_reserve_sample(struct vss_task* task, power_t** data, uint32_t time
 	return VSS_OK;
 }
 
+/** @brief Write the reserved block of sample data.
+ *
+ * Called by the device driver after concluding a measurement.
+ *
+ * @param task Pointer to the task.
+ * @return VSS_STOP if the driver should terminate the task or VSS_OK otherwise.
+ */
 int vss_task_write_sample(struct vss_task* task)
 {
 	vss_task_write_block(task);
