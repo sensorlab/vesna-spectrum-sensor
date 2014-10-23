@@ -187,7 +187,7 @@ void test_read(void)
 	TEST_ASSERT_EQUAL(0xdeadbeef, ctx.block->timestamp);
 	TEST_ASSERT_EQUAL(0, ctx.block->channel);
 
-	int channel;
+	unsigned int channel;
 	uint32_t timestamp;
 	power_t power;
 
@@ -222,7 +222,7 @@ void test_read_sample(void)
 	TEST_ASSERT_EQUAL(0xdeadbeef, ctx.block->timestamp);
 	TEST_ASSERT_EQUAL(0, ctx.block->channel);
 
-	int channel;
+	unsigned int channel;
 	uint32_t timestamp;
 	power_t power;
 
@@ -307,7 +307,7 @@ void test_overflow(void)
 	struct vss_task_read_result ctx;
 	vss_task_read(&run, &ctx);
 
-	int channel;
+	unsigned int channel;
 	uint32_t timestamp;
 	power_t power;
 

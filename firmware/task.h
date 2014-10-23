@@ -143,7 +143,7 @@ const char* vss_task_get_error(struct vss_task* task);
 
 int vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx);
 int vss_task_read_parse(struct vss_task_read_result *ctx,
-		uint32_t* timestamp, int* channel, power_t* power);
+		uint32_t* timestamp, unsigned int* channel, power_t* power);
 
 /** @} */
 

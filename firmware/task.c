@@ -304,12 +304,12 @@ int vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
  *
  * @param ctx Pointer to the result of the read operation.
  * @param timestamp Timestamp of the measurement.
- * @param channel Channel of the measurement (set to -1 if no measurement yet)
+ * @param channel Channel of the measurement.
  * @param power Result of the power measurement.
  * @return VSS_STOP if there is nothing more to parse or VSS_OK otherwise.
  */
 int vss_task_read_parse(struct vss_task_read_result *ctx,
-		uint32_t* timestamp, int* channel, power_t* power)
+		uint32_t* timestamp, unsigned int* channel, power_t* power)
 {
 	struct vss_task* const task = ctx->task;
 
