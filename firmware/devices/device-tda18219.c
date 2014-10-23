@@ -333,6 +333,14 @@ static enum state_t dev_tda18219_state_read_measurement(struct vss_task* task)
 
 static enum state_t dev_tda18219_state_baseband_sample(struct vss_task* task)
 {
+	/* We force-suspend the task here, because this gives a more
+	 * consistent output. Baseband sampling practically always leads
+	 * to buffer overflow and the task gets suspended anyway. If we force
+	 * suspend after one block, we avoid the situation where there are
+	 * a bunch of closely-spaced blocks at the start, when the buffer
+	 * is still empty. */
+	task->state = VSS_DEVICE_RUN_SUSPENDED;
+
 	power_t* data;
 	int r = vss_task_reserve_sample(task, &data, vss_rtc_read());
 	if(r == VSS_SUSPEND) {
@@ -354,7 +362,7 @@ static enum state_t dev_tda18219_state_baseband_sample(struct vss_task* task)
 		return OFF;
 	}
 
-	return dev_tda18219_state(task, SET_FREQUENCY);
+	return SET_FREQUENCY;
 }
 
 static enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
