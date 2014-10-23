@@ -95,7 +95,7 @@ unsigned int vss_task_get_n_average(struct vss_task* task)
 	return task->sweep_config->n_average;
 }
 
-static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
+static int vss_task_reserve_block(struct vss_task* task, uint32_t timestamp)
 {
 	vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
 	if(task->write_ptr == NULL) {
@@ -105,6 +105,11 @@ static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
 	}
 	vss_task_insert_timestamp(task, timestamp);
 	return VSS_OK;
+}
+
+static void vss_task_write_block(struct vss_task* task)
+{
+	vss_buffer_write(&task->buffer);
 }
 
 static int vss_task_inc_channel(struct vss_task* task)
@@ -127,22 +132,6 @@ static int vss_task_inc_channel(struct vss_task* task)
 	}
 }
 
-static int vss_task_reserve_block(struct vss_task* task, power_t** data, uint32_t timestamp)
-{
-	int r = vss_task_reserve_block_(task, timestamp);
-	if(r) {
-		return r;
-	}
-
-	*data = task->write_ptr;
-	return VSS_OK;
-}
-
-static void vss_task_write_block(struct vss_task* task)
-{
-	vss_buffer_write(&task->buffer);
-}
-
 /** @brief Add a new measurement result for the task.
  *
  * Called by the device driver to report a new measurement.
@@ -155,7 +144,7 @@ static void vss_task_write_block(struct vss_task* task)
 int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestamp)
 {
 	if(task->write_channel == task->sweep_config->channel_start) {
-		int r = vss_task_reserve_block_(task, timestamp);
+		int r = vss_task_reserve_block(task, timestamp);
 		if(r) {
 			return r;
 		}
@@ -174,9 +163,15 @@ int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestam
 	return r;
 }
 
-int vss_task_reserve_sample(struct vss_task* task, power_t **data, uint32_t timestamp)
+int vss_task_reserve_sample(struct vss_task* task, power_t** data, uint32_t timestamp)
 {
-	return vss_task_reserve_block(task, data, timestamp);
+	int r = vss_task_reserve_block(task, timestamp);
+	if(r) {
+		return r;
+	}
+
+	*data = task->write_ptr;
+	return VSS_OK;
 }
 
 int vss_task_write_sample(struct vss_task* task)
