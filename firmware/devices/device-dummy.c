@@ -74,7 +74,7 @@ static void do_sweep(void)
 		return;
 	}
 
-	if(vss_task_insert(current_task, result, vss_rtc_read()) == VSS_OK) {
+	if(vss_task_insert_sweep(current_task, result, vss_rtc_read()) == VSS_OK) {
 		vss_timer_schedule(CHANNEL_TIME_MS);
 	} else {
 		current_task = NULL;
@@ -88,7 +88,7 @@ static void do_sample(void)
 	const struct dev_dummy_config_priv* priv = current_task->sweep_config->device_config->priv;
 
 	int r;
-	r = vss_task_reserve_block(current_task, &data, vss_rtc_read());
+	r = vss_task_reserve_sample(current_task, &data, vss_rtc_read());
 	if(r == VSS_SUSPEND) {
 		return;
 	}
@@ -103,7 +103,7 @@ static void do_sample(void)
 		}
 	}
 
-	r = vss_task_write_block(current_task);
+	r = vss_task_write_sample(current_task);
 	if(r) {
 		current_task = NULL;
 		return;

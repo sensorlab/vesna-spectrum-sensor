@@ -480,31 +480,29 @@ int main(void)
 
 		int has_finished = (vss_task_get_state(&current_task) == VSS_DEVICE_RUN_FINISHED);
 
-		struct vss_task_read_result ctx;
-		vss_task_read(&current_task, &ctx);
-
-		int channel;
-		uint32_t timestamp;
-		power_t power;
-
 		int n = 0;
-		while(vss_task_read_parse(&current_task, &ctx,
-								&timestamp, &channel, &power) == VSS_OK) {
-			if(n == 0) {
-				printf("TS %ld.%03ld DS", timestamp/1000, timestamp%1000);
+
+		struct vss_task_read_result ctx;
+		while(vss_task_read(&current_task, &ctx) == VSS_OK) {
+
+			unsigned int channel = ctx.block->channel;
+			uint32_t timestamp = ctx.block->timestamp;
+			power_t power;
+
+			printf("TS %ld.%03ld CH %u DS", timestamp/1000,
+					timestamp%1000, channel);
+
+			while(vss_task_read_parse(&ctx, &timestamp, &channel, &power) == VSS_OK) {
+
+				if(current_task.type == VSS_TASK_SWEEP) {
+					printf(" %d.%02d", power/100, abs(power%100));
+				} else {
+					printf(" %d", power);
+				}
 			}
 
-			if(current_task.type == VSS_TASK_SWEEP) {
-				printf(" %d.%02d", power/100, abs(power%100));
-			} else {
-				printf(" %d", power);
-			}
-
-			n++;
-		}
-
-		if(n > 0) {
 			printf(" DE\n");
+			n = 1;
 		}
 
 		if(n == 0 && has_finished && has_started) {
