@@ -143,13 +143,14 @@ int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 
 unsigned int vss_task_get_channel(struct vss_task* task);
 unsigned int vss_task_get_n_average(struct vss_task* task);
-int vss_task_insert(struct vss_task* device_run, power_t data,
-							uint32_t timestamp);
-void vss_task_set_error(struct vss_task* task, const char* msg);
 
-int vss_task_reserve_block(struct vss_task* task, power_t** data,
+int vss_task_insert_sweep(struct vss_task* device_run, power_t data,
 							uint32_t timestamp);
-int vss_task_write_block(struct vss_task* task);
+int vss_task_reserve_sample(struct vss_task* task, power_t** data,
+							uint32_t timestamp);
+int vss_task_write_sample(struct vss_task* task);
+
+void vss_task_set_error(struct vss_task* task, const char* msg);
 
 /** @} */
 

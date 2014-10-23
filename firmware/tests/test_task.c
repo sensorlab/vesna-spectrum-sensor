@@ -90,12 +90,14 @@ void test_single_run(void)
 {
 	const power_t v = 0x70fe;
 
-	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 2, buffer_data);
 	vss_task_start(&run);
 
 	int cnt = 0;
 	while(1) {
-		int r = vss_task_insert(&run, v, 0xdeadbeef);
+		int ch = vss_task_get_channel(&run);
+		TEST_ASSERT_EQUAL(cnt%10, ch);
+		int r = vss_task_insert_sweep(&run, v, 0xdeadbeef);
 		if(r == VSS_OK) {
 			cnt++;
 		} else if(r == VSS_STOP) {
@@ -106,24 +108,26 @@ void test_single_run(void)
 		}
 	}
 
-	TEST_ASSERT_EQUAL(10, cnt);
+	TEST_ASSERT_EQUAL(20, cnt);
 }
 
 void test_single_run_block(void)
 {
-	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 5, buffer_data);
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, 2, buffer_data);
 	vss_task_start(&run);
 
 	int cnt = 0;
 	while(1) {
-		power_t *wptr;
+		int ch = vss_task_get_channel(&run);
+		TEST_ASSERT_EQUAL(cnt%10, ch);
 
-		int r = vss_task_reserve_block(&run, &wptr, 0xdeadbeef);
+		power_t *wptr;
+		int r = vss_task_reserve_sample(&run, &wptr, 0xdeadbeef);
 		TEST_ASSERT_EQUAL(VSS_OK, r);
 
 		memset(wptr, 0x01, sweep_config.n_average*sizeof(*wptr));
 
-		r = vss_task_write_block(&run);
+		r = vss_task_write_sample(&run);
 		if(r == VSS_OK) {
 			cnt++;
 		} else if(r == VSS_STOP) {
@@ -134,7 +138,7 @@ void test_single_run_block(void)
 		}
 	}
 
-	TEST_ASSERT_EQUAL(5, cnt);
+	TEST_ASSERT_EQUAL(20, cnt);
 }
 
 
@@ -147,14 +151,14 @@ void test_infinite_run(void)
 
 	int cnt, r;
 	for(cnt = 0; cnt < 100; cnt++) {
-		r = vss_task_insert(&run, v, 0xdeadbeef);
+		r = vss_task_insert_sweep(&run, v, 0xdeadbeef);
 		TEST_ASSERT_EQUAL(VSS_OK, r);
 	}
 
 	vss_task_stop(&run);
 
 	for(cnt = 0; cnt < 100; cnt++) {
-		r = vss_task_insert(&run, v, 0xdeadbeef);
+		r = vss_task_insert_sweep(&run, v, 0xdeadbeef);
 		if(r != VSS_OK) break;
 	}
 
@@ -172,7 +176,7 @@ void test_read(void)
 
 	int cnt;
 	for(cnt = 0; cnt < 10; cnt++) {
-		vss_task_insert(&run, v, 0xdeadbeef);
+		vss_task_insert_sweep(&run, v, 0xdeadbeef);
 	}
 
 	struct vss_task_read_result ctx;
@@ -202,9 +206,9 @@ void test_read_sample(void)
 	int cnt;
 	for(cnt = 0; cnt < 2; cnt++) {
 		power_t *wptr;
-		vss_task_reserve_block(&run, &wptr, 0xdeadbeef);
+		vss_task_reserve_sample(&run, &wptr, 0xdeadbeef);
 		memset(wptr, 0x01, sweep_config.n_average*sizeof(*wptr));
-		vss_task_write_block(&run);
+		vss_task_write_sample(&run);
 	}
 
 	struct vss_task_read_result ctx;
@@ -235,7 +239,7 @@ void test_get_channel(void)
 	int channel = vss_task_get_channel(&run);
 	TEST_ASSERT_EQUAL(sweep_config.channel_start, channel);
 
-	vss_task_insert(&run, 0, 0);
+	vss_task_insert_sweep(&run, 0, 0);
 
 	channel = vss_task_get_channel(&run);
 	TEST_ASSERT_EQUAL(sweep_config.channel_start + sweep_config.channel_step, channel);
@@ -288,7 +292,7 @@ void test_overflow(void)
 
 	int n;
 	for(n = 0; n < buffer_data_len+100; n++) {
-		vss_task_insert(&run, v, 0xdeadbeef);
+		vss_task_insert_sweep(&run, v, 0xdeadbeef);
 	}
 
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_SUSPENDED, vss_task_get_state(&run));
@@ -306,6 +310,6 @@ void test_overflow(void)
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_task_get_state(&run));
 	TEST_ASSERT_EQUAL(1, resume_called);
 
-	n = vss_task_insert(&run, v, 0xdeadbeef);
+	n = vss_task_insert_sweep(&run, v, 0xdeadbeef);
 	TEST_ASSERT_EQUAL(VSS_OK, n);
 }

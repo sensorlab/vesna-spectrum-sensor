@@ -107,6 +107,42 @@ static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
 	return VSS_OK;
 }
 
+static int vss_task_inc_channel(struct vss_task* task)
+{
+	task->write_channel += task->sweep_config->channel_step;
+	if(task->write_channel >= task->sweep_config->channel_stop) {
+		task->write_channel = task->sweep_config->channel_start;
+
+		if(task->sweep_num > 1) {
+			task->sweep_num--;
+			return VSS_OK;
+		} else if(task->sweep_num < 0) {
+			return VSS_OK;
+		} else {
+			task->state = VSS_DEVICE_RUN_FINISHED;
+			return VSS_STOP;
+		}
+	} else {
+		return VSS_OK;
+	}
+}
+
+static int vss_task_reserve_block(struct vss_task* task, power_t** data, uint32_t timestamp)
+{
+	int r = vss_task_reserve_block_(task, timestamp);
+	if(r) {
+		return r;
+	}
+
+	*data = task->write_ptr;
+	return VSS_OK;
+}
+
+static void vss_task_write_block(struct vss_task* task)
+{
+	vss_buffer_write(&task->buffer);
+}
+
 /** @brief Add a new measurement result for the task.
  *
  * Called by the device driver to report a new measurement.
@@ -116,7 +152,7 @@ static int vss_task_reserve_block_(struct vss_task* task, uint32_t timestamp)
  * @param timestamp Time of the measurement.
  * @return VSS_STOP if the driver should terminate the task or VSS_OK otherwise.
  */
-int vss_task_insert(struct vss_task* task, power_t data, uint32_t timestamp)
+int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestamp)
 {
 	if(task->write_channel == task->sweep_config->channel_start) {
 		int r = vss_task_reserve_block_(task, timestamp);
@@ -131,38 +167,22 @@ int vss_task_insert(struct vss_task* task, power_t data, uint32_t timestamp)
 	*task->write_ptr = data;
 	task->write_ptr++;
 
-	task->write_channel += task->sweep_config->channel_step;
-	if(task->write_channel >= task->sweep_config->channel_stop) {
-		return vss_task_write_block(task);
-	} else {
-		return VSS_OK;
+	int r = vss_task_inc_channel(task);
+	if(task->write_channel == task->sweep_config->channel_start) {
+		vss_task_write_block(task);
 	}
+	return r;
 }
 
-int vss_task_reserve_block(struct vss_task* task, power_t** data,
-		uint32_t timestamp)
+int vss_task_reserve_sample(struct vss_task* task, power_t **data, uint32_t timestamp)
 {
-	int r = vss_task_reserve_block_(task, timestamp);
-	if(r) {
-		return r;
-	}
-
-	*data = task->write_ptr;
-	return VSS_OK;
+	return vss_task_reserve_block(task, data, timestamp);
 }
 
-int vss_task_write_block(struct vss_task* task)
+int vss_task_write_sample(struct vss_task* task)
 {
-	vss_buffer_write(&task->buffer);
-	if(task->sweep_num > 1 || task->sweep_num < 0) {
-		task->sweep_num--;
-		task->write_channel = task->sweep_config->channel_start;
-
-		return VSS_OK;
-	} else {
-		task->state = VSS_DEVICE_RUN_FINISHED;
-		return VSS_STOP;
-	}
+	vss_task_write_block(task);
+	return vss_task_inc_channel(task);
 }
 
 /** @brief Stop a task with an error.
