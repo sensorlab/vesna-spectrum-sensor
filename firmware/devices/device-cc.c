@@ -152,7 +152,7 @@ static void dev_cc_take_measurement(struct vss_task* task)
 
 	power_t rssi_dbm_100 = vss_average(buffer, n_average);
 
-	if(vss_task_insert(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
+	if(vss_task_insert_sweep(task, rssi_dbm_100, vss_rtc_read()) == VSS_OK) {
 		r = dev_cc_prepare_measurement(task);
 		if(r) {
 			vss_task_set_error(task,
