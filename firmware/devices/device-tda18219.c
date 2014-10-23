@@ -233,12 +233,8 @@ static int dev_tda18219_stop(void)
 	return dev_tda18219_turn_off();
 }
 
-enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
+static int dev_tda18219_get_freq(struct vss_task* task)
 {
-	if(state == OFF) {
-		return OFF;
-	}
-
 	const struct vss_device_config* device_config = task->sweep_config->device_config;
 	const struct dev_tda18219_priv* priv = device_config->priv;
 
@@ -249,6 +245,19 @@ enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
 			priv->adc_source == ADC_SRC_BBAND_DUAL) {
 		freq -= (8000000 - device_config->channel_bw_hz)/2;
 	}
+
+	return freq;
+}
+
+enum state_t dev_tda18219_state(struct vss_task* task, enum state_t state)
+{
+	if(state == OFF) {
+		return OFF;
+	}
+
+	const struct dev_tda18219_priv* priv = task->sweep_config->device_config->priv;
+
+	int freq = dev_tda18219_get_freq(task);
 
 	int rssi_dbm_100;
 	power_t* data;
