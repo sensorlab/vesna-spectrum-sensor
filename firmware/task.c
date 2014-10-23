@@ -48,7 +48,7 @@ int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 	}
 
 	int r = vss_buffer_init_size(&task->buffer,
-			sizeof(*data) * (sample_num+2),
+			sizeof(struct vss_task_block) + sizeof(*data) * sample_num,
 			data, data_len);
 	if(r) {
 		return r;
@@ -63,13 +63,6 @@ int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 	task->overflows = 0;
 
 	return VSS_OK;
-}
-
-static void vss_task_insert_timestamp(struct vss_task* task, uint32_t timestamp)
-{
-	task->write_ptr[0] = (timestamp >>  0) & 0x0000ffff;
-	task->write_ptr[1] = (timestamp >> 16) & 0x0000ffff;
-	task->write_ptr += 2;
 }
 
 /** @brief Get current channel to measure.
@@ -95,15 +88,22 @@ unsigned int vss_task_get_n_average(struct vss_task* task)
 	return task->sweep_config->n_average;
 }
 
-static int vss_task_reserve_block(struct vss_task* task, uint32_t timestamp)
+static int vss_task_reserve_block(struct vss_task* task, uint32_t timestamp, unsigned int channel)
 {
-	vss_buffer_reserve(&task->buffer, (void**)&task->write_ptr);
-	if(task->write_ptr == NULL) {
+	struct vss_task_block* block;
+
+	vss_buffer_reserve(&task->buffer, (void**)&block);
+	if(block == NULL) {
 		task->overflows++;
 		task->state = VSS_DEVICE_RUN_SUSPENDED;
 		return VSS_SUSPEND;
 	}
-	vss_task_insert_timestamp(task, timestamp);
+
+	block->timestamp = timestamp;
+	block->channel = channel;
+
+	task->write_ptr = block->data;
+
 	return VSS_OK;
 }
 
@@ -144,7 +144,7 @@ static int vss_task_inc_channel(struct vss_task* task)
 int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestamp)
 {
 	if(task->write_channel == task->sweep_config->channel_start) {
-		int r = vss_task_reserve_block(task, timestamp);
+		int r = vss_task_reserve_block(task, timestamp, task->write_channel);
 		if(r) {
 			return r;
 		}
@@ -174,7 +174,7 @@ int vss_task_insert_sweep(struct vss_task* task, power_t data, uint32_t timestam
  */
 int vss_task_reserve_sample(struct vss_task* task, power_t** data, uint32_t timestamp)
 {
-	int r = vss_task_reserve_block(task, timestamp);
+	int r = vss_task_reserve_block(task, timestamp, task->write_channel);
 	if(r) {
 		return r;
 	}
@@ -285,34 +285,37 @@ enum vss_task_state vss_task_get_state(struct vss_task* task)
  * @param task Pointer to the task.
  * @param ctx Pointer to the result of the read operation.
  */
-void vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
+int vss_task_read(struct vss_task* task, struct vss_task_read_result* ctx)
 {
-	vss_buffer_read(&task->buffer, (void**) &ctx->read_ptr);
-	ctx->read_channel = task->sweep_config->channel_start;
-	ctx->read_cnt = 0;
+	ctx->task = task;
+	vss_buffer_read(&task->buffer, (void**) &ctx->block);
+
+	if(ctx->block == NULL) {
+		return VSS_ERROR;
+	} else {
+		ctx->read_ptr = ctx->block->data;
+		ctx->read_channel = ctx->block->channel;
+		ctx->read_cnt = 0;
+		return VSS_OK;
+	}
 }
 
 /** @brief Parse the values from the task's circular buffer.
  *
- * @param task Pointer to the task.
  * @param ctx Pointer to the result of the read operation.
  * @param timestamp Timestamp of the measurement.
  * @param channel Channel of the measurement (set to -1 if no measurement yet)
  * @param power Result of the power measurement.
  * @return VSS_STOP if there is nothing more to parse or VSS_OK otherwise.
  */
-int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
+int vss_task_read_parse(struct vss_task_read_result *ctx,
 		uint32_t* timestamp, int* channel, power_t* power)
 {
-	if(ctx->read_ptr == NULL) {
-		return VSS_STOP;
-	}
+	struct vss_task* const task = ctx->task;
 
-	if(ctx->read_cnt == 0) {
-		*timestamp = (uint16_t) ctx->read_ptr[0] | \
-			     (ctx->read_ptr[1] << 16);
-		ctx->read_ptr += 2;
-	}
+	assert(ctx->block != NULL);
+
+	*timestamp = ctx->block->timestamp;
 
 	if(ctx->read_cnt == task->sample_num) {
 		vss_buffer_release(&task->buffer);
@@ -337,7 +340,10 @@ int vss_task_read_parse(struct vss_task* task, struct vss_task_read_result *ctx,
 
 	ctx->read_ptr++;
 	ctx->read_cnt++;
-	ctx->read_channel += task->sweep_config->channel_step;
+
+	if(task->type == VSS_TASK_SWEEP) {
+		ctx->read_channel += task->sweep_config->channel_step;
+	}
 
 	return VSS_OK;
 }

@@ -180,19 +180,23 @@ void test_read(void)
 	}
 
 	struct vss_task_read_result ctx;
-	vss_task_read(&run, &ctx);
+	int r = vss_task_read(&run, &ctx);
+
+	TEST_ASSERT_EQUAL(VSS_OK, r);
+
+	TEST_ASSERT_EQUAL(0xdeadbeef, ctx.block->timestamp);
+	TEST_ASSERT_EQUAL(0, ctx.block->channel);
 
 	int channel;
 	uint32_t timestamp;
 	power_t power;
 
 	cnt = 0;
-	while(vss_task_read_parse(&run, &ctx, &timestamp, &channel, &power) == VSS_OK) {
-		if(channel != -1) {
-			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
-			TEST_ASSERT_EQUAL(v, power);
-			cnt++;
-		}
+	while(vss_task_read_parse(&ctx, &timestamp, &channel, &power) == VSS_OK) {
+		TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
+		TEST_ASSERT_EQUAL(v, power);
+		TEST_ASSERT_EQUAL(cnt, channel);
+		cnt++;
 	}
 
 	TEST_ASSERT_EQUAL(10, cnt);
@@ -212,20 +216,22 @@ void test_read_sample(void)
 	}
 
 	struct vss_task_read_result ctx;
-	vss_task_read(&run, &ctx);
+	int r = vss_task_read(&run, &ctx);
+
+	TEST_ASSERT_EQUAL(VSS_OK, r);
+	TEST_ASSERT_EQUAL(0xdeadbeef, ctx.block->timestamp);
+	TEST_ASSERT_EQUAL(0, ctx.block->channel);
 
 	int channel;
 	uint32_t timestamp;
 	power_t power;
 
 	cnt = 0;
-	while(vss_task_read_parse(&run, &ctx, &timestamp, &channel, &power) == VSS_OK) {
-		if(channel != -1) {
-			TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
-			TEST_ASSERT_EQUAL(0x0101, power);
-			TEST_ASSERT_EQUAL(0, channel);
-			cnt++;
-		}
+	while(vss_task_read_parse(&ctx, &timestamp, &channel, &power) == VSS_OK) {
+		TEST_ASSERT_EQUAL(0xdeadbeef, timestamp);
+		TEST_ASSERT_EQUAL(0x0101, power);
+		TEST_ASSERT_EQUAL(0, channel);
+		cnt++;
 	}
 
 	TEST_ASSERT_EQUAL(10, cnt);
@@ -305,7 +311,7 @@ void test_overflow(void)
 	uint32_t timestamp;
 	power_t power;
 
-	while(!vss_task_read_parse(&run, &ctx, &timestamp, &channel, &power));
+	while(!vss_task_read_parse(&ctx, &timestamp, &channel, &power));
 
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_task_get_state(&run));
 	TEST_ASSERT_EQUAL(1, resume_called);
