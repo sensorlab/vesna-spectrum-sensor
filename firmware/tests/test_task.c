@@ -56,12 +56,12 @@ static const struct vss_sweep_config sweep_config = {
 	.n_average = 10
 };
 
-static const struct vss_sweep_config sample_config = {
+static const struct vss_sweep_config sweep_config_one = {
 	.device_config = &device_config,
 
 	.channel_start = 0,
-	.channel_stop = 0,
-	.channel_step = 0,
+	.channel_stop = 1,
+	.channel_step = 1,
 	.n_average = 10
 };
 
@@ -86,7 +86,7 @@ void test_start(void)
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_RUNNING, vss_task_get_state(&run));
 }
 
-void test_single_run(void)
+void test_single_run_sweep(void)
 {
 	const power_t v = 0x70fe;
 
@@ -110,6 +110,32 @@ void test_single_run(void)
 
 	TEST_ASSERT_EQUAL(20, cnt);
 }
+
+void test_single_run_sweep_one_channel(void)
+{
+	const power_t v = 0x70fe;
+
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config_one, 2, buffer_data);
+	vss_task_start(&run);
+
+	int cnt = 0;
+	while(1) {
+		//int ch = vss_task_get_channel(&run);
+		//TEST_ASSERT_EQUAL(0, ch);
+		int r = vss_task_insert_sweep(&run, v, 0xdeadbeef);
+		if(r == VSS_OK) {
+			cnt++;
+		} else if(r == VSS_STOP) {
+			cnt++;
+			break;
+		} else {
+			break;
+		}
+	}
+
+	TEST_ASSERT_EQUAL(2, cnt);
+}
+
 
 void test_single_run_block(void)
 {
@@ -204,7 +230,7 @@ void test_read(void)
 
 void test_read_sample(void)
 {
-	vss_task_init(&run, VSS_TASK_SAMPLE, &sample_config, -1, buffer_data);
+	vss_task_init(&run, VSS_TASK_SAMPLE, &sweep_config_one, -1, buffer_data);
 	vss_task_start(&run);
 
 	int cnt;
