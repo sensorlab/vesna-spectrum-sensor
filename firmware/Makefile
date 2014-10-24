@@ -48,6 +48,7 @@ clean:
 		reset halt; \
 		poll; \
 		flash write_image erase $< 0 elf; \
+		verify_image $< 0 elf; \
 		reset run; \
 		shutdown \
 	"
