@@ -61,11 +61,11 @@ extern void (*const vector_table[]) (void);
 
 /* Set up all the peripherals */
 
-static void setup_usart(void)
+static void setup_usart(uint32_t usart)
 {
 	uint32_t baudrate;
 
-	if(VSS_UART == USART1) {
+	if(usart == USART1) {
 		/* GPIO pin for USART TX */
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 				GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
@@ -95,18 +95,18 @@ static void setup_usart(void)
 	}
 
 	/* Setup USART parameters. */
-	usart_set_baudrate(VSS_UART, baudrate);
-	usart_set_databits(VSS_UART, 8);
-	usart_set_stopbits(VSS_UART, USART_STOPBITS_1);
-	usart_set_parity(VSS_UART, USART_PARITY_NONE);
-	usart_set_flow_control(VSS_UART, USART_FLOWCONTROL_NONE);
-	usart_set_mode(VSS_UART, USART_MODE_TX_RX);
+	usart_set_baudrate(usart, baudrate);
+	usart_set_databits(usart, 8);
+	usart_set_stopbits(usart, USART_STOPBITS_1);
+	usart_set_parity(usart, USART_PARITY_NONE);
+	usart_set_flow_control(usart, USART_FLOWCONTROL_NONE);
+	usart_set_mode(usart, USART_MODE_TX_RX);
 
-	/* Enable VSS_UART Receive interrupt. */
-	USART_CR1(VSS_UART) |= USART_CR1_RXNEIE;
+	/* Enable usart Receive interrupt. */
+	USART_CR1(usart) |= USART_CR1_RXNEIE;
 
 	/* Finally enable the USART. */
-	usart_enable(VSS_UART);
+	usart_enable(usart);
 }
 
 static void setup(void)
@@ -123,9 +123,9 @@ static void setup(void)
 			RCC_APB2ENR_AFIOEN);
 
 	uint8_t irqn;
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_USART1EN);
+
 	if(VSS_UART == USART1) {
-		rcc_peripheral_enable_clock(&RCC_APB2ENR,
-			RCC_APB2ENR_USART1EN);
 		irqn = NVIC_USART1_IRQ;
 	} else {
 		rcc_peripheral_enable_clock(&RCC_APB1ENR,
@@ -140,7 +140,10 @@ static void setup(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 
-	setup_usart();
+	setup_usart(VSS_UART);
+	if(VSS_UART != USART1) {
+		setup_usart(USART1);
+	}
 
 	/* Setup watchdog */
 	iwdg_set_period_ms(10000);
@@ -189,21 +192,33 @@ void usart3_isr(void)
 	usart_isr();
 }
 
+static int write(char *ptr, int len, uint32_t usart)
+{
+	int i;
+	for(i = 0; i < len; i++) {
+		usart_send_blocking(usart, ptr[i]);
+	}
+	return i;
+}
+
 /* Provide _write syscall used by libc */
 int _write(int file, char *ptr, int len)
 {
-	int i;
-
-	if (file == 1) {
+	if(file == 1) {
 		led_on();
-		for (i = 0; i < len; i++) {
-			usart_send_blocking(VSS_UART, ptr[i]);
-		}
+		int r = write(ptr, len, VSS_UART);
 		led_off();
-		return i;
+		return r;
 	} else {
 		errno = EIO;
 		return -1;
+	}
+}
+
+static void debug(char *ptr)
+{
+	if(VSS_UART != USART1) {
+		write(ptr, strlen(ptr), USART1);
 	}
 }
 
@@ -412,6 +427,8 @@ static void dispatch(char* cmdi)
 
 	char* cmd = trim(cmdi);
 
+	debug("dispatch: received command '"); debug(cmd); debug("'\n");
+
 	if (!strcmp(cmd, "help")) {
 		command_help();
 	} else if (!strcmp(cmd, "list")) {
@@ -450,6 +467,7 @@ static void dispatch(char* cmdi)
 		scb_reset_system();
 	} else {
 		printf("error: unknown command: %s\n", cmd);
+		debug("dispatch: unknown command\n");
 	}
 }
 
@@ -457,6 +475,7 @@ int main(void)
 {
 	setup();
 	printf("boot\n");
+	debug("boot\n");
 
 	int r = VSS_OK;
 #ifdef TUNER_TDA18219
@@ -506,6 +525,7 @@ int main(void)
 			}
 
 			printf(" DE\n");
+			debug("main: wrote block report\n");
 			n = 1;
 		}
 
@@ -521,6 +541,7 @@ int main(void)
 				}
 			}
 			has_started = 0;
+			debug("main: task finished\n");
 		}
 	}
 
