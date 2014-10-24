@@ -47,9 +47,17 @@ int vss_task_init_size(struct vss_task* task, enum vss_task_type type,
 			assert(0);
 	}
 
-	int r = vss_buffer_init_size(&task->buffer,
-			sizeof(struct vss_task_block) + sizeof(*data) * sample_num,
-			data, data_len);
+	size_t block_size = sizeof(struct vss_task_block) + \
+			    sizeof(*data) * sample_num;
+
+	// Make sure block_size is multiple of 4 bytes. This is important
+	// to keep accesses to vss_task_block structure properly aligned.
+	block_size += block_size % sizeof(int);
+
+	// Also check if the start of the buffer is itself properly aligned
+	assert(((intptr_t) &task->buffer) % sizeof(int) == 0);
+
+	int r = vss_buffer_init_size(&task->buffer, block_size, data, data_len);
 	if(r) {
 		return r;
 	}
@@ -98,6 +106,8 @@ static int vss_task_reserve_block(struct vss_task* task, uint32_t timestamp, uns
 		task->state = VSS_DEVICE_RUN_SUSPENDED;
 		return VSS_SUSPEND;
 	}
+
+	assert(((uintptr_t) block) % sizeof(block->timestamp) == 0);
 
 	block->timestamp = timestamp;
 	block->channel = channel;
