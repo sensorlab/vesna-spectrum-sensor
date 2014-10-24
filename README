@@ -2,17 +2,21 @@ Introduction
 ============
 
 This is a spectrum sensing application for the VESNA platform. It presents
-a unified interface to different radiofrequency energy detection modules
-through a serial terminal. It also serves as an example use of hardware
-drivers using the low-level spectrum sensing API.
+a unified interface to different radio modules through a serial interface. It
+also serves as an example use of hardware drivers using the low-level spectrum
+sensing API.
 
 All spectrum sensing devices supported by this application work by tuning
-to a radiofrequency channel and estimating the power level at the antenna
-interface. The range of frequencies that can be sensed is determined by a
-hardware configuration. Each device may support one or more configurations.
-A configuration is characterized by the frequency of the bottom-most
-channel, channel spacing, channel bandwidth, number of channels and the
-time it takes the device to perform a measurement for a single channel.
+to a radiofrequency channel and either estimating the power level at the
+antenna interface or sampling the baseband data signal. The application
+supports both continuously sensing one channel of performing a frequency sweep
+over a range of channels.
+
+The range of frequencies that can be tuned to is determined by a hardware
+configuration. Each device may support one or more configurations.  A
+configuration is characterized by the frequency of the bottom-most channel,
+channel spacing, channel bandwidth, number of channels and the time it takes
+the device to perform a measurement for a single channel.
 
 Currently the following hardware models are supported (selectable via the
 MODEL environment variable when invoking make):
@@ -81,41 +85,83 @@ For more info on VESNA, see http://sensorlab.ijs.si/hardware.html
 Compilation
 ===========
 
-To compile and upload firmware to a VESNA using OpenOCD and Olimex
-ARM-USB-OCD:
+To configure the build, use the ./configure script. First argument is the name
+of the hardware model you are using. Second argument is the USART used for
+communication with the host.
 
-$ cd firmware
-$ ./configure sne-eshter
-$ make spectrum-sensor.u
+Typically, USART1 is used when the VESNA is connected directly via RS-232 to a
+PC. USART3 is used when the sensor is accessed remotely through SNR-ETH
+(DigiConnect ME) TCP/IP module.
 
-Set argument to the ./configure script to the name of the hardware model you
-are using.
+    $ cd firmware
+    $ ./configure sne-eshter usart1
 
-If you want to run the application using the VESNA bootloader, add
-"LDSCRIPT=vesna_app.ld" to the make command-line.
+To compile and upload firmware to a VESNA using OpenOCD and Olimex ARM-USB-OCD:
+
+    $ make spectrum-sensor.u
+
+To make a binary image for loading with the VESNA bootloader, use the following
+make command:
+
+    $ LDSCRIPT=vesna_app.ld make spectrum-sensor.bin
+
+To make a hex file for uploading to the OpenBLT bootloader, use the following
+make command:
+
+    $ LDSCRIPT=vesna_openblt.ld make spectrum-sensor.srec
+
+
+Testing
+-------
 
 To run unit tests, make sure that Unity framework is installed in a directory
 along side vesna-spectrum-sensor:
 
-$ ls
-Unity  vesna-spectrum-sensor
+    $ ls
+    Unity  vesna-spectrum-sensor
 
 Then run "make test":
 
-$ cd vesna-spectrum-sensor/firmware
-$ make test
+    $ cd vesna-spectrum-sensor/firmware
+    $ make test
+
+
+Python bindings
+---------------
 
 To install Python bindings:
 
-$ cd vesna-spectrum-sensor/python
-$ python setup.py
+    $ cd vesna-spectrum-sensor/python
+    $ python setup.py
+
+
+Remote programming with the OpenBLT bootloader
+----------------------------------------------
+
+To compile and upload the OpenBLT bootloader to the node using OpenOCD and
+Olimex ARM-USB-OCD:
+
+    $ cd bootloader
+    $ make upload
+
+Once the bootloader has been uploaded to the node, application can be reprogrammed
+remotely over TCP/IP:
+
+    $ cd firmware
+    $ LDSCRIPT=vesna_openblt.ld make spectrum-sensor.srec
+
+    $ openblt-tcp-boot -dXXX.XXX.XXX.XXX -p2101 spectrum-sensor.srec
+
+(see https://github.com/avian2/openblt-tcp-boot for the openblt-tcp-boot
+application)
 
 
 Usage
 =====
 
 Connect VESNA to a serial terminal using 576000 baud, 8 data bits, 1 stop
-bit, no parity.
+bit, no parity. On the other hand, if you are accessing the sensor remotely
+over TCP/IP network, connect a telnet session to the VESNA node.
 
 You can then use the terminal to interact with the application in a
 command-line fashion (conclude each command with a new line)
