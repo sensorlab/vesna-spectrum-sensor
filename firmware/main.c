@@ -141,6 +141,10 @@ static void setup(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO2);
 
 	setup_usart();
+
+	/* Setup watchdog */
+	iwdg_set_period_ms(10000);
+	iwdg_start();
 }
 
 static void led_on(void)
@@ -476,7 +480,7 @@ int main(void)
 			usart_buffer_attn = 0;
 		}
 
-		IWDG_KR = IWDG_KR_RESET;
+		iwdg_reset();
 
 		int has_finished = (vss_task_get_state(&current_task) == VSS_DEVICE_RUN_FINISHED);
 
