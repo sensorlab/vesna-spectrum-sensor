@@ -483,7 +483,7 @@ int main(void)
 		int n = 0;
 
 		struct vss_task_read_result ctx;
-		while(vss_task_read(&current_task, &ctx) == VSS_OK) {
+		if(vss_task_read(&current_task, &ctx) == VSS_OK) {
 
 			unsigned int channel = ctx.block->channel;
 			uint32_t timestamp = ctx.block->timestamp;
