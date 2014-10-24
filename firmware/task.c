@@ -203,7 +203,16 @@ int vss_task_reserve_sample(struct vss_task* task, power_t** data, uint32_t time
 int vss_task_write_sample(struct vss_task* task)
 {
 	vss_task_write_block(task);
-	return vss_task_inc_channel(task);
+	int r = vss_task_inc_channel(task);
+
+	// stop sampling immediately - don't wait until the complete sweep
+	// is finished.
+	if(r == VSS_OK && task->sweep_num == 0) {
+		task->state = VSS_DEVICE_RUN_FINISHED;
+		return VSS_STOP;
+	} else {
+		return r;
+	}
 }
 
 /** @brief Stop a task with an error.

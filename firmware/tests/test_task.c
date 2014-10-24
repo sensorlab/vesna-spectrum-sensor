@@ -193,6 +193,35 @@ void test_infinite_run(void)
 	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_task_get_state(&run));
 }
 
+void test_infinite_run_block(void)
+{
+	vss_task_init(&run, VSS_TASK_SWEEP, &sweep_config, -1, buffer_data);
+	vss_task_start(&run);
+
+	int cnt, r;
+	for(cnt = 0; cnt < 50; cnt++) {
+		power_t *wptr;
+		r = vss_task_reserve_sample(&run, &wptr, 0xdeadbeef);
+		TEST_ASSERT_EQUAL(VSS_OK, r);
+		r = vss_task_write_sample(&run);
+		TEST_ASSERT_EQUAL(VSS_OK, r);
+	}
+
+	vss_task_stop(&run);
+
+	for(cnt = 0; cnt < 50; cnt++) {
+		power_t *wptr;
+		r = vss_task_reserve_sample(&run, &wptr, 0xdeadbeef);
+		TEST_ASSERT_EQUAL(VSS_OK, r);
+		r = vss_task_write_sample(&run);
+		if(r != VSS_OK) break;
+	}
+
+	TEST_ASSERT_EQUAL(VSS_STOP, r);
+	TEST_ASSERT_TRUE(cnt <= 1);
+	TEST_ASSERT_EQUAL(VSS_DEVICE_RUN_FINISHED, vss_task_get_state(&run));
+}
+
 void test_read(void)
 {
 	const power_t v = 0x70fe;
