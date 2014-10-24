@@ -158,7 +158,7 @@ class SweepConfig:
 		"""
 		return map(self.config.ch_to_hz, self.get_ch_list())
 
-class SampleConfig:
+class SampleConfig(SweepConfig):
 	"""Frequency sweep configuration for a spectrum sensing device."""
 	def __init__(self, config, ch, nsamples):
 		"""Create a new sweep configuration.
@@ -167,17 +167,8 @@ class SampleConfig:
 		ch -- Frequency channel to sample,
 		nsamples -- Number of samples to record
 		"""
-		assert ch >= 0
-		assert ch < config.num
-		assert nsamples > 0
-		assert config.device.supports_sampling
 
-		self.config = config
-		self.ch = ch
-		self.nsamples = nsamples
-
-		# real frequency
-		self.hz = config.ch_to_hz(ch)
+		SweepConfig.__init__(config, ch, ch+1, 1, nsamples)
 
 class TimestampedData:
 	"""Measurement data from a single frequency sweep.
@@ -189,6 +180,7 @@ class TimestampedData:
 	"""
 	def __init__(self):
 		self.timestamp = None
+		self.channel = None
 		self.data = []
 
 Sweep = TimestampedData
@@ -250,12 +242,18 @@ class ConfigList:
 class SpectrumSensor:
 	"""Top-level abstraction of the attached spectrum sensing hardware."""
 
+	COMMAND_TIMEOUT = 0.5
+	DATA_TIMEOUT = 900
+
 	def __init__(self, device, calibration=True):
 		"""Create a new spectrum sensor object.
 
 		device -- path to the character device for the RS232 port with the spectrum sensor.
 		"""
-		self.comm = serial.Serial(device, 576000, timeout=.5)
+		if '://' in device:
+			self.comm = serial.serial_for_url(device, timeout=self.COMMAND_TIMEOUT)
+		else:
+			self.comm = serial.Serial(device, 576000, timeout=self.COMMAND_TIMEOUT)
 		self.calibration = calibration
 
 		self.comm.write("sweep-off\n")
@@ -360,16 +358,6 @@ class SpectrumSensor:
 				sweep_config.nsamples))
 		self._wait_for_ok()
 
-	def _select_sample_channel(self, sample_config):
-		self.comm.write("select channel %d config %d,%d\n" % (
-				sample_config.ch,
-				sample_config.config.device.id, sample_config.config.id))
-		self._wait_for_ok()
-
-		self.comm.write("samples %d\n" % (
-				sample_config.nsamples))
-		self._wait_for_ok()
-
 	def _iter_timestamps(self, num):
 		while True:
 			try:
@@ -382,11 +370,13 @@ class SpectrumSensor:
 
 			try:
 				fields = line.split()
-				if len(fields) != num + 4:
+				if len(fields) != num + 6:
 					raise ValueError
 				if fields[0] != 'TS':
 					raise ValueError
-				if fields[2] != 'DS':
+				if fields[2] != 'CH':
+					raise ValueError
+				if fields[4] != 'DS':
 					raise ValueError
 				if fields[-1] != 'DE':
 					raise ValueError
@@ -394,13 +384,14 @@ class SpectrumSensor:
 				sweep = TimestampedData()
 
 				sweep.timestamp = float(fields[1])
-				sweep.data = map(float, fields[3:-1])
+				sweep.channel = int(fields[3])
+				sweep.data = map(float, fields[5:-1])
 			except ValueError:
 				print "Ignoring corrupted line: %s" % (line,)
 			else:
 				yield sweep
 
-	def sample_run(self, sample_config, cb):
+	def sample_run(self, sweep_config, cb):
 		"""Run the specified frequency sweep.
 
 		sweep_config -- frequency sweep configuration object
@@ -416,17 +407,17 @@ class SpectrumSensor:
 		the Sweep object with measured data.
 		"""
 
-		self._select_sample_channel(sample_config)
+		self._select_sweep_channel(sweep_config)
 
 		self.comm.write("sample-on\n")
 
-		self.comm.timeout = None
+		self.comm.timeout = self.DATA_TIMEOUT
 
-		for samples in self._iter_timestamps(sample_config.nsamples):
-			if not cb(sample_config, samples):
+		for samples in self._iter_timestamps(sweep_config.nsamples):
+			if not cb(sweep_config, samples):
 				break
 
-		self.comm.timeout = 0.5
+		self.comm.timeout = self.COMMAND_TIMEOUT
 
 		self.comm.write("sample-off\n")
 
@@ -451,13 +442,13 @@ class SpectrumSensor:
 
 		self.comm.write("sweep-on\n")
 
-		self.comm.timeout = None
+		self.comm.timeout = self.DATA_TIMEOUT
 
 		for sweep in self._iter_timestamps(sweep_config.num_channels):
 			if not cb(sweep_config, sweep):
 				break
 
-		self.comm.timeout = 0.5
+		self.comm.timeout = self.COMMAND_TIMEOUT
 
 		self.comm.write("sweep-off\n")
 
