@@ -139,13 +139,15 @@ Remote programming with the OpenBLT bootloader
 ----------------------------------------------
 
 To compile and upload the OpenBLT bootloader to the node using OpenOCD and
-Olimex ARM-USB-OCD:
+Olimex ARM-USB-OCD. Note that you need the source of the OpenBLT bootloader
+v1.00.01 (available from http://feaser.com/openblt/doku.php - see Makefile for
+the required path to OpenBLT source tree)
 
     $ cd bootloader
     $ make upload
 
-Once the bootloader has been uploaded to the node, application can be reprogrammed
-remotely over TCP/IP:
+Once the bootloader has been uploaded to the node, application can be
+reprogrammed remotely over TCP/IP:
 
     $ cd firmware
     $ LDSCRIPT=vesna_openblt.ld make spectrum-sensor.srec
@@ -206,3 +208,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Authors:	Tomaz Solc, <tomaz.solc@ijs.si>
 		Zoltan Padrah
 		Ales Verbic
+
+
+(OpenBLT bootloader code is covered by a different license - please see files
+in the bootloader/ for details)
