@@ -55,6 +55,11 @@ class Output:
 
 		return self.current_fh
 
+def get_sweep_config(device_config, range):
+	start, step, stop = map(lambda x:int(x)*1e3, range.split(':'))
+
+	sweep_config = device_config.get_sweep_config(start, stop, step)
+	return sweep_config
 
 def main():
 	parser = optparse.OptionParser()
@@ -63,6 +68,12 @@ def main():
 			help="Use VESNA spectrum sensor attached to DEVICE.")
 	parser.add_option("-o", "--output", dest="output", metavar="DIR",
 			help="Directory where to save the log.")
+	parser.add_option("-r", "--range", dest="range", metavar="RANGE",
+			help="Range of frequencies to scan (in kHz, e.g. 470000:1000:860000)")
+	parser.add_option("-c", "--config", dest="config", metavar="CONFIG",
+			help="Device config to use (e.g. 0,2)")
+	parser.add_option("-n", "--samples", dest="nsamples", metavar="SAMPLES",
+			help="Number of samples to use", type="int", default="25000")
 
 	(options, args) = parser.parse_args()
 
@@ -76,10 +87,12 @@ def main():
 	sensor = SpectrumSensor(options.vesna_device)
 
 	device_config_list = sensor.get_config_list()
-	device_config = device_config_list.get_config(0, 2)
 
-	sweep_config = device_config.get_sweep_config(470e6, 520e6, 1e6)
-	sweep_config.nsamples = 25000
+	dev_id, conf_id = map(int, options.config.split(','))
+	device_config = device_config_list.get_config(dev_id, conf_id)
+
+	sweep_config = get_sweep_config(device_config, options.range)
+	sweep_config.nsamples = options.nsamples
 
 	signal.signal(signal.SIGTERM, handler)
 	signal.signal(signal.SIGINT, handler)
