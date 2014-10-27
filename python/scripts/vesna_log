@@ -1,0 +1,40 @@
+#!/usr/bin/python
+import optparse
+import signal
+from vesna.spectrumsensor import SpectrumSensor, SweepConfig
+
+want_stop = False
+
+def handler(signum, frame):
+	global want_stop
+	print "Signal %d caught! Stopping scan..." % (signum,)
+	want_stop = True
+
+def main():
+	parser = optparse.OptionParser()
+
+	parser.add_option("-d", "--vesna-device", dest="vesna_device", metavar="DEVICE",
+			help="Use VESNA spectrum sensor attached to DEVICE.")
+
+	(options, args) = parser.parse_args()
+
+	sensor = SpectrumSensor(options.vesna_device)
+
+	device_config_list = sensor.get_config_list()
+	device_config = device_config_list.get_config(0, 2)
+
+	sweep_config = device_config.get_sweep_config(470e6, 520e6, 1e6)
+	sweep_config.nsamples = 25000
+
+	def cb(sweep_config, sweep):
+		print "%f %d [%d samples]" % (sweep.timestamp, 
+				sweep.channel, 
+				len(sweep.data))
+		return not want_stop
+
+	signal.signal(signal.SIGTERM, handler)
+	signal.signal(signal.SIGINT, handler)
+
+	sensor.sample_run(sweep_config, cb)
+
+main()
