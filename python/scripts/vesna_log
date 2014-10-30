@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import datetime
+import time
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +63,36 @@ def get_sweep_config(device_config, range):
 	sweep_config = device_config.get_sweep_config(start, stop, step)
 	return sweep_config
 
+def scan(output, options):
+	log.info("Scan setup")
+
+	sensor = SpectrumSensor(options.vesna_device)
+
+	device_config_list = sensor.get_config_list()
+
+	dev_id, conf_id = map(int, options.config.split(','))
+	device_config = device_config_list.get_config(dev_id, conf_id)
+
+	sweep_config = get_sweep_config(device_config, options.range)
+	sweep_config.nsamples = options.nsamples
+
+	log.info("Starting scan")
+
+	while not want_stop:
+		fh = output.get_fh()
+		sweep_config.fh = fh
+		sweep_config.bk = get_break_key()
+
+		log.info("Obtaining sensor status")
+		status = sensor.get_status(device_config)
+		fh.write(''.join(status))
+
+		log.info("Starting run")
+		sensor.sample_run(sweep_config, cb)
+		log.info("Stopped")
+
+	log.info("Stopping scan")
+
 def main():
 	parser = optparse.OptionParser()
 
@@ -89,33 +120,14 @@ def main():
 			level=logging.DEBUG)
 	log.info("Command line: %s" % (' '.join(sys.argv),))
 
-	sensor = SpectrumSensor(options.vesna_device)
-
-	device_config_list = sensor.get_config_list()
-
-	dev_id, conf_id = map(int, options.config.split(','))
-	device_config = device_config_list.get_config(dev_id, conf_id)
-
-	sweep_config = get_sweep_config(device_config, options.range)
-	sweep_config.nsamples = options.nsamples
-
 	signal.signal(signal.SIGTERM, handler)
 	signal.signal(signal.SIGINT, handler)
 
-	log.info("Starting scan")
-
 	while not want_stop:
-		fh = output.get_fh()
-		sweep_config.fh = fh
-		sweep_config.bk = get_break_key()
-
-		log.info("Obtaining sensor status")
-		status = sensor.get_status(device_config)
-		fh.write(''.join(status))
-
-		log.info("Starting run")
-		sensor.sample_run(sweep_config, cb)
-		log.info("Stopped")
-
-	log.info("Stopping scan")
+		try:
+			scan(output, options)
+		except:
+			n = 10
+			log.exception("Error while scanning. Restarting after %d seconds." % (n,))
+			time.sleep(n)
 main()
