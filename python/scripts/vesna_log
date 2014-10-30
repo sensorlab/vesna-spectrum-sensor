@@ -4,6 +4,7 @@ import signal
 from vesna.spectrumsensor import SpectrumSensor, SweepConfig
 import logging
 import os
+import sys
 import datetime
 
 log = logging.getLogger(__name__)
@@ -82,7 +83,11 @@ def main():
 		os.mkdir(output.output_dir)
 	except OSError:
 		pass
-	logging.basicConfig(filename=os.path.join(output.output_dir, "log"), level=logging.DEBUG)
+	logging.basicConfig(
+			filename=os.path.join(output.output_dir, "log"),
+			format="%(asctime)s:%(levelname)s:%(message)s",
+			level=logging.DEBUG)
+	log.info("Command line: %s" % (' '.join(sys.argv),))
 
 	sensor = SpectrumSensor(options.vesna_device)
 
