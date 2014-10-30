@@ -70,9 +70,13 @@ def scan(output, options):
 
 	log.info("Firmware version: %s" % (sensor.get_fw_version()))
 
+	log.info("Device configuration list follows")
 	device_config_list = sensor.get_config_list()
+	for line in str(device_config_list).split('\n'):
+		log.info("--- %s" % (line,))
 
 	dev_id, conf_id = map(int, options.config.split(','))
+	log.info("Using config %d,%d" % (dev_id, conf_id))
 	device_config = device_config_list.get_config(dev_id, conf_id)
 
 	sweep_config = get_sweep_config(device_config, options.range)

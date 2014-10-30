@@ -239,6 +239,21 @@ class ConfigList:
 		else:
 			return None
 
+	def __str__(self):
+		lines = []
+		for device in self.devices:
+			lines.append("device %d: %s" % (device.id, device.name))
+			for config in self.configs:
+				if config.device is device:
+					lines.append("  channel config %d,%d: %s" % (device.id, config.id, config.name))
+					lines.append("    base: %d Hz" % (config.base,))
+					lines.append("    spacing: %d Hz" % (config.spacing,))
+					lines.append("    bw: %d Hz" % (config.bw,))
+					lines.append("    num: %d" % (config.num,))
+					lines.append("    time: %d ms" % (config.time,))
+
+		return '\n'.join(lines)
+
 class SpectrumSensor:
 	"""Top-level abstraction of the attached spectrum sensing hardware."""
 

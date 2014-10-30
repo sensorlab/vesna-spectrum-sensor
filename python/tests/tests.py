@@ -1,4 +1,5 @@
 import unittest
+from textwrap import dedent
 
 from vesna.spectrumsensor import Device, DeviceConfig, SweepConfig, DeviceConfig, ConfigList
 
@@ -51,24 +52,29 @@ class TestSweepConfig(unittest.TestCase):
 		self.assertEquals(sc.stop_hz, 1039)
 
 class TestConfigList(unittest.TestCase):
-	def test_get_config_name(self):
-		cl = ConfigList()
+	def setUp(self):
+		self.cl = ConfigList()
 
-		d = Device(0, "test")
-		cl._add_device(d)
+		d = Device(0, "test device")
+		self.cl._add_device(d)
 
 		def add_dc(id, name, base):
 			dc = DeviceConfig(id, name, d)
 			dc.base = base
 			dc.spacing = 1
+			dc.bw = 1
 			dc.num = 1000
 			dc.time = 1
-			cl._add_config(dc)
+			self.cl._add_config(dc)
 
 		add_dc(0, "foo 1", 1000)
 		add_dc(1, "foo 2", 2000)
 		add_dc(2, "bar 1", 1000)
 		add_dc(3, "bar 2", 2000)
+
+	def test_get_config_name(self):
+
+		cl = self.cl
 
 		sc = cl.get_sweep_config(1500, 1600, 1)
 		self.assertEquals(0, sc.config.id)
@@ -81,3 +87,37 @@ class TestConfigList(unittest.TestCase):
 
 		sc = cl.get_sweep_config(2500, 2600, 1, name="bar")
 		self.assertEquals(3, sc.config.id)
+
+	def test_str_empty(self):
+		cl = ConfigList()
+
+		self.assertEquals('', str(cl))
+
+	def test_str(self):
+		self.assertEquals(dedent('''\
+			device 0: test device
+			  channel config 0,0: foo 1
+			    base: 1000 Hz
+			    spacing: 1 Hz
+			    bw: 1 Hz
+			    num: 1000
+			    time: 1 ms
+			  channel config 0,1: foo 2
+			    base: 2000 Hz
+			    spacing: 1 Hz
+			    bw: 1 Hz
+			    num: 1000
+			    time: 1 ms
+			  channel config 0,2: bar 1
+			    base: 1000 Hz
+			    spacing: 1 Hz
+			    bw: 1 Hz
+			    num: 1000
+			    time: 1 ms
+			  channel config 0,3: bar 2
+			    base: 2000 Hz
+			    spacing: 1 Hz
+			    bw: 1 Hz
+			    num: 1000
+			    time: 1 ms'''
+		), str(self.cl))

@@ -398,16 +398,8 @@ def test_ident(dut, gen):
 		log("      %s" % (line.strip(),))
 
 	log("    Device configurations:")
-	for device in dut.config_list.devices:
-		log("      device %d: %s" % (device.id, device.name))
-		for config in dut.config_list.configs:
-			if config.device is device:
-				log("        channel config %d,%d: %s" % (device.id, config.id, config.name))
-				log("          base: %d Hz" % (config.base,))
-				log("          spacing: %d Hz" % (config.spacing,))
-				log("          bw: %d Hz" % (config.bw,))
-				log("          num: %d" % (config.num,))
-				log("          time: %d ms" % (config.time,))
+	for line in str(dut.config_list).split('\n'):
+		log("      %s" % (line,))
 
 	log("    Using config %d,%d" % (dut.config.device.id, dut.config.id))
 
