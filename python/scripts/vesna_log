@@ -68,6 +68,8 @@ def scan(output, options):
 
 	sensor = SpectrumSensor(options.vesna_device)
 
+	log.info("Firmware version: %s" % (sensor.get_fw_version()))
+
 	device_config_list = sensor.get_config_list()
 
 	dev_id, conf_id = map(int, options.config.split(','))
@@ -83,9 +85,10 @@ def scan(output, options):
 		sweep_config.fh = fh
 		sweep_config.bk = get_break_key()
 
-		log.info("Obtaining sensor status")
+		log.info("Sensor status follows")
 		status = sensor.get_status(device_config)
-		fh.write(''.join(status))
+		for line in status:
+			log.info("--- %s" % (line.strip(),))
 
 		log.info("Starting run")
 		sensor.sample_run(sweep_config, cb)
