@@ -19,7 +19,7 @@ def cb(sweep_config, sweep):
 
 	fh = sweep_config.fh
 
-	fh.write('TS %f CH %d DS ' % (sweep.timestamp, sweep.channel))
+	fh.write('TS %f %f CH %d DS ' % (time.time(), sweep.timestamp, sweep.channel))
 	fh.write(' '.join(map(str, sweep.data)))
 	fh.write(' DE\n')
 
